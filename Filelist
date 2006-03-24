@@ -2,7 +2,7 @@
 # Used by Makefile and upload.aap.
 
 # source files for all source archives
-SRC_ALL1 =	\
+SRC_ALL =	\
 		src/README.txt \
 		src/arabic.c \
 		src/arabic.h \
@@ -30,6 +30,8 @@ SRC_ALL1 =	\
 		src/gui.h \
 		src/gui_beval.c \
 		src/gui_beval.h \
+		src/hardcopy.c \
+		src/hashtab.c \
 		src/keymap.h \
 		src/macros.h \
 		src/main.c \
@@ -50,12 +52,14 @@ SRC_ALL1 =	\
 		src/ops.c \
 		src/option.c \
 		src/option.h \
+		src/popupmnu.c \
 		src/quickfix.c \
 		src/regexp.c \
 		src/regexp.h \
 		src/screen.c \
 		src/search.c \
 		src/structs.h \
+		src/spell.c \
 		src/syntax.c \
 		src/tag.c \
 		src/term.c \
@@ -68,13 +72,12 @@ SRC_ALL1 =	\
 		src/vim.h \
 		src/window.c \
 		src/xxd/xxd.c \
-
-SRC_ALL2 =	\
 		src/main.aap \
 		src/testdir/main.aap \
 		src/testdir/*.in \
-		src/testdir/*.ok \
+		src/testdir/test[0-9]*.ok \
 		src/testdir/test49.vim \
+		src/testdir/test60.vim \
 		src/proto.h \
 		src/proto/buffer.pro \
 		src/proto/charset.pro \
@@ -92,6 +95,8 @@ SRC_ALL2 =	\
 		src/proto/getchar.pro \
 		src/proto/gui.pro \
 		src/proto/gui_beval.pro \
+		src/proto/hardcopy.pro \
+		src/proto/hashtab.pro \
 		src/proto/main.pro \
 		src/proto/mark.pro \
 		src/proto/mbyte.pro \
@@ -106,10 +111,12 @@ SRC_ALL2 =	\
 		src/proto/normal.pro \
 		src/proto/ops.pro \
 		src/proto/option.pro \
+		src/proto/popupmnu.pro \
 		src/proto/quickfix.pro \
 		src/proto/regexp.pro \
 		src/proto/screen.pro \
 		src/proto/search.pro \
+		src/proto/spell.pro \
 		src/proto/syntax.pro \
 		src/proto/tag.pro \
 		src/proto/term.pro \
@@ -147,12 +154,19 @@ SRC_UNIX =	\
 		src/gui_gtk_f.h \
 		src/gui_gtk_x11.c \
 		src/gui_motif.c \
+		src/gui_xmdlg.c \
+		src/gui_xmebw.c \
+		src/gui_xmebw.h \
+		src/gui_xmebwp.h \
 		src/gui_x11.c \
+		src/gui_x11_pm.h \
 		src/hangulin.c \
 		src/if_xcmdsrv.c \
 		src/integration.c \
 		src/integration.h \
 		src/link.sh \
+		src/installman.sh \
+		src/installml.sh \
 		src/mkinstalldirs \
 		src/os_unix.c \
 		src/os_unix.h \
@@ -165,6 +179,7 @@ SRC_UNIX =	\
 		src/proto/gui_gtk.pro \
 		src/proto/gui_gtk_x11.pro \
 		src/proto/gui_motif.pro \
+		src/proto/gui_xmdlg.pro \
 		src/proto/gui_x11.pro \
 		src/proto/hangulin.pro \
 		src/proto/if_xcmdsrv.pro \
@@ -189,12 +204,16 @@ SRC_UNIX =	\
 SRC_DOS_UNIX =	\
 		src/if_cscope.c \
 		src/if_cscope.h \
+		src/if_mzsch.c \
+		src/if_mzsch.h \
 		src/if_perl.xs \
 		src/if_perlsfio.c \
 		src/if_python.c \
 		src/if_ruby.c \
+		src/if_sniff.h \
 		src/if_tcl.c \
 		src/proto/if_cscope.pro \
+		src/proto/if_mzsch.pro \
 		src/proto/if_perl.pro \
 		src/proto/if_perlsfio.pro \
 		src/proto/if_python.pro \
@@ -204,7 +223,19 @@ SRC_DOS_UNIX =	\
 
 # source files for DOS (also in the extra archive)
 SRC_DOS =	\
-		src/GvimExt \
+		src/GvimExt/*.mak \
+		src/GvimExt/GvimExt.reg \
+		src/GvimExt/Makefile \
+		src/GvimExt/README.txt \
+		src/GvimExt/gvimext.cpp \
+		src/GvimExt/gvimext.def \
+		src/GvimExt/gvimext.h \
+		src/GvimExt/gvimext.inf \
+		src/GvimExt/gvimext.rc \
+		src/GvimExt/gvimext_ming.def \
+		src/GvimExt/gvimext_ming.rc \
+		src/GvimExt/resource.h \
+		src/GvimExt/uninst.bat \
 		README_srcdos.txt \
 		src/INSTALLpc.txt \
 		src/Make_bc3.mak \
@@ -217,6 +248,7 @@ SRC_DOS =	\
 		src/Make_mvc.mak \
 		src/Make_w16.mak \
 		src/bigvim.bat \
+		src/msvcsetup.bat \
 		src/dimm.idl \
 		src/dlldata.c \
 		src/dosinst.c \
@@ -254,6 +286,7 @@ SRC_DOS =	\
 		src/uninstal.c \
 		src/vim.def \
 		src/vim.rc \
+		src/vimio.h \
 		src/gvim.exe.mnf \
 		src/vim16.def \
 		src/vim16.rc \
@@ -292,7 +325,7 @@ SRC_DOS =	\
 
 # source files for DOS without CR/LF translation (also in the extra archive)
 SRC_DOS_BIN =	\
-		src/VisVim/Res \
+		src/VisVim/Res/*.bmp \
 		src/tearoff.bmp \
 		src/tools.bmp \
 		src/tools16.bmp \
@@ -311,17 +344,12 @@ SRC_AMI =	\
 		README_amisrc.txt.info \
 		src.info \
 		src/INSTALLami.txt \
-		src/Make_agui.mak \
-		src/Make_aros.mak \
 		src/Make_dice.mak \
 		src/Make_manx.mak \
 		src/Make_morph.mak \
 		src/Make_sas.mak \
-		src/gui_amiga.c \
-		src/gui_amiga.h \
 		src/os_amiga.c \
 		src/os_amiga.h \
-		src/proto/gui_amiga.pro \
 		src/proto/os_amiga.pro \
 		src/testdir/Make_amiga.mak \
 		src/testdir/amiga.vim \
@@ -330,14 +358,15 @@ SRC_AMI =	\
 # source files for the Mac (also in the extra archive)
 SRC_MAC =	\
 		src/INSTALLmac.txt \
-		src/Make_mpw.mak \
 		src/dehqx.py \
 		src/gui_mac.c \
 		src/gui_mac.icns \
-		src/gui_mac.r \
-		src/os_mac* \
+		src/os_mac.h \
+		src/os_mac.rsr.hqx \
+		src/os_mac_conv.c \
+		src/os_macosx.c \
 		src/proto/gui_mac.pro \
-		src/proto/os_mac.pro \
+		src/proto/os_mac_conv.pro \
 
 # source files for VMS (in the extra archive)
 SRC_VMS =	\
@@ -384,12 +413,9 @@ SRC_EXTRA =	\
 		README_os390.txt \
 		src/Make_mint.mak \
 		src/Make_ro.mak \
-		src/gui_beos.cc \
-		src/gui_beos.h \
 		src/gui_riscos.c \
 		src/gui_riscos.h \
 		src/if_sniff.c \
-		src/if_sniff.h \
 		src/infplist.xml \
 		src/link.390 \
 		src/os_beos.c \
@@ -398,9 +424,7 @@ SRC_EXTRA =	\
 		src/os_mint.h \
 		src/os_riscos.c \
 		src/os_riscos.h \
-		src/proto/gui_beos.pro \
 		src/proto/gui_riscos.pro \
-		src/proto/os_beos.pro \
 		src/proto/os_riscos.pro \
 		src/os_vms_fix.com \
 		src/toolbar.phi \
@@ -423,6 +447,7 @@ RT_ALL =	\
 		runtime/gvimrc_example.vim \
 		runtime/macros/README.txt \
 		runtime/macros/dvorak \
+		runtime/macros/editexisting.vim \
 		runtime/macros/hanoi/click.me \
 		runtime/macros/hanoi/hanoi.vim \
 		runtime/macros/hanoi/poster \
@@ -473,9 +498,12 @@ RT_SCRIPTS =	\
 		runtime/filetype.vim \
 		runtime/scripts.vim \
 		runtime/menu.vim \
+		runtime/macmap.vim \
 		runtime/delmenu.vim \
 		runtime/synmenu.vim \
 		runtime/makemenu.vim \
+		runtime/autoload/*.vim \
+		runtime/autoload/README.txt \
 		runtime/colors/*.vim \
 		runtime/colors/README.txt \
 		runtime/compiler/*.vim \
@@ -492,6 +520,9 @@ RT_SCRIPTS =	\
 # Unix runtime
 RT_UNIX =	\
 		README_unix.txt \
+		runtime/KVim.desktop \
+		runtime/hi16-action-make.png \
+		runtime/hi22-action-make.png \
 		runtime/vim16x16.png \
 		runtime/vim16x16.xpm \
 		runtime/vim32x32.png \
@@ -618,12 +649,16 @@ EXTRA =		\
 		src/tee/Makefile* \
 		src/tee/tee.c \
 		csdpmi4b.zip \
-		emx.dll \
-		emxlibcs.dll \
 
 # generic language files
 LANG_GEN = \
 		README_lang.txt \
+		runtime/doc/*-fr.1 \
+		runtime/doc/*-fr.UTF-8.1 \
+		runtime/doc/*-it.1 \
+		runtime/doc/*-it.UTF-8.1 \
+		runtime/doc/*-ru.1 \
+		runtime/doc/*-ru.UTF-8.1 \
 		runtime/lang/README.txt \
 		runtime/lang/menu_*.vim \
 		runtime/keymap/README.txt \
@@ -636,15 +671,36 @@ LANG_GEN = \
 		runtime/tutor/tutor.ko.* \
 		runtime/tutor/tutor.pl.* \
 		runtime/tutor/tutor.ru.* \
+		runtime/tutor/tutor.sk.* \
 		runtime/tutor/tutor.zh.* \
+		runtime/spell/README.txt \
+		runtime/spell/??/*.diff \
+		runtime/spell/??/main.aap \
+		runtime/spell/yi/README.txt \
+		runtime/spell/main.aap \
+		runtime/spell/cleanadd.vim \
+		runtime/spell/*.vim \
+		runtime/spell/fixdup \
+
+# generic language files, binary
+LANG_GEN_BIN = \
+		runtime/spell/README_en.txt \
+		runtime/spell/en.ascii.spl \
+		runtime/spell/en.latin1.spl \
+		runtime/spell/en.utf-8.spl \
+		runtime/spell/en.ascii.sug \
+		runtime/spell/en.latin1.sug \
+		runtime/spell/en.utf-8.sug \
 
 # all files for lang archive
 LANG_SRC = \
 		src/po/README.txt \
 		src/po/README_mingw.txt \
 		src/po/README_mvc.txt \
+		src/po/check.vim \
 		src/po/cleanup.vim \
 		src/po/Makefile \
+		src/po/Make_cyg.mak \
 		src/po/Make_ming.mak \
 		src/po/Make_mvc.mak \
 		src/po/sjiscorr.c \
