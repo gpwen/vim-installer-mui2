@@ -2,7 +2,7 @@
 #
 # NSIS file to create a self-installing exe for Vim.
 # It requires NSIS version 2.34 or later (for Modern UI 2.0).
-# Last change:  2010-07-30
+# Last Change:	2010 Jul 30
 
 # WARNING: if you make changes to this script, look out for $0 to be valid,
 # because uninstall deletes most files in $0.
@@ -36,7 +36,7 @@
 #!define MUI_UNFINISHPAGE_NOAUTOCLOSE
 
 !define VER_MAJOR 7
-!define VER_MINOR 3c
+!define VER_MINOR 3d
 
 # ---------------- No configurable settings below this line ------------------
 
