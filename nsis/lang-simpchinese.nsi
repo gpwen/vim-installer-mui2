@@ -134,8 +134,8 @@ LangString str_desc_rm_exe       ${LANG_SIMPCHINESE} \
     "删除 Vim 的所有执行文件及脚本。"
 
 LangString str_desc_rm_plugin    ${LANG_SIMPCHINESE} \
-    "删除您的 Vim  插件目录 $vim_plugin_path。请注意该目录下所有文件都会被\
-     删除。如果您在该目录下有需要保留的文件，切勿选择该项！"
+    "删除您的 Vim  插件目录 $vim_plugin_path。$\n$\n请注意该目录下所有文件\
+     都会被删除。如果您在该目录下有需要保留的文件，切勿选择该项！"
 
 LangString str_desc_rm_root      ${LANG_SIMPCHINESE} \
     "删除 Vim 安装目录 $vim_install_root。请注意该目录下可能有您的 Vim 配置\
