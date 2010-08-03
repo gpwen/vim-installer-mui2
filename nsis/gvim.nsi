@@ -21,45 +21,57 @@
 # comment the next line if you do not want to add Native Language Support
 !define HAVE_NLS
 
+# commend the next line if you do not want to include VisVim extension:
+#!define HAVE_VIS_VIM
+
 !define VER_MAJOR 7
 !define VER_MINOR 3c
 
 # ----------- No configurable settings below this line -----------
 
-!include MUI2.nsh
-!include UpgradeDLL.nsh		# for VisVim.dll
-!include LogicLib.nsh
-!include x64.nsh
+!include "MUI2.nsh"
+!include "UpgradeDLL.nsh"  # for VisVim.dll
+!include "Sections.nsh"
+!include "LogicLib.nsh"
+!include "x64.nsh"
 
-Name "Vim ${VER_MAJOR}.${VER_MINOR}"
-OutFile gvim${VER_MAJOR}${VER_MINOR}.exe
-CRCCheck force
-SetCompressor lzma
-SetDatablockOptimize on
-BrandingText " "
+# Global variables:
+Var vim_install_root
+Var vim_plugin_path
+
+Name                  "Vim ${VER_MAJOR}.${VER_MINOR}"
+OutFile               gvim${VER_MAJOR}${VER_MINOR}.exe
+CRCCheck              force
+SetCompressor         lzma
+SetDatablockOptimize  on
+BrandingText          " "
 RequestExecutionLevel highest
 
-!define MUI_ICON "icons\vim_16c.ico"
-# NSIS2 uses a different strategy with six diferent images in a strip...
-#EnabledBitmap icons\enabled.bmp
-#DisabledBitmap icons\disabled.bmp
-!define MUI_UNICON "icons\vim_uninst_16c.ico"
+!define MUI_ICON      "icons\vim_16c.ico"
+!define MUI_UNICON    "icons\vim_uninst_16c.ico"
 
 # On NSIS 2 using the BGGradient causes trouble on Windows 98, in combination
 # with the BringToFront.
 # BGGradient 004000 008200 FFFFFF
-!define MUI_COMPONENTSPAGE_TEXT_TOP "This will install Vim ${VER_MAJOR}.${VER_MINOR} on your computer."
-!define MUI_DIRECTORYPAGE_TEXT_TOP  "Choose a directory to install Vim (must end in 'vim')"
-!define MUI_LICENSEPAGE_TEXT_TOP    "You should read the following before installing:"
+!define MUI_COMPONENTSPAGE_TEXT_TOP \
+    "This will install Vim ${VER_MAJOR}.${VER_MINOR} on your computer."
+!define MUI_DIRECTORYPAGE_TEXT_TOP \
+    "Choose a directory to install Vim (must end in 'vim')"
+!define MUI_LICENSEPAGE_TEXT_TOP \
+    "You should read the following before installing:"
 !define MUI_LICENSEPAGE_CHECKBOX
-!define MUI_FINISHPAGE_RUN "$0\gvim.exe"
-!define MUI_FINISHPAGE_RUN_TEXT "Show REDAME after I finish"
+!define MUI_FINISHPAGE_RUN            "$0\gvim.exe"
+!define MUI_FINISHPAGE_RUN_TEXT       "Show README after I finish"
 !define MUI_FINISHPAGE_RUN_PARAMETERS "-R $\"$0\README.txt$\""
-#!define MUI_FINISHPAGE_REBOOTLATER_DEFAULT
+!define MUI_FINISHPAGE_REBOOTLATER_DEFAULT
 !define MUI_FINISHPAGE_NOREBOOTSUPPORT
 !define MUI_UNFINISHPAGE_NOREBOOTSUPPORT
+!define MUI_UNCONFIRMPAGE_TEXT_TOP \
+    "This will uninstall Vim ${VER_MAJOR}.${VER_MINOR} from your system."
 
-!define MUI_UNCONFIRMPAGE_TEXT_TOP "This will uninstall Vim ${VER_MAJOR}.${VER_MINOR} from your system."
+# Do not automatically jump to the finish page, to allow the user to check the
+# uninstall log.  Define this for debug purpose.
+!define MUI_UNFINISHPAGE_NOAUTOCLOSE
 
 !ifdef HAVE_UPX
   !packhdr temp.dat "upx --best --compress-icons=1 temp.dat"
@@ -81,7 +93,7 @@ SilentInstall normal
   !insertmacro MUI_PAGE_WELCOME
   !insertmacro MUI_PAGE_LICENSE "${VIMRT}\doc\uganda.nsis.txt"
   !insertmacro MUI_PAGE_COMPONENTS
-  !define MUI_PAGE_CUSTOMFUNCTION_LEAVE CheckInstallDir
+  #!define MUI_PAGE_CUSTOMFUNCTION_LEAVE CheckInstallDir
   !insertmacro MUI_PAGE_DIRECTORY
   !insertmacro MUI_PAGE_INSTFILES
   !insertmacro MUI_PAGE_FINISH
@@ -142,21 +154,14 @@ Function .onInit
   StrCpy $0 "$INSTDIR\vim${VER_MAJOR}${VER_MINOR}"
   StrCpy $1 "-register-OLE"
   StrCpy $2 "gvim evim gview gvimdiff vimtutor"
-
 FunctionEnd
-
-#Function .onUserAbort
-#  MessageBox MB_YESNO|MB_ICONQUESTION "Abort install?" IDYES NoCancelAbort
-#    Abort ; causes installer to not quit.
-#  NoCancelAbort:
-#FunctionEnd
 
 # We only accept the directory if it ends in "vim".  Using .onVerifyInstDir has
 # the disadvantage that the browse dialog is difficult to use.
-Function CheckInstallDir
+Function .onVerifyInstDir
   StrCpy $0 $INSTDIR 3 -3
   StrCmp $0 "vim" PathGood
-    MessageBox MB_OK "The path must end in 'vim'."
+    #MessageBox MB_OK "The path must end in 'vim'."
     Abort
   PathGood:
 FunctionEnd
@@ -167,24 +172,6 @@ FunctionEnd
 
 Function .onInstFailed
   MessageBox MB_OK|MB_ICONEXCLAMATION "Installation failed. Better luck next time."
-FunctionEnd
-
-Function un.GetParent
-  Exch $0 ; old $0 is on top of stack
-  Push $1
-  Push $2
-  StrCpy $1 -1
-  loop:
-    StrCpy $2 $0 1 $1
-    StrCmp $2 "" exit
-    StrCmp $2 "\" exit
-    IntOp $1 $1 - 1
-  Goto loop
-  exit:
-    StrCpy $0 $0 $1
-    Pop $2
-    Pop $1
-    Exch $0 ; put $0 on top of stack, restore $0 to original value
 FunctionEnd
 
 ##########################################################
@@ -310,17 +297,17 @@ Section "Add an Edit-with-Vim context menu entry"
 	  File /oname=gvimext.dll ${VIMSRC}\GvimExt\gvimext.dll
 	${EndIf}
 
-        ${If} ${Errors}
-          # Can't copy gvimext.dll, create it under another name and rename it
-          # on next reboot.
-          GetTempFileName $3 $0
-          ${If} ${RunningX64}
-            File /oname=$3 ${VIMSRC}\GvimExt\gvimext64.dll
-          ${Else}
-            File /oname=$3 ${VIMSRC}\GvimExt\gvimext.dll
-          ${EndIf}
-          Rename /REBOOTOK $3 $0\gvimext.dll
-        ${EndIf}
+	${If} ${Errors}
+	  # Can't copy gvimext.dll, create it under another name and rename it
+	  # on next reboot.
+	  GetTempFileName $3 $0
+	  ${If} ${RunningX64}
+	    File /oname=$3 ${VIMSRC}\GvimExt\gvimext64.dll
+	  ${Else}
+	    File /oname=$3 ${VIMSRC}\GvimExt\gvimext.dll
+	  ${EndIf}
+	  Rename /REBOOTOK $3 $0\gvimext.dll
+	${EndIf}
 
 	SetOverwrite lastused
 
@@ -351,13 +338,15 @@ Section "Create plugin directories in VIM"
 SectionEnd
 
 ##########################################################
-# Section "VisVim Extension for MS Visual Studio"
-# 	SectionIn 3
-#
-# 	SetOutPath $0
-# 	!insertmacro UpgradeDLL "${VIMSRC}\VisVim\VisVim.dll" "$0\VisVim.dll" "$0"
-# 	File ${VIMSRC}\VisVim\README_VisVim.txt
-# SectionEnd
+!ifdef HAVE_VIS_VIM
+	Section "VisVim Extension for MS Visual Studio"
+		SectionIn 3
+
+		SetOutPath $0
+		!insertmacro UpgradeDLL "${VIMSRC}\VisVim\VisVim.dll" "$0\VisVim.dll" "$0"
+		File ${VIMSRC}\VisVim\README_VisVim.txt
+	SectionEnd
+!endif
 
 ##########################################################
 !ifdef HAVE_NLS
@@ -387,90 +376,164 @@ Section -post
 SectionEnd
 
 ##########################################################
-Section "un.Remove gvim"
-	# Apparently $INSTDIR is set to the directory where the uninstaller is
-	# created.  Thus the "vim61" directory is included in it.
-	StrCpy $0 "$INSTDIR"
+Section "un.Unregister VIM"
+        # Do not allow user to keep this section:
+        SectionIn RO
 
-	# If VisVim was installed, unregister the DLL.
-	${If} ${FileExists} "$0\VisVim.dll"
-	  ExecWait "regsvr32.exe /u /s $0\VisVim.dll"
+        DetailPrint "Unregistering VIM ..."
+
+        # Apparently $INSTDIR is set to the directory where the uninstaller is
+        # created.  Thus the "vim61" directory is included in it.
+        StrCpy $0 "$INSTDIR"
+
+        # If VisVim was installed, unregister the DLL.
+        ${If} ${FileExists} "$0\VisVim.dll"
+          ExecWait "regsvr32.exe /u /s $0\VisVim.dll"
         ${EndIf}
 
-	# delete the context menu entry and batch files
-	ExecWait "$0\uninstal.exe -nsis"
+        # delete the context menu entry and batch files
+        ExecWait "$0\uninstal.exe -nsis"
 
-	# We may have been put to the background when uninstall did something.
-	BringToFront
-
+        # We may have been put to the background when uninstall did something.
+        BringToFront
 SectionEnd
 
-Section "un.Remove VIM Excutables/Runtime Files"
-  # It contains the Vim executables and runtime files.
+##########################################################
+Section "un.Remove VIM Excutables/Runtime Files" section_rm_exe
+        DetailPrint "Removing VIM excutables/runtime files ..."
 
-  Delete /REBOOTOK $0\*.dll
-  ClearErrors
+	# It contains the Vim executables and runtime files.
+	Delete /REBOOTOK $0\*.dll
+	ClearErrors
 
-  # Remove everything but *.dll files.  Avoids that
-  # a lot remains when gvimext.dll cannot be deleted.
-  RMDir /r $0\autoload
-  RMDir /r $0\colors
-  RMDir /r $0\compiler
-  RMDir /r $0\doc
-  RMDir /r $0\ftplugin
-  RMDir /r $0\indent
-  RMDir /r $0\macros
-  RMDir /r $0\plugin
-  RMDir /r $0\spell
-  RMDir /r $0\syntax
-  RMDir /r $0\tools
-  RMDir /r $0\tutor
-  RMDir /r $0\VisVim
-  RMDir /r $0\lang
-  RMDir /r $0\keymap
-  Delete $0\*.exe
-  Delete $0\*.bat
-  Delete $0\*.vim
-  Delete $0\*.txt
+	# Remove everything but *.dll files.  Avoids that
+	# a lot remains when gvimext.dll cannot be deleted.
+	RMDir /r $0\autoload
+	RMDir /r $0\colors
+	RMDir /r $0\compiler
+	RMDir /r $0\doc
+	RMDir /r $0\ftplugin
+	RMDir /r $0\indent
+	RMDir /r $0\macros
+	RMDir /r $0\plugin
+	RMDir /r $0\spell
+	RMDir /r $0\syntax
+	RMDir /r $0\tools
+	RMDir /r $0\tutor
+	RMDir /r $0\VisVim
+	RMDir /r $0\lang
+	RMDir /r $0\keymap
+	Delete $0\*.exe
+	Delete $0\*.bat
+	Delete $0\*.vim
+	Delete $0\*.txt
 
-  ${If} ${Errors}
-    MessageBox MB_OK|MB_ICONEXCLAMATION \
-      "Some files in $0 have not been deleted!$\nYou must do it manually."
+	${If} ${Errors}
+	  MessageBox MB_OK|MB_ICONEXCLAMATION \
+	    "Some files in $0 have not been deleted!$\nYou must do it manually."
+	${EndIf}
+
+	# No error message if the "vim62" directory can't be removed, the
+	# gvimext.dll may still be there.
+	RMDir /r /REBOOTOK $0
+SectionEnd
+
+##########################################################
+Section "un.Remove VIM Plugin Directory (vimfiles)" section_rm_plugin
+        DetailPrint "Removing VIM plugin directory $vim_plugin_path ..."
+        RMDir /r /REBOOTOK $vim_plugin_path
+SectionEnd
+
+##########################################################
+Section "un.Remove VIM Root Directory" section_rm_root
+        DetailPrint "Removing VIM root directory $vim_install_root ..."
+	RMDir /r /REBOOTOK $vim_install_root
+SectionEnd
+
+##########################################################
+
+Function un.GetParent
+  Exch $0 ; old $0 is on top of stack
+  Push $1
+  Push $2
+  StrCpy $1 -1
+
+  ${Do}
+    StrCpy $2 $0 1 $1
+    ${If}   $2 == ""
+    ${OrIf} $2 == "\"
+        ${ExitDo}
+    ${EndIf}
+    IntOp $1 $1 - 1
+  ${Loop}
+
+  StrCpy $0 $0 $1
+  Pop $2
+  Pop $1
+  Exch $0 ; put $0 on top of stack, restore $0 to original value
+FunctionEnd
+
+Function un.onInit
+  # Get root path of the installation:
+  Push $INSTDIR
+  Call un.GetParent
+  Pop $vim_install_root
+
+  # TODO: Check to make sure this is a valid directory:
+
+  # Show what will be removed:
+  SectionSetText ${section_rm_root} "Remove VIM Root Directory ($vim_install_root)"
+
+  # Determines vim plugin path.  Try plugin path under vim install root first,
+  # and then plugin path under user's HOME directory.
+  StrCpy $vim_plugin_path "$vim_install_root\vimfiles"
+  ${IfNot} ${FileExists} "$vim_plugin_path"
+    ReadEnvStr $1 "HOME"
+    ${If}    $1 != ""
+    ${AndIf} ${FileExists} "$1\vimfiles"
+      StrCpy $vim_plugin_path "$1\vimfiles"
+    ${Else}
+      StrCpy $vim_plugin_path ""
+    ${EndIf}
   ${EndIf}
 
-  # No error message if the "vim62" directory can't be removed, the
-  # gvimext.dll may still be there.
-  RMDir /r /REBOOTOK $0
+  # Update status of the vim plugin uninstall section:
+  ${If} $vim_plugin_path == ""
+    # We don't know how to remove vim plugin as no valid plugin path found:
+    !insertmacro UnSelectSection ${section_rm_plugin}
+    !insertmacro SetSectionFlag  ${section_rm_plugin} ${SF_RO}
+  ${Else}
+    # Valid plugin path found, remove it by default:
+    !insertmacro ClearSectionFlag ${section_rm_plugin} ${SF_RO}
+    !insertmacro SelectSection    ${section_rm_plugin}
 
-SectionEnd
+    # Show what will be removed:
+    SectionSetText ${section_rm_plugin} "Remove VIM Plugin Directory ($vim_plugin_path)"
+  ${EndIf}
+FunctionEnd
 
-Section "un.Remove VIM Plugin Directory (vimfiles)"
-  # get the parent dir of the installation
-  Push $INSTDIR
-  Call un.GetParent
-  Pop $0
-  StrCpy $1 $0
+Function un.onSelChange
+  # Get selection status of the exe removal section:
+  SectionGetFlags ${section_rm_exe} $R0
 
-  # if a plugin dir was created at installation ask the user to remove it
-  # first look in the root of the installation then in HOME
-  IfFileExists $1\vimfiles AskRemove 0
-      ReadEnvStr $1 "HOME"
-      StrCmp $1 "" NoRemove 0
+  # Status of the plugin removal section is considered only if valid plugin
+  # path has been found:
+  ${If} $vim_plugin_path != ""
+    SectionGetFlags ${section_rm_plugin} $R1
+    IntOp $R0 $R0 & $R1
+  ${EndIf}
 
-      IfFileExists $1\vimfiles 0 NoRemove
+  IntOp $R0 $R0 & ${SF_SELECTED}
 
-    AskRemove:
-      # If you have created something there that you want to keep, click No
-      RMDir /r /REBOOTOK $1\vimfiles
-    NoRemove:
-SectionEnd
-
-Section "un.Remove VIM Root Directory ($0)"
-  Push $INSTDIR
-  Call un.GetParent
-  Pop $0
-  StrCpy $1 $0
-
-  # It contains your Vim configuration files!" IDNO NoDelete
-  RMDir /r /REBOOTOK $0 ; skipped if no
-SectionEnd
+  # Root directory can be removed only if all sub-directories will be removed:
+  ${If} $R0 = ${SF_SELECTED}
+    # All sub-directories will be removed, so user is allowed to remove the
+    # root directory:
+    !insertmacro ClearSectionFlag ${section_rm_root} ${SF_RO}
+  ${Else}
+    # Some sub-directories will not be removed, disable removal of the root
+    # directory:
+    !insertmacro UnSelectSection ${section_rm_root}
+    !insertmacro SetSectionFlag  ${section_rm_root} ${SF_RO}
+  ${EndIf}
+FunctionEnd
