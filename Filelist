@@ -314,8 +314,8 @@ SRC_DOS =	\
 		src/xxd/Make_mvc.mak \
 		nsis/gvim.nsi \
 		nsis/lang-english.nsi \
-		nsis/lang-simp-chinese.nsi \
-		nsis/lang-trad-chinese.nsi \
+		nsis/lang-simpchinese.nsi \
+		nsis/lang-tradchinese.nsi \
 		nsis/README.txt \
 		uninstal.txt \
 		src/VisVim/Commands.cpp \

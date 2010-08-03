@@ -24,10 +24,13 @@
 # Commend the next line if you do not want to include VisVim extension:
 #!define HAVE_VIS_VIM
 
+# Uncomment the following line to create a multilanguage installer:
+!define HAVE_MULTI_LANG
+
 # Uncomment the following line so that the uninstaller would not jump to the
 # finish page automatically, this allows the user to check the uninstall log.
 # It's used for debug purpose.
-!define MUI_UNFINISHPAGE_NOAUTOCLOSE
+#!define MUI_UNFINISHPAGE_NOAUTOCLOSE
 
 !define VER_MAJOR 7
 !define VER_MINOR 3c
@@ -59,9 +62,9 @@ RequestExecutionLevel highest
 InstallDir            "$PROGRAMFILES\Vim"
 
 # Types of installs we can perform:
-InstType              $(str_TypeTypical)
-InstType              $(str_TypeMinimal)
-InstType              $(str_TypeFull)
+InstType              $(str_type_typical)
+InstType              $(str_type_minimal)
+InstType              $(str_type_full)
 
 SilentInstall         normal
 
@@ -78,10 +81,10 @@ SilentInstall         normal
 # Show all languages, despite user's codepage:
 !define MUI_LANGDLL_ALLLANGUAGES
 
-!define MUI_DIRECTORYPAGE_TEXT_DESTINATION $(str_DestFolder)
+!define MUI_DIRECTORYPAGE_TEXT_DESTINATION $(str_dest_folder)
 !define MUI_LICENSEPAGE_CHECKBOX
 !define MUI_FINISHPAGE_RUN                 "$0\gvim.exe"
-!define MUI_FINISHPAGE_RUN_TEXT            $(str_ShowReadme)
+!define MUI_FINISHPAGE_RUN_TEXT            $(str_show_readme)
 !define MUI_FINISHPAGE_RUN_PARAMETERS      "-R $\"$0\README.txt$\""
 !define MUI_FINISHPAGE_REBOOTLATER_DEFAULT
 !define MUI_FINISHPAGE_NOREBOOTSUPPORT
@@ -89,6 +92,14 @@ SilentInstall         normal
 
 !ifdef HAVE_UPX
   !packhdr temp.dat "upx --best --compress-icons=1 temp.dat"
+!endif
+
+# Registry key to save installer language selection.  It will be removed by
+# the uninstaller:
+!ifdef HAVE_MULTI_LANG
+  !define MUI_LANGDLL_REGISTRY_ROOT      "HKLM"
+  !define MUI_LANGDLL_REGISTRY_KEY       "SOFTWARE\Vim"
+  !define MUI_LANGDLL_REGISTRY_VALUENAME "Installer Language"
 !endif
 
 # Installer pages
@@ -113,8 +124,12 @@ SilentInstall         normal
 # will be used as the default.
 !insertmacro MUI_RESERVEFILE_LANGDLL
 !include lang-english.nsi
-!include lang-simp-chinese.nsi
-!include lang-trad-chinese.nsi
+
+# Include support for other languages:
+!ifdef HAVE_MULTI_LANG
+  !include lang-simpchinese.nsi
+  !include lang-tradchinese.nsi
+!endif
 
 ##############################################################################
 # Macros
@@ -198,10 +213,18 @@ Function .onInit
   Pop $R1
   Pop $R0
 
-  # Show language selection dialog:
-  !insertmacro MUI_LANGDLL_DISPLAY
+  # Show language selection dialog:  User selected language will be
+  # represented by Local ID (LCID) and assigned to $LANGUAGE.  If registry key
+  # defined, the LCID will also be stored in Windows registry.  For list of
+  # LCID, check "Locale IDs Assigned by Microsoft":
+  #   http://msdn.microsoft.com/en-us/goglobal/bb964664.aspx
+  !ifdef HAVE_MULTI_LANG
+    !insertmacro MUI_LANGDLL_DISPLAY
+  !endif
 FunctionEnd
 
+# Unintall existing Vim if found.  The install path of the existing Vim will
+# be used as the default install path.
 Function UninstallOldVer
   Push $R0
   Push $R1
@@ -254,7 +277,7 @@ Function .onInstSuccess
 FunctionEnd
 
 Function .onInstFailed
-  MessageBox MB_OK|MB_ICONEXCLAMATION $(str_MsgInstallFail)
+  MessageBox MB_OK|MB_ICONEXCLAMATION $(str_msg_install_fail)
 FunctionEnd
 
 
@@ -262,7 +285,7 @@ FunctionEnd
 # Installer Sections
 ##############################################################################
 
-Section $(str_SectionExe) id_section_exe
+Section $(str_section_exe) id_section_exe
 	SectionIn 1 2 3 RO
 
 	# we need also this here if the user changes the instdir
@@ -325,7 +348,7 @@ Section $(str_SectionExe) id_section_exe
 	File ${VIMRT}\tutor\*.*
 SectionEnd
 
-Section $(str_SectionConsole) id_section_console
+Section $(str_section_console) id_section_console
 	SectionIn 1 3
 
 	SetOutPath $0
@@ -341,25 +364,25 @@ Section $(str_SectionConsole) id_section_console
 	StrCpy $2 "$2 vim view vimdiff"
 SectionEnd
 
-Section $(str_SectionBatch) id_section_batch
+Section $(str_section_batch) id_section_batch
 	SectionIn 3
 
 	StrCpy $1 "$1 -create-batfiles $2"
 SectionEnd
 
-Section $(str_SectionDesktop) id_section_desktop
+Section $(str_section_desktop) id_section_desktop
 	SectionIn 1 3
 
 	StrCpy $1 "$1 -install-icons"
 SectionEnd
 
-Section $(str_SectionStartMenu) id_section_startmenu
+Section $(str_section_start_menu) id_section_startmenu
 	SectionIn 1 3
 
 	StrCpy $1 "$1 -add-start-menu"
 SectionEnd
 
-Section $(str_SectionQuickLaunch) id_section_quicklaunch
+Section $(str_section_quick_launch) id_section_quicklaunch
 	SectionIn 1 3
 
 	${If} $QUICKLAUNCH != $TEMP
@@ -369,7 +392,7 @@ Section $(str_SectionQuickLaunch) id_section_quicklaunch
         ${EndIf}
 SectionEnd
 
-Section $(str_SectionEditWith) id_section_editwith
+Section $(str_section_edit_with) id_section_editwith
 	SectionIn 1 3
 
 	# Be aware of this sequence of events:
@@ -408,26 +431,26 @@ Section $(str_SectionEditWith) id_section_editwith
 	StrCpy $1 "$1 -install-popup -install-openwith"
 SectionEnd
 
-Section $(str_SectionVimRC) id_section_vimrc
+Section $(str_section_vim_rc) id_section_vimrc
 	SectionIn 1 3
 
 	StrCpy $1 "$1 -create-vimrc"
 SectionEnd
 
-Section $(str_SectionPluginHome) id_section_pluginhome
+Section $(str_section_plugin_home) id_section_pluginhome
 	SectionIn 1 3
 
 	StrCpy $1 "$1 -create-directories home"
 SectionEnd
 
-Section $(str_SectionPluginVim) id_section_pluginvim
+Section $(str_section_plugin_vim) id_section_pluginvim
 	SectionIn 3
 
 	StrCpy $1 "$1 -create-directories vim"
 SectionEnd
 
 !ifdef HAVE_VIS_VIM
-	Section $(str_SectionVisVim) id_section_visvim
+	Section $(str_section_vis_vim) id_section_visvim
 		SectionIn 3
 
 		SetOutPath $0
@@ -437,7 +460,7 @@ SectionEnd
 !endif
 
 !ifdef HAVE_NLS
-	Section $(str_SectionNLS) id_section_nls
+	Section $(str_section_nls) id_section_nls
 		SectionIn 1 3
 
 		SetOutPath $0\lang
@@ -465,23 +488,23 @@ SectionEnd
 # Description for Installer Sections
 ##############################################################################
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
-  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_exe}         $(str_DescExe)
-  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_console}     $(str_DescConsole)
-  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_batch}       $(str_DescBatch)
-  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_desktop}     $(str_DescDesktop)
-  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_startmenu}   $(str_DescStartmenu)
-  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_quicklaunch} $(str_DescQuicklaunch)
-  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_editwith}    $(str_DescEditwith)
-  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_vimrc}       $(str_DescVimRC)
-  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_pluginhome}  $(str_DescPluginHome)
-  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_pluginvim}   $(str_DescPluginVim)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_exe}         $(str_desc_exe)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_console}     $(str_desc_console)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_batch}       $(str_desc_batch)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_desktop}     $(str_desc_desktop)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_startmenu}   $(str_desc_start_menu)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_quicklaunch} $(str_desc_quick_launch)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_editwith}    $(str_desc_edit_with)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_vimrc}       $(str_desc_vim_rc)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_pluginhome}  $(str_desc_plugin_home)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_pluginvim}   $(str_desc_plugin_vim)
 
 !ifdef HAVE_VIS_VIM
-  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_visvim}      $(str_DescVisVim)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_visvim}      $(str_desc_vis_vim)
 !endif
 
 !ifdef HAVE_NLS
-  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_nls}         $(str_DescNLS)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_nls}         $(str_desc_nls)
 !endif
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
@@ -490,11 +513,11 @@ SectionEnd
 # Uninstaller Sections
 ##############################################################################
 
-Section "un.$(str_UnsectionRegister)" id_unsection_register
+Section "un.$(str_unsection_register)" id_unsection_register
         # Do not allow user to keep this section:
         SectionIn RO
 
-        DetailPrint $(str_MsgUnregister)
+        DetailPrint $(str_msg_unregister)
 
         # Apparently $INSTDIR is set to the directory where the uninstaller is
         # created.  Thus the "vim61" directory is included in it.
@@ -515,8 +538,8 @@ Section "un.$(str_UnsectionRegister)" id_unsection_register
         BringToFront
 SectionEnd
 
-Section "un.$(str_UnsectionExe)" id_unsection_exe
-        DetailPrint $(str_MsgRmExe)
+Section "un.$(str_unsection_exe)" id_unsection_exe
+        DetailPrint $(str_msg_rm_exe)
 
 	# It contains the Vim executables and runtime files.
 	Delete /REBOOTOK $0\*.dll
@@ -545,7 +568,7 @@ Section "un.$(str_UnsectionExe)" id_unsection_exe
 	Delete $0\*.txt
 
 	${If} ${Errors}
-	  MessageBox MB_OK|MB_ICONEXCLAMATION $(str_MsgRmExeFail)
+	  MessageBox MB_OK|MB_ICONEXCLAMATION $(str_msg_rm_exe_fail)
 	${EndIf}
 
 	# No error message if the "vim62" directory can't be removed, the
@@ -553,13 +576,13 @@ Section "un.$(str_UnsectionExe)" id_unsection_exe
 	RMDir /r /REBOOTOK $0
 SectionEnd
 
-Section "un.$(str_UnsectionPlugin)" id_unsection_plugin
-        DetailPrint $(str_MsgRmPlugin)
+Section "un.$(str_unsection_plugin)" id_unsection_plugin
+        DetailPrint $(str_msg_rm_plugin)
         RMDir /r /REBOOTOK $vim_plugin_path
 SectionEnd
 
-Section "un.$(str_UnsectionRoot)" id_unsection_root
-        DetailPrint $(str_MsgRmRoot)
+Section "un.$(str_unsection_root)" id_unsection_root
+        DetailPrint $(str_msg_rm_root)
 	RMDir /r /REBOOTOK $vim_install_root
 SectionEnd
 
@@ -568,10 +591,10 @@ SectionEnd
 # Description for Uninstaller Sections
 ##############################################################################
 !insertmacro MUI_UNFUNCTION_DESCRIPTION_BEGIN
-  !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_register}  $(str_DescUnregister)
-  !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_exe}       $(str_DescRmExe)
-  !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_plugin}    $(str_DescnRmPlugin)
-  !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_root}      $(str_DescnRmRoot)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_register}  $(str_desc_unregister)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_exe}       $(str_desc_rm_exe)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_plugin}    $(str_desc_rm_plugin)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_root}      $(str_desc_rm_root)
 !insertmacro MUI_UNFUNCTION_DESCRIPTION_END
 
 
@@ -592,7 +615,7 @@ Function un.onInit
   # Check to make sure this is a valid directory:
   !insertmacro VerifyInstDir $vim_install_root $R0
   ${If} $R0 = 0
-    MessageBox MB_OK|MB_ICONSTOP $(str_MsgInvalidRoot)
+    MessageBox MB_OK|MB_ICONSTOP $(str_msg_invalid_root)
     Abort
   ${EndIf}
 
@@ -621,6 +644,11 @@ Function un.onInit
   ${EndIf}
 
   Pop $R0
+
+  # Get stored language preference:
+  !ifdef HAVE_MULTI_LANG
+    !insertmacro MUI_UNGETLANGUAGE
+  !endif
 FunctionEnd
 
 Function un.onSelChange
