@@ -18,16 +18,21 @@
 # Get it at http://upx.sourceforge.net
 !define HAVE_UPX
 
-# comment the next line if you do not want to add Native Language Support
+# Comment the next line if you do not want to add Native Language Support
 !define HAVE_NLS
 
-# commend the next line if you do not want to include VisVim extension:
+# Commend the next line if you do not want to include VisVim extension:
 #!define HAVE_VIS_VIM
+
+# Uncomment the following line so that the uninstaller would not jump to the
+# finish page automatically, this allows the user to check the uninstall log.
+# It's used for debug purpose.
+!define MUI_UNFINISHPAGE_NOAUTOCLOSE
 
 !define VER_MAJOR 7
 !define VER_MINOR 3c
 
-# ----------- No configurable settings below this line -----------
+# ---------------- No configurable settings below this line ------------------
 
 !include "MUI2.nsh"
 !include "UpgradeDLL.nsh"  # for VisVim.dll
@@ -46,6 +51,19 @@ SetCompressor         lzma
 SetDatablockOptimize  on
 BrandingText          " "
 RequestExecutionLevel highest
+
+# This adds '\vim' to the user choice automagically.  The actual value is
+# obtained below with ReadINIStr.
+InstallDir            "$PROGRAMFILES\Vim"
+
+# Types of installs we can perform:
+InstType              Typical
+InstType              Minimal
+InstType              Full
+
+SilentInstall         normal
+
+!define VIM_LNK_NAME  "gVim ${VER_MAJOR}.${VER_MINOR}"
 
 !define MUI_ICON      "icons\vim_16c.ico"
 !define MUI_UNICON    "icons\vim_uninst_16c.ico"
@@ -69,83 +87,105 @@ RequestExecutionLevel highest
 !define MUI_UNCONFIRMPAGE_TEXT_TOP \
     "This will uninstall Vim ${VER_MAJOR}.${VER_MINOR} from your system."
 
-# Do not automatically jump to the finish page, to allow the user to check the
-# uninstall log.  Define this for debug purpose.
-!define MUI_UNFINISHPAGE_NOAUTOCLOSE
-
 !ifdef HAVE_UPX
   !packhdr temp.dat "upx --best --compress-icons=1 temp.dat"
 !endif
 
-# This adds '\vim' to the user choice automagically.  The actual value is
-# obtained below with ReadINIStr.
-InstallDir "$PROGRAMFILES\Vim"
-
-# Types of installs we can perform:
-InstType Typical
-InstType Minimal
-InstType Full
-
-SilentInstall normal
-
-##########################################################
+##############################################################################
 # Installer pages
+##############################################################################
+  !define MUI_PAGE_CUSTOMFUNCTION_LEAVE UninstallOldVer
   !insertmacro MUI_PAGE_WELCOME
   !insertmacro MUI_PAGE_LICENSE "${VIMRT}\doc\uganda.nsis.txt"
   !insertmacro MUI_PAGE_COMPONENTS
-  #!define MUI_PAGE_CUSTOMFUNCTION_LEAVE CheckInstallDir
   !insertmacro MUI_PAGE_DIRECTORY
   !insertmacro MUI_PAGE_INSTFILES
   !insertmacro MUI_PAGE_FINISH
 
-  # Uninstaller pages:
+##############################################################################
+# Uninstaller pages:
+##############################################################################
   !insertmacro MUI_UNPAGE_CONFIRM
   !insertmacro MUI_UNPAGE_COMPONENTS
   !insertmacro MUI_UNPAGE_INSTFILES
   !insertmacro MUI_UNPAGE_FINISH
 
-##########################################################
+##############################################################################
 # Languages
+##############################################################################
   !insertmacro MUI_LANGUAGE "English"
   !insertmacro MUI_LANGUAGE "SimpChinese"
 
-##########################################################
-# Functions
+##############################################################################
+# Macros
+##############################################################################
+
+# Verify VIM install path $INPUT_DIR.  If the input path is a valid VIM
+# install path (ends with "vim"), $VALID will be set to 1; Otherwise $VALID
+# will be set to 0.
+!macro VerifyInstDir INPUT_DIR VALID
+  StrCpy ${VALID} ${INPUT_DIR} 3 -3
+  ${If} ${VALID} != "vim"
+    StrCpy ${VALID} 0
+  ${Else}
+    StrCpy ${VALID} 1
+  ${EndIf}
+!macroend
+
+# The following function needs to be in both installer an uninstaller, so a
+# macro is created to avoid code duplication.
+!macro GetParent un
+  Function ${un}GetParent
+    Exch $0 ; old $0 is on top of stack
+    Push $1
+    Push $2
+    StrCpy $1 -1
+
+    ${Do}
+      StrCpy $2 $0 1 $1
+      ${If}   $2 == ""
+      ${OrIf} $2 == "\"
+          ${ExitDo}
+      ${EndIf}
+      IntOp $1 $1 - 1
+    ${Loop}
+
+    StrCpy $0 $0 $1
+    Pop $2
+    Pop $1
+    Exch $0 ; put $0 on top of stack, restore $0 to original value
+  FunctionEnd
+!macroend
+
+
+##############################################################################
+# Installer Functions
+##############################################################################
+
+!insertmacro GetParent ""
 
 Function .onInit
-  MessageBox MB_YESNO|MB_ICONQUESTION \
-	"This will install Vim ${VER_MAJOR}.${VER_MINOR} on your computer.$\n Continue?" \
-	IDYES NoAbort
-	    Abort ; causes installer to quit.
-	NoAbort:
+  Push $R0
+  Push $R1
 
-  # run the install program to check for already installed versions
-  SetOutPath $TEMP
-  File /oname=install.exe ${VIMSRC}\installw32.exe
-  ExecWait "$TEMP\install.exe -uninstall-check"
-  Delete $TEMP\install.exe
+  # If VIM environment string contains a valid VIM install path, use that as
+  # install path:
+  ReadEnvStr $R0 "VIM"
+  ${If}    $R0 != ""
+  ${AndIf} ${FileExists} "$R0"
+    Push $R0
+    Call GetParent
+    Pop $R0
 
-  # We may have been put to the background when uninstall did something.
-  BringToFront
+    !insertmacro VerifyInstDir $R0 $R1
+    ${IfThen} $R1 = 0 ${|} StrCpy $INSTDIR $R0 ${|}
+  ${EndIf}
 
-  # Install will have created a file for us that contains the directory where
-  # we should install.  This is $VIM if it's set.  This appears to be the only
-  # way to get the value of $VIM here!?
-  ReadINIStr $INSTDIR $TEMP\vimini.ini vimini dir
-  Delete $TEMP\vimini.ini
+  # Default install path:
+  !insertmacro VerifyInstDir $INSTDIR $R0
+  ${IfThen} $R0 = 0 ${|} StrCpy $INSTDIR "$PROGRAMFILES\Vim" ${|}
 
-  # If ReadINIStr failed or did not find a path: use the default dir.
-  StrCmp $INSTDIR "" 0 IniOK
-  StrCpy $INSTDIR "$PROGRAMFILES\Vim"
-  IniOK:
-
-  # Should check for the value of $VIM and use it.  Unfortunately I don't know
-  # how to obtain the value of $VIM
-  # IfFileExists "$VIM" 0 No_Vim
-  #   StrCpy $INSTDIR "$VIM"
-  # No_Vim:
-
-  # User variables:
+  # Initialize user variables:
   # $0 - holds the directory the executables are installed to
   # $1 - holds the parameters to be passed to install.exe.  Starts with OLE
   #      registration (since a non-OLE gvim will not complain, and we want to
@@ -154,16 +194,56 @@ Function .onInit
   StrCpy $0 "$INSTDIR\vim${VER_MAJOR}${VER_MINOR}"
   StrCpy $1 "-register-OLE"
   StrCpy $2 "gvim evim gview gvimdiff vimtutor"
+
+  Pop $R1
+  Pop $R0
 FunctionEnd
 
-# We only accept the directory if it ends in "vim".  Using .onVerifyInstDir has
-# the disadvantage that the browse dialog is difficult to use.
+Function UninstallOldVer
+  Push $R0
+  Push $R1
+
+  # Run the install program to check for already installed versions:
+  SetOutPath $TEMP
+  File /oname=install.exe ${VIMSRC}\installw32.exe
+  ExecWait "$TEMP\install.exe -uninstall-check"
+  Delete $TEMP\install.exe
+
+  # We may have been put to the background when uninstall did something:
+  BringToFront
+
+  # Install will have created a file for us that contains the directory where
+  # we should install.  This is $VIM if it's set.  This appears to be the only
+  # way to get the value of $VIM here!?
+  ${If} ${FileExists} "$TEMP\vimini.ini"
+    ReadINIStr $R0 $TEMP\vimini.ini vimini dir
+    Delete $TEMP\vimini.ini
+
+    # Make sure the loaded path name is valid:
+    !insertmacro VerifyInstDir $R0 $R1
+    ${IfThen} $R1 = 0 ${|} StrCpy $R0 "" ${|}
+  ${Else}
+    StrCpy $R0 ""
+  ${EndIf}
+
+  # If ReadINIStr find a valid path: use it as the default dir:
+  ${If} $R0 != ""
+      StrCpy $INSTDIR $R0
+      StrCpy $0 "$R0\vim${VER_MAJOR}${VER_MINOR}"
+  ${EndIf}
+
+  Pop $R1
+  Pop $R0
+FunctionEnd
+
+# We only accept the directory if it ends in "vim":
 Function .onVerifyInstDir
-  StrCpy $0 $INSTDIR 3 -3
-  StrCmp $0 "vim" PathGood
-    #MessageBox MB_OK "The path must end in 'vim'."
-    Abort
-  PathGood:
+  Push $R0
+
+  !insertmacro VerifyInstDir $INSTDIR $R0
+  ${IfThen} $R0 = 0 ${|} Abort ${|}
+
+  Pop $R0
 FunctionEnd
 
 Function .onInstSuccess
@@ -174,7 +254,10 @@ Function .onInstFailed
   MessageBox MB_OK|MB_ICONEXCLAMATION "Installation failed. Better luck next time."
 FunctionEnd
 
-##########################################################
+##############################################################################
+# Installer Sections
+##############################################################################
+
 Section "Vim executables and runtime files"
 	SectionIn 1 2 3 RO
 
@@ -238,7 +321,6 @@ Section "Vim executables and runtime files"
 	File ${VIMRT}\tutor\*.*
 SectionEnd
 
-##########################################################
 Section "Vim console program (vim.exe)"
 	SectionIn 1 3
 
@@ -255,28 +337,34 @@ Section "Vim console program (vim.exe)"
 	StrCpy $2 "$2 vim view vimdiff"
 SectionEnd
 
-##########################################################
 Section "Create .bat files for command line use"
 	SectionIn 3
 
 	StrCpy $1 "$1 -create-batfiles $2"
 SectionEnd
 
-##########################################################
 Section "Create icons on the Desktop"
 	SectionIn 1 3
 
 	StrCpy $1 "$1 -install-icons"
 SectionEnd
 
-##########################################################
 Section "Add Vim to the Start Menu"
 	SectionIn 1 3
 
 	StrCpy $1 "$1 -add-start-menu"
 SectionEnd
 
-##########################################################
+Section "Add Vim to the Quick Launch Panel"
+	SectionIn 1 3
+
+	${If} $QUICKLAUNCH != $TEMP
+                SetOutPath ""
+                CreateShortCut "$QUICKLAUNCH\${VIM_LNK_NAME}.lnk" \
+                    "$0\gvim.exe" "" "$0\gvim.exe" 0
+        ${EndIf}
+SectionEnd
+
 Section "Add an Edit-with-Vim context menu entry"
 	SectionIn 1 3
 
@@ -316,28 +404,24 @@ Section "Add an Edit-with-Vim context menu entry"
 	StrCpy $1 "$1 -install-popup -install-openwith"
 SectionEnd
 
-##########################################################
 Section "Create a _vimrc if it doesn't exist"
 	SectionIn 1 3
 
 	StrCpy $1 "$1 -create-vimrc"
 SectionEnd
 
-##########################################################
 Section "Create plugin directories in HOME or VIM"
 	SectionIn 1 3
 
 	StrCpy $1 "$1 -create-directories home"
 SectionEnd
 
-##########################################################
 Section "Create plugin directories in VIM"
 	SectionIn 3
 
 	StrCpy $1 "$1 -create-directories vim"
 SectionEnd
 
-##########################################################
 !ifdef HAVE_VIS_VIM
 	Section "VisVim Extension for MS Visual Studio"
 		SectionIn 3
@@ -348,7 +432,6 @@ SectionEnd
 	SectionEnd
 !endif
 
-##########################################################
 !ifdef HAVE_NLS
 	Section "Native Language Support"
 		SectionIn 1 3
@@ -364,18 +447,19 @@ SectionEnd
 	SectionEnd
 !endif
 
-##########################################################
 Section -call_install_exe
 	SetOutPath $0
 	ExecWait "$0\install.exe $1"
 SectionEnd
 
-##########################################################
 Section -post
 	BringToFront
 SectionEnd
 
-##########################################################
+##############################################################################
+# Uninstaller Sections
+##############################################################################
+
 Section "un.Unregister VIM"
         # Do not allow user to keep this section:
         SectionIn RO
@@ -394,11 +478,13 @@ Section "un.Unregister VIM"
         # delete the context menu entry and batch files
         ExecWait "$0\uninstal.exe -nsis"
 
+        # Delete quick launch:
+        Delete "$QUICKLAUNCH\${VIM_LNK_NAME}.lnk"
+
         # We may have been put to the background when uninstall did something.
         BringToFront
 SectionEnd
 
-##########################################################
 Section "un.Remove VIM Excutables/Runtime Files" section_rm_exe
         DetailPrint "Removing VIM excutables/runtime files ..."
 
@@ -438,60 +524,50 @@ Section "un.Remove VIM Excutables/Runtime Files" section_rm_exe
 	RMDir /r /REBOOTOK $0
 SectionEnd
 
-##########################################################
 Section "un.Remove VIM Plugin Directory (vimfiles)" section_rm_plugin
         DetailPrint "Removing VIM plugin directory $vim_plugin_path ..."
         RMDir /r /REBOOTOK $vim_plugin_path
 SectionEnd
 
-##########################################################
 Section "un.Remove VIM Root Directory" section_rm_root
         DetailPrint "Removing VIM root directory $vim_install_root ..."
 	RMDir /r /REBOOTOK $vim_install_root
 SectionEnd
 
-##########################################################
+##############################################################################
+# Uninstaller Functions
+##############################################################################
 
-Function un.GetParent
-  Exch $0 ; old $0 is on top of stack
-  Push $1
-  Push $2
-  StrCpy $1 -1
-
-  ${Do}
-    StrCpy $2 $0 1 $1
-    ${If}   $2 == ""
-    ${OrIf} $2 == "\"
-        ${ExitDo}
-    ${EndIf}
-    IntOp $1 $1 - 1
-  ${Loop}
-
-  StrCpy $0 $0 $1
-  Pop $2
-  Pop $1
-  Exch $0 ; put $0 on top of stack, restore $0 to original value
-FunctionEnd
+!insertmacro GetParent "un."
 
 Function un.onInit
+  Push R0
+
   # Get root path of the installation:
   Push $INSTDIR
   Call un.GetParent
   Pop $vim_install_root
 
-  # TODO: Check to make sure this is a valid directory:
+  # Check to make sure this is a valid directory:
+  !insertmacro VerifyInstDir $vim_install_root $R0
+  ${If} $R0 = 0
+    MessageBox MB_OK|MB_ICONSTOP \
+      "Invalid install path $vim_install_root!  Abort uninstaller."
+    Abort
+  ${EndIf}
 
   # Show what will be removed:
-  SectionSetText ${section_rm_root} "Remove VIM Root Directory ($vim_install_root)"
+  SectionSetText ${section_rm_root} \
+    "Remove VIM Root Directory ($vim_install_root)"
 
   # Determines vim plugin path.  Try plugin path under vim install root first,
   # and then plugin path under user's HOME directory.
   StrCpy $vim_plugin_path "$vim_install_root\vimfiles"
   ${IfNot} ${FileExists} "$vim_plugin_path"
-    ReadEnvStr $1 "HOME"
-    ${If}    $1 != ""
-    ${AndIf} ${FileExists} "$1\vimfiles"
-      StrCpy $vim_plugin_path "$1\vimfiles"
+    ReadEnvStr $R0 "HOME"
+    ${If}    $R0 != ""
+    ${AndIf} ${FileExists} "$R0\vimfiles"
+      StrCpy $vim_plugin_path "$R0\vimfiles"
     ${Else}
       StrCpy $vim_plugin_path ""
     ${EndIf}
@@ -508,8 +584,11 @@ Function un.onInit
     !insertmacro SelectSection    ${section_rm_plugin}
 
     # Show what will be removed:
-    SectionSetText ${section_rm_plugin} "Remove VIM Plugin Directory ($vim_plugin_path)"
+    SectionSetText ${section_rm_plugin} \
+      "Remove VIM Plugin Directory ($vim_plugin_path)"
   ${EndIf}
+
+  Pop $R0
 FunctionEnd
 
 Function un.onSelChange
