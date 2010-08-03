@@ -158,7 +158,7 @@ SilentInstall         normal
 # Extract different version of vim console executable based on detected
 # Windows version.  The output path is whatever has already been set before
 # this marcro.
-!macro ExtractVimConsole
+!macro ExtractVimConsole_
     ReadRegStr $R0 HKLM \
         "SOFTWARE\Microsoft\Windows NT\CurrentVersion" CurrentVersion
     ${If} ${Errors}
@@ -169,13 +169,14 @@ SilentInstall         normal
         File /oname=vim.exe ${VIMSRC}\vimw32.exe
     ${EndIf}
 !macroend
+!define ExtractVimConsole "!insertmacro ExtractVimConsole_"
 
 # Detect whether an instance of Vim is running or not.  The console version of
 # Vim will be executed (silently) to list Vim servers.  If found, there must
 # be some instances of Vim running.
 # $VIM_CONSOLE_PATH - Input, path to Vim console (vim.exe)
 # $IS_RUNNING       - Output. 1 if some instances running, 0 if not.
-!macro DetectRunningVim VIM_CONSOLE_PATH IS_RUNNING
+!macro DetectRunningVim_ VIM_CONSOLE_PATH IS_RUNNING
     Push $R0
     Push $R1
 
@@ -199,10 +200,11 @@ SilentInstall         normal
     Exch $R0           # Restore R0 and put result on stack
     Pop  ${IS_RUNNING} # Assign result
 !macroend
+!define DetectRunningVim "!insertmacro DetectRunningVim_"
 
 # Show error message.  Error dialog will be shown only if we're currently not
 # in slient install mode.
-!macro ShowErrMsg ERR_MSG
+!macro ShowErrMsg_ ERR_MSG
     # Show message box only if we're not in silent install mode:
     ${IfNot} ${Silent}
         MessageBox MB_OK|MB_ICONEXCLAMATION ${ERR_MSG} /SD IDOK
@@ -213,6 +215,7 @@ SilentInstall         normal
     # TODO: A better choice should be sent it to external log file.
     DetailPrint ${ERR_MSG}
 !macroend
+!define ShowErrMsg "!insertmacro ShowErrMsg_"
 
 
 ##############################################################################
@@ -308,11 +311,11 @@ Function CheckRunningVim
     Push $R0
 
     SetOutPath $TEMP
-    !insertmacro ExtractVimConsole
-    !insertmacro DetectRunningVim $TEMP $R0
+    ${ExtractVimConsole}
+    ${DetectRunningVim} $TEMP $R0
     Delete $TEMP\vim.exe
     ${If} $R0 <> 0
-        !insertmacro ShowErrMsg $(str_msg_vim_running)
+        ${ShowErrMsg} $(str_msg_vim_running)
         Pop $R0
         Abort
     ${EndIf}
@@ -338,7 +341,7 @@ Function .onInstSuccess
 FunctionEnd
 
 Function .onInstFailed
-    !insertmacro ShowErrMsg $(str_msg_install_fail)
+    ${ShowErrMsg} $(str_msg_install_fail)
 FunctionEnd
 
 
@@ -413,7 +416,7 @@ Section $(str_section_console) id_section_console
     SectionIn 1 3
 
     SetOutPath $0
-    !insertmacro ExtractVimConsole
+    ${ExtractVimConsole}
     StrCpy $2 "$2 vim view vimdiff"
 SectionEnd
 
@@ -629,7 +632,7 @@ Section "un.$(str_unsection_exe)" id_unsection_exe
     Delete $0\*.txt
 
     ${If} ${Errors}
-        !insertmacro ShowErrMsg $(str_msg_rm_exe_fail)
+        ${ShowErrMsg} $(str_msg_rm_exe_fail)
     ${EndIf}
 
     # No error message if the "vim62" directory can't be removed, the
@@ -672,7 +675,7 @@ Function un.onInit
     # Check to make sure this is a valid directory:
     !insertmacro VerifyInstDir $vim_install_root $R0
     ${If} $R0 = 0
-        !insertmacro ShowErrMsg $(str_msg_invalid_root)
+        ${ShowErrMsg} $(str_msg_invalid_root)
         Pop $R0
         Abort
     ${EndIf}
@@ -740,9 +743,9 @@ FunctionEnd
 Function un.CheckRunningVim
     Push $R0
 
-    !insertmacro DetectRunningVim $INSTDIR $R0
+    ${DetectRunningVim} $INSTDIR $R0
     ${If} $R0 <> 0
-        !insertmacro ShowErrMsg $(str_msg_vim_running)
+        ${ShowErrMsg} $(str_msg_vim_running)
         Pop $R0
         Abort
     ${EndIf}

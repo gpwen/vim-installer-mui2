@@ -147,7 +147,8 @@ LangString str_desc_rm_root      ${LANG_SIMPCHINESE} \
 ##############################################################################
 
 LangString str_msg_vim_running   ${LANG_SIMPCHINESE} \
-    "您的系统上仍有 Vim 在运行，请您在执行后续步骤前退出这些 Vim。"
+    "您的系统上仍有 Vim 在运行，$\n\
+     请您在执行后续步骤前退出这些 Vim。"
 
 LangString str_msg_install_fail  ${LANG_SIMPCHINESE} \
     "安装失败。祝您下次好运。"

@@ -156,8 +156,8 @@ LangString str_desc_rm_root      ${LANG_ENGLISH} \
 ##############################################################################
 
 LangString str_msg_vim_running   ${LANG_ENGLISH} \
-    "Vim is still running on your system.  Please close all instances of Vim \
-     before you continue."
+    "Vim is still running on your system.$\n\
+     Please close all instances of Vim before you continue."
 
 LangString str_msg_install_fail  ${LANG_ENGLISH} \
     "Installation failed. Better luck next time."
