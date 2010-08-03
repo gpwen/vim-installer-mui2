@@ -146,6 +146,9 @@ LangString str_desc_rm_root      ${LANG_TRADCHINESE} \
 # Messages
 ##############################################################################
 
+LangString str_msg_vim_running   ${LANG_TRADCHINESE} \
+    "閣下的電腦上尚有正在運行之 Vim，煩請閣下在執行后續步驟前將其全部退出。"
+
 LangString str_msg_install_fail  ${LANG_TRADCHINESE} \
     "安裝失敗。預祝下次好運。"
 

@@ -118,8 +118,8 @@ LangString str_desc_vim_rc       ${LANG_ENGLISH} \
      The _vimrc file is used to set options for how Vim behaves."
 
 LangString str_desc_plugin_home  ${LANG_ENGLISH} \
-    "Create plugin directories in HOME (if you have a home directory) \
-     or Vim install directory (used for everybody on the system). \
+    "Create plugin directories in HOME (if you defined one) or Vim \
+     install directory (used for everybody on the system). \
      Plugin directories allow extending Vim by dropping a file into \
      a directory."
 
@@ -153,6 +153,10 @@ LangString str_desc_rm_root      ${LANG_ENGLISH} \
 ##############################################################################
 # Messages
 ##############################################################################
+
+LangString str_msg_vim_running   ${LANG_ENGLISH} \
+    "Vim is still running on your system.  Please close all instances of Vim \
+     before you continue."
 
 LangString str_msg_install_fail  ${LANG_ENGLISH} \
     "Installation failed. Better luck next time."
