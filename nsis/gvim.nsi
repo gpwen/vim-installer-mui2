@@ -24,10 +24,10 @@
 !define HAVE_NLS
 
 # Commend the next line if you do not want to include VisVim extension:
-#!define HAVE_VIS_VIM
+!define HAVE_VIS_VIM
 
 # Uncomment the following line to create a multilanguage installer:
-!define HAVE_MULTI_LANG
+#!define HAVE_MULTI_LANG
 
 # Uncomment the following line so that the uninstaller would not jump to the
 # finish page automatically, this allows the user to check the uninstall log.
@@ -549,7 +549,6 @@ SectionEnd
         File ${VIMRT}\keymap\*.vim
         SetOutPath $0
         File ${VIMRT}\libintl.dll
-        File ${VIMRT}\iconv.dll
     SectionEnd
 !endif
 
