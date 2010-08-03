@@ -663,12 +663,12 @@ Section "un.$(str_unsection_exe)" id_unsection_exe
     RMDir /r /REBOOTOK $0
 SectionEnd
 
-Section "un.$(str_unsection_plugin)" id_unsection_plugin
+Section /o "un.$(str_unsection_plugin)" id_unsection_plugin
     DetailPrint $(str_msg_rm_plugin)
     RMDir /r /REBOOTOK $vim_plugin_path
 SectionEnd
 
-Section "un.$(str_unsection_root)" id_unsection_root
+Section /o "un.$(str_unsection_root)" id_unsection_root
     DetailPrint $(str_msg_rm_root)
     RMDir /r /REBOOTOK $vim_install_root
 SectionEnd
