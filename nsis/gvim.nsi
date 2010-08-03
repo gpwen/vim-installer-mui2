@@ -727,9 +727,8 @@ Function un.onInit
         !insertmacro UnSelectSection ${id_unsection_plugin}
         !insertmacro SetSectionFlag  ${id_unsection_plugin} ${SF_RO}
     ${Else}
-        # Valid plugin path found, remove it by default:
+        # Valid plugin path found, allow the directory to be removed:
         !insertmacro ClearSectionFlag ${id_unsection_plugin} ${SF_RO}
-        !insertmacro SelectSection    ${id_unsection_plugin}
     ${EndIf}
 
     Pop $R0
