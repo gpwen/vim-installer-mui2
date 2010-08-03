@@ -34,15 +34,17 @@
 
 # ---------------- No configurable settings below this line ------------------
 
-!include "MUI2.nsh"
-!include "UpgradeDLL.nsh"  # for VisVim.dll
-!include "Sections.nsh"
-!include "LogicLib.nsh"
-!include "x64.nsh"
+!include MUI2.nsh
+!include UpgradeDLL.nsh  # for VisVim.dll
+!include Sections.nsh
+!include LogicLib.nsh
+!include x64.nsh
 
 # Global variables:
 Var vim_install_root
 Var vim_plugin_path
+
+!define VIM_LNK_NAME  "gVim ${VER_MAJOR}.${VER_MINOR}"
 
 Name                  "Vim ${VER_MAJOR}.${VER_MINOR}"
 OutFile               gvim${VER_MAJOR}${VER_MINOR}.exe
@@ -57,64 +59,62 @@ RequestExecutionLevel highest
 InstallDir            "$PROGRAMFILES\Vim"
 
 # Types of installs we can perform:
-InstType              Typical
-InstType              Minimal
-InstType              Full
+InstType              $(str_TypeTypical)
+InstType              $(str_TypeMinimal)
+InstType              $(str_TypeFull)
 
 SilentInstall         normal
-
-!define VIM_LNK_NAME  "gVim ${VER_MAJOR}.${VER_MINOR}"
-
-!define MUI_ICON      "icons\vim_16c.ico"
-!define MUI_UNICON    "icons\vim_uninst_16c.ico"
 
 # On NSIS 2 using the BGGradient causes trouble on Windows 98, in combination
 # with the BringToFront.
 # BGGradient 004000 008200 FFFFFF
-!define MUI_COMPONENTSPAGE_TEXT_TOP \
-    "This will install Vim ${VER_MAJOR}.${VER_MINOR} on your computer."
-!define MUI_DIRECTORYPAGE_TEXT_TOP \
-    "Choose a directory to install Vim (must end in 'vim')"
-!define MUI_LICENSEPAGE_TEXT_TOP \
-    "You should read the following before installing:"
+
+##############################################################################
+# MUI Settings
+##############################################################################
+!define MUI_ICON   "icons\vim_16c.ico"
+!define MUI_UNICON "icons\vim_uninst_16c.ico"
+
+# Show all languages, despite user's codepage:
+!define MUI_LANGDLL_ALLLANGUAGES
+
+!define MUI_DIRECTORYPAGE_TEXT_DESTINATION $(str_DestFolder)
 !define MUI_LICENSEPAGE_CHECKBOX
-!define MUI_FINISHPAGE_RUN            "$0\gvim.exe"
-!define MUI_FINISHPAGE_RUN_TEXT       "Show README after I finish"
-!define MUI_FINISHPAGE_RUN_PARAMETERS "-R $\"$0\README.txt$\""
+!define MUI_FINISHPAGE_RUN                 "$0\gvim.exe"
+!define MUI_FINISHPAGE_RUN_TEXT            $(str_ShowReadme)
+!define MUI_FINISHPAGE_RUN_PARAMETERS      "-R $\"$0\README.txt$\""
 !define MUI_FINISHPAGE_REBOOTLATER_DEFAULT
 !define MUI_FINISHPAGE_NOREBOOTSUPPORT
 !define MUI_UNFINISHPAGE_NOREBOOTSUPPORT
-!define MUI_UNCONFIRMPAGE_TEXT_TOP \
-    "This will uninstall Vim ${VER_MAJOR}.${VER_MINOR} from your system."
 
 !ifdef HAVE_UPX
   !packhdr temp.dat "upx --best --compress-icons=1 temp.dat"
 !endif
 
-##############################################################################
 # Installer pages
-##############################################################################
-  !define MUI_PAGE_CUSTOMFUNCTION_LEAVE UninstallOldVer
-  !insertmacro MUI_PAGE_WELCOME
-  !insertmacro MUI_PAGE_LICENSE "${VIMRT}\doc\uganda.nsis.txt"
-  !insertmacro MUI_PAGE_COMPONENTS
-  !insertmacro MUI_PAGE_DIRECTORY
-  !insertmacro MUI_PAGE_INSTFILES
-  !insertmacro MUI_PAGE_FINISH
+!define MUI_PAGE_CUSTOMFUNCTION_LEAVE UninstallOldVer
+!insertmacro MUI_PAGE_WELCOME
+!insertmacro MUI_PAGE_LICENSE "${VIMRT}\doc\uganda.nsis.txt"
+!insertmacro MUI_PAGE_COMPONENTS
+!insertmacro MUI_PAGE_DIRECTORY
+!insertmacro MUI_PAGE_INSTFILES
+!insertmacro MUI_PAGE_FINISH
 
-##############################################################################
 # Uninstaller pages:
-##############################################################################
-  !insertmacro MUI_UNPAGE_CONFIRM
-  !insertmacro MUI_UNPAGE_COMPONENTS
-  !insertmacro MUI_UNPAGE_INSTFILES
-  !insertmacro MUI_UNPAGE_FINISH
+!insertmacro MUI_UNPAGE_CONFIRM
+!insertmacro MUI_UNPAGE_COMPONENTS
+!insertmacro MUI_UNPAGE_INSTFILES
+!insertmacro MUI_UNPAGE_FINISH
 
 ##############################################################################
-# Languages
+# Languages Files
 ##############################################################################
-  !insertmacro MUI_LANGUAGE "English"
-  !insertmacro MUI_LANGUAGE "SimpChinese"
+# Please note English language file should be listed first as the first one
+# will be used as the default.
+!insertmacro MUI_RESERVEFILE_LANGDLL
+!include lang-english.nsi
+!include lang-simp-chinese.nsi
+!include lang-trad-chinese.nsi
 
 ##############################################################################
 # Macros
@@ -197,6 +197,9 @@ Function .onInit
 
   Pop $R1
   Pop $R0
+
+  # Show language selection dialog:
+  !insertmacro MUI_LANGDLL_DISPLAY
 FunctionEnd
 
 Function UninstallOldVer
@@ -251,14 +254,15 @@ Function .onInstSuccess
 FunctionEnd
 
 Function .onInstFailed
-  MessageBox MB_OK|MB_ICONEXCLAMATION "Installation failed. Better luck next time."
+  MessageBox MB_OK|MB_ICONEXCLAMATION $(str_MsgInstallFail)
 FunctionEnd
+
 
 ##############################################################################
 # Installer Sections
 ##############################################################################
 
-Section "Vim executables and runtime files"
+Section $(str_SectionExe) id_section_exe
 	SectionIn 1 2 3 RO
 
 	# we need also this here if the user changes the instdir
@@ -321,7 +325,7 @@ Section "Vim executables and runtime files"
 	File ${VIMRT}\tutor\*.*
 SectionEnd
 
-Section "Vim console program (vim.exe)"
+Section $(str_SectionConsole) id_section_console
 	SectionIn 1 3
 
 	SetOutPath $0
@@ -337,25 +341,25 @@ Section "Vim console program (vim.exe)"
 	StrCpy $2 "$2 vim view vimdiff"
 SectionEnd
 
-Section "Create .bat files for command line use"
+Section $(str_SectionBatch) id_section_batch
 	SectionIn 3
 
 	StrCpy $1 "$1 -create-batfiles $2"
 SectionEnd
 
-Section "Create icons on the Desktop"
+Section $(str_SectionDesktop) id_section_desktop
 	SectionIn 1 3
 
 	StrCpy $1 "$1 -install-icons"
 SectionEnd
 
-Section "Add Vim to the Start Menu"
+Section $(str_SectionStartMenu) id_section_startmenu
 	SectionIn 1 3
 
 	StrCpy $1 "$1 -add-start-menu"
 SectionEnd
 
-Section "Add Vim to the Quick Launch Panel"
+Section $(str_SectionQuickLaunch) id_section_quicklaunch
 	SectionIn 1 3
 
 	${If} $QUICKLAUNCH != $TEMP
@@ -365,7 +369,7 @@ Section "Add Vim to the Quick Launch Panel"
         ${EndIf}
 SectionEnd
 
-Section "Add an Edit-with-Vim context menu entry"
+Section $(str_SectionEditWith) id_section_editwith
 	SectionIn 1 3
 
 	# Be aware of this sequence of events:
@@ -404,26 +408,26 @@ Section "Add an Edit-with-Vim context menu entry"
 	StrCpy $1 "$1 -install-popup -install-openwith"
 SectionEnd
 
-Section "Create a _vimrc if it doesn't exist"
+Section $(str_SectionVimRC) id_section_vimrc
 	SectionIn 1 3
 
 	StrCpy $1 "$1 -create-vimrc"
 SectionEnd
 
-Section "Create plugin directories in HOME or VIM"
+Section $(str_SectionPluginHome) id_section_pluginhome
 	SectionIn 1 3
 
 	StrCpy $1 "$1 -create-directories home"
 SectionEnd
 
-Section "Create plugin directories in VIM"
+Section $(str_SectionPluginVim) id_section_pluginvim
 	SectionIn 3
 
 	StrCpy $1 "$1 -create-directories vim"
 SectionEnd
 
 !ifdef HAVE_VIS_VIM
-	Section "VisVim Extension for MS Visual Studio"
+	Section $(str_SectionVisVim) id_section_visvim
 		SectionIn 3
 
 		SetOutPath $0
@@ -433,7 +437,7 @@ SectionEnd
 !endif
 
 !ifdef HAVE_NLS
-	Section "Native Language Support"
+	Section $(str_SectionNLS) id_section_nls
 		SectionIn 1 3
 
 		SetOutPath $0\lang
@@ -456,15 +460,41 @@ Section -post
 	BringToFront
 SectionEnd
 
+
+##############################################################################
+# Description for Installer Sections
+##############################################################################
+!insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_exe}         $(str_DescExe)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_console}     $(str_DescConsole)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_batch}       $(str_DescBatch)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_desktop}     $(str_DescDesktop)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_startmenu}   $(str_DescStartmenu)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_quicklaunch} $(str_DescQuicklaunch)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_editwith}    $(str_DescEditwith)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_vimrc}       $(str_DescVimRC)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_pluginhome}  $(str_DescPluginHome)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_pluginvim}   $(str_DescPluginVim)
+
+!ifdef HAVE_VIS_VIM
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_visvim}      $(str_DescVisVim)
+!endif
+
+!ifdef HAVE_NLS
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_section_nls}         $(str_DescNLS)
+!endif
+!insertmacro MUI_FUNCTION_DESCRIPTION_END
+
+
 ##############################################################################
 # Uninstaller Sections
 ##############################################################################
 
-Section "un.Unregister VIM"
+Section "un.$(str_UnsectionRegister)" id_unsection_register
         # Do not allow user to keep this section:
         SectionIn RO
 
-        DetailPrint "Unregistering VIM ..."
+        DetailPrint $(str_MsgUnregister)
 
         # Apparently $INSTDIR is set to the directory where the uninstaller is
         # created.  Thus the "vim61" directory is included in it.
@@ -485,8 +515,8 @@ Section "un.Unregister VIM"
         BringToFront
 SectionEnd
 
-Section "un.Remove VIM Excutables/Runtime Files" section_rm_exe
-        DetailPrint "Removing VIM excutables/runtime files ..."
+Section "un.$(str_UnsectionExe)" id_unsection_exe
+        DetailPrint $(str_MsgRmExe)
 
 	# It contains the Vim executables and runtime files.
 	Delete /REBOOTOK $0\*.dll
@@ -515,8 +545,7 @@ Section "un.Remove VIM Excutables/Runtime Files" section_rm_exe
 	Delete $0\*.txt
 
 	${If} ${Errors}
-	  MessageBox MB_OK|MB_ICONEXCLAMATION \
-	    "Some files in $0 have not been deleted!$\nYou must do it manually."
+	  MessageBox MB_OK|MB_ICONEXCLAMATION $(str_MsgRmExeFail)
 	${EndIf}
 
 	# No error message if the "vim62" directory can't be removed, the
@@ -524,15 +553,27 @@ Section "un.Remove VIM Excutables/Runtime Files" section_rm_exe
 	RMDir /r /REBOOTOK $0
 SectionEnd
 
-Section "un.Remove VIM Plugin Directory (vimfiles)" section_rm_plugin
-        DetailPrint "Removing VIM plugin directory $vim_plugin_path ..."
+Section "un.$(str_UnsectionPlugin)" id_unsection_plugin
+        DetailPrint $(str_MsgRmPlugin)
         RMDir /r /REBOOTOK $vim_plugin_path
 SectionEnd
 
-Section "un.Remove VIM Root Directory" section_rm_root
-        DetailPrint "Removing VIM root directory $vim_install_root ..."
+Section "un.$(str_UnsectionRoot)" id_unsection_root
+        DetailPrint $(str_MsgRmRoot)
 	RMDir /r /REBOOTOK $vim_install_root
 SectionEnd
+
+
+##############################################################################
+# Description for Uninstaller Sections
+##############################################################################
+!insertmacro MUI_UNFUNCTION_DESCRIPTION_BEGIN
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_register}  $(str_DescUnregister)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_exe}       $(str_DescRmExe)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_plugin}    $(str_DescnRmPlugin)
+  !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_root}      $(str_DescnRmRoot)
+!insertmacro MUI_UNFUNCTION_DESCRIPTION_END
+
 
 ##############################################################################
 # Uninstaller Functions
@@ -551,14 +592,9 @@ Function un.onInit
   # Check to make sure this is a valid directory:
   !insertmacro VerifyInstDir $vim_install_root $R0
   ${If} $R0 = 0
-    MessageBox MB_OK|MB_ICONSTOP \
-      "Invalid install path $vim_install_root!  Abort uninstaller."
+    MessageBox MB_OK|MB_ICONSTOP $(str_MsgInvalidRoot)
     Abort
   ${EndIf}
-
-  # Show what will be removed:
-  SectionSetText ${section_rm_root} \
-    "Remove VIM Root Directory ($vim_install_root)"
 
   # Determines vim plugin path.  Try plugin path under vim install root first,
   # and then plugin path under user's HOME directory.
@@ -576,16 +612,12 @@ Function un.onInit
   # Update status of the vim plugin uninstall section:
   ${If} $vim_plugin_path == ""
     # We don't know how to remove vim plugin as no valid plugin path found:
-    !insertmacro UnSelectSection ${section_rm_plugin}
-    !insertmacro SetSectionFlag  ${section_rm_plugin} ${SF_RO}
+    !insertmacro UnSelectSection ${id_unsection_plugin}
+    !insertmacro SetSectionFlag  ${id_unsection_plugin} ${SF_RO}
   ${Else}
     # Valid plugin path found, remove it by default:
-    !insertmacro ClearSectionFlag ${section_rm_plugin} ${SF_RO}
-    !insertmacro SelectSection    ${section_rm_plugin}
-
-    # Show what will be removed:
-    SectionSetText ${section_rm_plugin} \
-      "Remove VIM Plugin Directory ($vim_plugin_path)"
+    !insertmacro ClearSectionFlag ${id_unsection_plugin} ${SF_RO}
+    !insertmacro SelectSection    ${id_unsection_plugin}
   ${EndIf}
 
   Pop $R0
@@ -593,12 +625,12 @@ FunctionEnd
 
 Function un.onSelChange
   # Get selection status of the exe removal section:
-  SectionGetFlags ${section_rm_exe} $R0
+  SectionGetFlags ${id_unsection_exe} $R0
 
   # Status of the plugin removal section is considered only if valid plugin
   # path has been found:
   ${If} $vim_plugin_path != ""
-    SectionGetFlags ${section_rm_plugin} $R1
+    SectionGetFlags ${id_unsection_plugin} $R1
     IntOp $R0 $R0 & $R1
   ${EndIf}
 
@@ -608,11 +640,11 @@ Function un.onSelChange
   ${If} $R0 = ${SF_SELECTED}
     # All sub-directories will be removed, so user is allowed to remove the
     # root directory:
-    !insertmacro ClearSectionFlag ${section_rm_root} ${SF_RO}
+    !insertmacro ClearSectionFlag ${id_unsection_root} ${SF_RO}
   ${Else}
     # Some sub-directories will not be removed, disable removal of the root
     # directory:
-    !insertmacro UnSelectSection ${section_rm_root}
-    !insertmacro SetSectionFlag  ${section_rm_root} ${SF_RO}
+    !insertmacro UnSelectSection ${id_unsection_root}
+    !insertmacro SetSectionFlag  ${id_unsection_root} ${SF_RO}
   ${EndIf}
 FunctionEnd
