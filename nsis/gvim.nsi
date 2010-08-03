@@ -44,6 +44,7 @@
 !include UpgradeDLL.nsh  # For VisVim.dll
 !include Sections.nsh    # For section control
 !include LogicLib.nsh
+!include FileFunc.nsh
 !include x64.nsh
 
 # Global variables:
@@ -143,12 +144,15 @@ SilentInstall         normal
 # install path (ends with "vim"), $VALID will be set to 1; Otherwise $VALID
 # will be set to 0.
 !macro VerifyInstDir INPUT_DIR VALID
-    StrCpy ${VALID} ${INPUT_DIR} 3 -3
-    ${If} ${VALID} != "vim"
-        StrCpy ${VALID} 0
+    push $R0
+    StrCpy $R0 ${INPUT_DIR} 3 -3
+    ${If} $R0 != "vim"
+        StrCpy $R0 0
     ${Else}
-        StrCpy ${VALID} 1
+        StrCpy $R0 1
     ${EndIf}
+    Exch $R0
+    Pop ${VALID}
 !macroend
 
 # Extract different version of vim console executable based on detected
@@ -196,31 +200,6 @@ SilentInstall         normal
     Pop  ${IS_RUNNING} # Assign result
 !macroend
 
-# The following function needs to be in both installer an uninstaller, so a
-# macro is created to avoid code duplication.
-!macro GetParent un
-    Function ${un}GetParent
-        Exch $0 ; old $0 is on top of stack
-        Push $1
-        Push $2
-        StrCpy $1 -1
-
-        ${Do}
-            StrCpy $2 $0 1 $1
-            ${If}   $2 == ""
-            ${OrIf} $2 == "\"
-                ${ExitDo}
-            ${EndIf}
-            IntOp $1 $1 - 1
-        ${Loop}
-
-        StrCpy $0 $0 $1
-        Pop $2
-        Pop $1
-        Exch $0 ; put $0 on top of stack, restore $0 to original value
-    FunctionEnd
-!macroend
-
 # Show error message.  Error dialog will be shown only if we're currently not
 # in slient install mode.
 !macro ShowErrMsg ERR_MSG
@@ -240,8 +219,6 @@ SilentInstall         normal
 # Installer Functions
 ##############################################################################
 
-!insertmacro GetParent ""
-
 Function .onInit
     Push $R0
     Push $R1
@@ -251,10 +228,7 @@ Function .onInit
     ReadEnvStr $R0 "VIM"
     ${If}    $R0 != ""
     ${AndIf} ${FileExists} "$R0"
-        Push $R0
-        Call GetParent
-        Pop $R0
-
+        ${GetParent} $R0 $R0
         !insertmacro VerifyInstDir $R0 $R1
         ${IfThen} $R1 = 0 ${|} StrCpy $INSTDIR $R0 ${|}
     ${EndIf}
@@ -689,15 +663,11 @@ SectionEnd
 # Uninstaller Functions
 ##############################################################################
 
-!insertmacro GetParent "un."
-
 Function un.onInit
     Push $R0
 
     # Get root path of the installation:
-    Push $INSTDIR
-    Call un.GetParent
-    Pop $vim_install_root
+    ${GetParent} $INSTDIR $vim_install_root
 
     # Check to make sure this is a valid directory:
     !insertmacro VerifyInstDir $vim_install_root $R0
