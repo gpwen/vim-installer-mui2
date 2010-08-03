@@ -613,7 +613,7 @@ Section "un.$(str_unsection_register)" id_unsection_register
     ${EndIf}
 
     # Delete the context menu entry and batch files:
-    nsExec::ExecToLog '$0\uninstal.exe" -nsis'
+    nsExec::ExecToLog '"$0\uninstal.exe" -nsis'
     # TODO: Check return value:
     Exch $R0
     DetailPrint "uninstall.exe exit code - $R0"
