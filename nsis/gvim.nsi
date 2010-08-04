@@ -35,6 +35,9 @@
 #!define MUI_FINISHPAGE_NOAUTOCLOSE
 #!define MUI_UNFINISHPAGE_NOAUTOCLOSE
 
+# Uncomment the following line to enable debug log:
+!define VIM_LOG_FILE "$TEMP\vim-install-debug.log"
+
 !define VER_MAJOR 7
 !define VER_MINOR 3d
 
@@ -50,6 +53,7 @@
 # Global variables:
 Var vim_install_root
 Var vim_plugin_path
+Var fh_log
 
 !define VIM_LNK_NAME  "gVim ${VER_MAJOR}.${VER_MINOR}"
 
@@ -140,10 +144,76 @@ SilentInstall         normal
 # Macros
 ##############################################################################
 
+!define LogInit "!insertmacro _LogInit"
+!macro _LogInit _LOG_FILE
+    ${If} ${FileExists} "${_LOG_FILE}"
+        FileOpen $fh_log "${_LOG_FILE}" w
+    ${Else}
+        SetFileAttributes "${_LOG_FILE}" NORMAL
+        FileOpen $fh_log "${_LOG_FILE}" a
+        FileSeek $fh_log 0 END
+    ${EndIf}
+!macroend
+
+!define LogClose "!insertmacro _LogClose"
+!macro _LogClose
+    ${If} $fh_log != ""
+        FileClose $fh_log
+        StrCpy $fh_log ""
+        # SetFileAttributes "${_LOG_FILE}" READONLY|SYSTEM|HIDDEN
+    ${EndIf}
+!macroend
+
+!define Log "!insertmacro _Log"
+!macro _Log _LOG_MSG
+    ${If} $fh_log != ""
+        FileWrite $fh_log `${_LOG_MSG}$\r$\n`
+    ${EndIf}
+!macroend
+
+!define Logged0 "!insertmacro _Logged0"
+!macro _Logged0 _CMD
+    ${Log} `${_CMD}`
+    `${_CMD}`
+!macroend
+
+!define Logged1 "!insertmacro _Logged1"
+!macro _Logged1 _CMD _PARAM1
+    ${Log} `${_CMD} ${_PARAM1}`
+    `${_CMD}` `${_PARAM1}`
+!macroend
+
+!define Logged2 "!insertmacro _Logged2"
+!macro _Logged2 _CMD _PARAM1 _PARAM2
+    ${Log} "${_CMD} ${_PARAM1} ${_PARAM2}"
+    `${_CMD}` `${_PARAM1}` `${_PARAM2}`
+!macroend
+
+!define Logged3 "!insertmacro _Logged3"
+!macro _Logged3 _CMD _PARAM1 _PARAM2  _PARAM3
+    ${Log} `${_CMD} ${_PARAM1} ${_PARAM2}  ${_PARAM3}`
+    `${_CMD}` `${_PARAM1}` `${_PARAM2}`  `${_PARAM3}`
+!macroend
+
+!define LogSectionStart "!insertmacro _LogSectionStart"
+!macro _LogSectionStart
+    !ifdef __SECTION__
+        ${Log} "$\r$\nEnter section ${__SECTION__}"
+    !endif
+!macroend
+
+!define LogSectionEnd "!insertmacro _LogSectionEnd"
+!macro _LogSectionEnd
+    !ifdef __SECTION__
+        ${Log} "Leave section ${__SECTION__}"
+    !endif
+!macroend
+
 # Verify VIM install path $INPUT_DIR.  If the input path is a valid VIM
 # install path (ends with "vim"), $VALID will be set to 1; Otherwise $VALID
 # will be set to 0.
-!macro VerifyInstDir INPUT_DIR VALID
+!define VerifyInstDir "!insertmacro _VerifyInstDir"
+!macro _VerifyInstDir INPUT_DIR VALID
     push $R0
     StrCpy $R0 ${INPUT_DIR} 3 -3
     ${If} $R0 != "vim"
@@ -158,31 +228,35 @@ SilentInstall         normal
 # Extract different version of vim console executable based on detected
 # Windows version.  The output path is whatever has already been set before
 # this marcro.
-!macro ExtractVimConsole_
+!define ExtractVimConsole "!insertmacro _ExtractVimConsole"
+!macro _ExtractVimConsole
     ReadRegStr $R0 HKLM \
         "SOFTWARE\Microsoft\Windows NT\CurrentVersion" CurrentVersion
     ${If} ${Errors}
         # Windows 95/98/ME
-        File /oname=vim.exe ${VIMSRC}\vimd32.exe
+        ${Logged2} File /oname=vim.exe ${VIMSRC}\vimd32.exe
     ${Else}
         # Windows NT/2000/XT
-        File /oname=vim.exe ${VIMSRC}\vimw32.exe
+        ${Logged2} File /oname=vim.exe ${VIMSRC}\vimw32.exe
     ${EndIf}
 !macroend
-!define ExtractVimConsole "!insertmacro ExtractVimConsole_"
 
 # Detect whether an instance of Vim is running or not.  The console version of
 # Vim will be executed (silently) to list Vim servers.  If found, there must
 # be some instances of Vim running.
-# $VIM_CONSOLE_PATH - Input, path to Vim console (vim.exe)
-# $IS_RUNNING       - Output. 1 if some instances running, 0 if not.
-!macro DetectRunningVim_ VIM_CONSOLE_PATH IS_RUNNING
+# $_VIM_CONSOLE_PATH - Input, path to Vim console (vim.exe)
+# $_IS_RUNNING       - Output. 1 if some instances running, 0 if not.
+!define DetectRunningVim "!insertmacro _DetectRunningVim"
+!macro _DetectRunningVim _VIM_CONSOLE_PATH _IS_RUNNING
     Push $R0
     Push $R1
 
-    nsExec::ExecToStack '"${VIM_CONSOLE_PATH}\vim.exe" --serverlist'
+    nsExec::ExecToStack '"${_VIM_CONSOLE_PATH}\vim.exe" --serverlist'
     Pop $R0  # Execution status
     Pop $R1  # Output string (server list)
+
+    # Debug log:
+    ${Log} "Detect running Vim: status=$R0, server list=[$R1]"
 
     # If no execution error found and server list is empty, there must be some
     # vim instances running.  The result will hold by $R0.
@@ -197,25 +271,23 @@ SilentInstall         normal
     ${EndIf}
 
     Pop  $R1
-    Exch $R0           # Restore R0 and put result on stack
-    Pop  ${IS_RUNNING} # Assign result
+    Exch $R0            # Restore R0 and put result on stack
+    Pop  ${_IS_RUNNING} # Assign result
 !macroend
-!define DetectRunningVim "!insertmacro DetectRunningVim_"
 
 # Show error message.  Error dialog will be shown only if we're currently not
 # in slient install mode.
-!macro ShowErrMsg_ ERR_MSG
+!define ShowErrMsg "!insertmacro _ShowErrMsg"
+!macro _ShowErrMsg _ERR_MSG
     # Show message box only if we're not in silent install mode:
     ${IfNot} ${Silent}
-        MessageBox MB_OK|MB_ICONEXCLAMATION ${ERR_MSG} /SD IDOK
+        MessageBox MB_OK|MB_ICONEXCLAMATION ${_ERR_MSG} /SD IDOK
     ${EndIf}
 
     # Also send error message to detail log.  Might not work if the log window
     # has not been created yet.
-    # TODO: A better choice should be sent it to external log file.
-    DetailPrint ${ERR_MSG}
+    ${Log} ${_ERR_MSG}
 !macroend
-!define ShowErrMsg "!insertmacro ShowErrMsg_"
 
 
 ##############################################################################
@@ -226,19 +298,28 @@ Function .onInit
     Push $R0
     Push $R1
 
+    # Initialize log:
+    ${LogInit} ${VIM_LOG_FILE}
+
     # If VIM environment string contains a valid VIM install path, use that as
     # install path:
     ReadEnvStr $R0 "VIM"
     ${If}    $R0 != ""
     ${AndIf} ${FileExists} "$R0"
         ${GetParent} $R0 $R0
-        !insertmacro VerifyInstDir $R0 $R1
-        ${IfThen} $R1 = 0 ${|} StrCpy $INSTDIR $R0 ${|}
+        ${VerifyInstDir} $R0 $R1
+        ${If} $R1 = 0
+            ${Log} "Set install path per VIM env: $R0"
+            StrCpy $INSTDIR $R0
+        ${EndIf}
     ${EndIf}
 
     # Default install path:
-    !insertmacro VerifyInstDir $INSTDIR $R0
-    ${IfThen} $R0 = 0 ${|} StrCpy $INSTDIR "$PROGRAMFILES\Vim" ${|}
+    ${VerifyInstDir} $INSTDIR $R0
+    ${If} $R0 = 0
+        StrCpy $INSTDIR "$PROGRAMFILES\Vim"
+        ${Log} "Set default install path to: $INSTDIR"
+    ${EndIf}
 
     # Initialize user variables:
     # $0 - holds the directory the executables are installed to
@@ -289,7 +370,7 @@ Function UninstallOldVer
         Delete $TEMP\vimini.ini
 
         # Make sure the loaded path name is valid:
-        !insertmacro VerifyInstDir $R0 $R1
+        ${VerifyInstDir} $R0 $R1
         ${IfThen} $R1 = 0 ${|} StrCpy $R0 "" ${|}
     ${Else}
         StrCpy $R0 ""
@@ -327,7 +408,7 @@ FunctionEnd
 Function .onVerifyInstDir
     Push $R0
 
-    !insertmacro VerifyInstDir $INSTDIR $R0
+    ${VerifyInstDir} $INSTDIR $R0
     ${If} $R0 = 0
         Pop $R0
         Abort
@@ -352,104 +433,124 @@ FunctionEnd
 Section $(str_section_exe) id_section_exe
     SectionIn 1 2 3 RO
 
+    ${LogSectionStart}
+
     # we need also this here if the user changes the instdir
     StrCpy $0 "$INSTDIR\vim${VER_MAJOR}${VER_MINOR}"
 
-    SetOutPath $0
-    File /oname=gvim.exe ${VIMSRC}\gvim_ole.exe
-    File /oname=install.exe ${VIMSRC}\installw32.exe
-    File /oname=uninstal.exe ${VIMSRC}\uninstalw32.exe
-    File ${VIMSRC}\vimrun.exe
-    File /oname=xxd.exe ${VIMSRC}\xxdw32.exe
-    File ${VIMTOOLS}\diff.exe
-    File ${VIMRT}\vimtutor.bat
-    File ${VIMRT}\README.txt
-    File ..\uninstal.txt
-    File ${VIMRT}\*.vim
-    File ${VIMRT}\rgb.txt
+    ${Logged1} SetOutPath $0
+    ${Logged2} File /oname=gvim.exe     ${VIMSRC}\gvim_ole.exe
+    ${Logged2} File /oname=install.exe  ${VIMSRC}\installw32.exe
+    ${Logged2} File /oname=uninstal.exe ${VIMSRC}\uninstalw32.exe
+    ${Logged1} File ${VIMSRC}\vimrun.exe
+    ${Logged2} File /oname=xxd.exe      ${VIMSRC}\xxdw32.exe
+    ${Logged1} File ${VIMTOOLS}\diff.exe
+    ${Logged1} File ${VIMRT}\vimtutor.bat
+    ${Logged1} File ${VIMRT}\README.txt
+    ${Logged1} File ..\uninstal.txt
+    ${Logged1} File ${VIMRT}\*.vim
+    ${Logged1} File ${VIMRT}\rgb.txt
 
-    SetOutPath $0\colors
-    File ${VIMRT}\colors\*.*
+    ${Logged1} SetOutPath $0\colors
+    ${Logged1} File ${VIMRT}\colors\*.*
 
-    SetOutPath $0\compiler
-    File ${VIMRT}\compiler\*.*
+    ${Logged1} SetOutPath $0\compiler
+    ${Logged1} File ${VIMRT}\compiler\*.*
 
-    SetOutPath $0\doc
-    File ${VIMRT}\doc\*.txt
-    File ${VIMRT}\doc\tags
+    ${Logged1} SetOutPath $0\doc
+    ${Logged1} File ${VIMRT}\doc\*.txt
+    ${Logged1} File ${VIMRT}\doc\tags
 
-    SetOutPath $0\ftplugin
-    File ${VIMRT}\ftplugin\*.*
+    ${Logged1} SetOutPath $0\ftplugin
+    ${Logged1} File ${VIMRT}\ftplugin\*.*
 
-    SetOutPath $0\indent
-    File ${VIMRT}\indent\*.*
+    ${Logged1} SetOutPath $0\indent
+    ${Logged1} File ${VIMRT}\indent\*.*
 
-    SetOutPath $0\macros
-    File ${VIMRT}\macros\*.*
+    ${Logged1} SetOutPath $0\macros
+    ${Logged1} File ${VIMRT}\macros\*.*
 
-    SetOutPath $0\plugin
-    File ${VIMRT}\plugin\*.*
+    ${Logged1} SetOutPath $0\plugin
+    ${Logged1} File ${VIMRT}\plugin\*.*
 
-    SetOutPath $0\autoload
-    File ${VIMRT}\autoload\*.*
+    ${Logged1} SetOutPath $0\autoload
+    ${Logged1} File ${VIMRT}\autoload\*.*
 
-    SetOutPath $0\autoload\xml
-    File ${VIMRT}\autoload\xml\*.*
+    ${Logged1} SetOutPath $0\autoload\xml
+    ${Logged1} File ${VIMRT}\autoload\xml\*.*
 
-    SetOutPath $0\syntax
-    File ${VIMRT}\syntax\*.*
+    ${Logged1} SetOutPath $0\syntax
+    ${Logged1} File ${VIMRT}\syntax\*.*
 
-    SetOutPath $0\spell
-    File ${VIMRT}\spell\*.txt
-    File ${VIMRT}\spell\*.vim
-    File ${VIMRT}\spell\*.spl
-    File ${VIMRT}\spell\*.sug
+    ${Logged1} SetOutPath $0\spell
+    ${Logged1} File ${VIMRT}\spell\*.txt
+    ${Logged1} File ${VIMRT}\spell\*.vim
+    ${Logged1} File ${VIMRT}\spell\*.spl
+    ${Logged1} File ${VIMRT}\spell\*.sug
 
-    SetOutPath $0\tools
-    File ${VIMRT}\tools\*.*
+    ${Logged1} SetOutPath $0\tools
+    ${Logged1} File ${VIMRT}\tools\*.*
 
-    SetOutPath $0\tutor
-    File ${VIMRT}\tutor\*.*
+    ${Logged1} SetOutPath $0\tutor
+    ${Logged1} File ${VIMRT}\tutor\*.*
+
+    ${LogSectionEnd}
 SectionEnd
 
 Section $(str_section_console) id_section_console
     SectionIn 1 3
 
-    SetOutPath $0
+    ${LogSectionStart}
+
+    ${Logged1} SetOutPath $0
     ${ExtractVimConsole}
     StrCpy $2 "$2 vim view vimdiff"
+
+    ${LogSectionEnd}
 SectionEnd
 
 Section $(str_section_batch) id_section_batch
     SectionIn 3
 
+    ${LogSectionStart}
     StrCpy $1 "$1 -create-batfiles $2"
+    ${LogSectionEnd}
 SectionEnd
 
 Section $(str_section_desktop) id_section_desktop
     SectionIn 1 3
 
+    ${LogSectionStart}
     StrCpy $1 "$1 -install-icons"
+    ${LogSectionEnd}
 SectionEnd
 
 Section $(str_section_start_menu) id_section_startmenu
     SectionIn 1 3
 
+    ${LogSectionStart}
     StrCpy $1 "$1 -add-start-menu"
+    ${LogSectionEnd}
 SectionEnd
 
 Section $(str_section_quick_launch) id_section_quicklaunch
     SectionIn 1 3
+
+    ${LogSectionStart}
 
     ${If} $QUICKLAUNCH != $TEMP
         SetOutPath ""
         CreateShortCut "$QUICKLAUNCH\${VIM_LNK_NAME}.lnk" \
             "$0\gvim.exe" "" "$0\gvim.exe" 0
     ${EndIf}
+
+    ${LogSectionEnd}
 SectionEnd
 
 Section $(str_section_edit_with) id_section_editwith
     SectionIn 1 3
+
+    ${LogSectionStart}
 
     # Be aware of this sequence of events:
     # - user uninstalls Vim, gvimext.dll can't be removed (it's in use) and is
@@ -459,13 +560,13 @@ Section $(str_section_edit_with) id_section_editwith
     # reboot.  Thus when copying gvimext.dll fails always schedule it to be
     # installed at the next reboot.  Can't use UpgradeDLL!  We don't ask the
     # user to reboot, the old dll will keep on working.
-    SetOutPath $0
+    ${Logged1} SetOutPath $0
     ClearErrors
     SetOverwrite try
     ${If} ${RunningX64}
-        File /oname=gvimext.dll ${VIMSRC}\GvimExt\gvimext64.dll
+        ${Logged2} File /oname=gvimext.dll ${VIMSRC}\GvimExt\gvimext64.dll
     ${Else}
-        File /oname=gvimext.dll ${VIMSRC}\GvimExt\gvimext.dll
+        ${Logged2} File /oname=gvimext.dll ${VIMSRC}\GvimExt\gvimext.dll
     ${EndIf}
 
     ${If} ${Errors}
@@ -473,11 +574,11 @@ Section $(str_section_edit_with) id_section_editwith
         # on next reboot.
         GetTempFileName $3 $0
         ${If} ${RunningX64}
-            File /oname=$3 ${VIMSRC}\GvimExt\gvimext64.dll
+            ${Logged2} File /oname=$3 ${VIMSRC}\GvimExt\gvimext64.dll
         ${Else}
-            File /oname=$3 ${VIMSRC}\GvimExt\gvimext.dll
+            ${Logged2} File /oname=$3 ${VIMSRC}\GvimExt\gvimext.dll
         ${EndIf}
-        Rename /REBOOTOK $3 $0\gvimext.dll
+        ${Logged3} Rename /REBOOTOK $3 $0\gvimext.dll
     ${EndIf}
 
     SetOverwrite lastused
@@ -485,39 +586,53 @@ Section $(str_section_edit_with) id_section_editwith
     # We don't have a separate entry for the "Open With..." menu, assume
     # the user wants either both or none.
     StrCpy $1 "$1 -install-popup -install-openwith"
+
+    ${LogSectionEnd}
 SectionEnd
 
 Section $(str_section_vim_rc) id_section_vimrc
     SectionIn 1 3
 
+    ${LogSectionStart}
     StrCpy $1 "$1 -create-vimrc"
+    ${LogSectionEnd}
 SectionEnd
 
 Section $(str_section_plugin_home) id_section_pluginhome
     SectionIn 1 3
 
+    ${LogSectionStart}
     StrCpy $1 "$1 -create-directories home"
+    ${LogSectionEnd}
 SectionEnd
 
 Section $(str_section_plugin_vim) id_section_pluginvim
     SectionIn 3
 
+    ${LogSectionStart}
     StrCpy $1 "$1 -create-directories vim"
+    ${LogSectionEnd}
 SectionEnd
 
 !ifdef HAVE_VIS_VIM
     Section $(str_section_vis_vim) id_section_visvim
         SectionIn 3
 
-        SetOutPath $0
+        ${LogSectionStart}
+
+        ${Logged1} SetOutPath $0
         !insertmacro UpgradeDLL "${VIMSRC}\VisVim\VisVim.dll" "$0\VisVim.dll" "$0"
-        File ${VIMSRC}\VisVim\README_VisVim.txt
+        ${Logged1} File ${VIMSRC}\VisVim\README_VisVim.txt
+
+        ${LogSectionEnd}
     SectionEnd
 !endif
 
 !ifdef HAVE_NLS
     Section $(str_section_nls) id_section_nls
         SectionIn 1 3
+
+        ${LogSectionStart}
 
         SetOutPath $0\lang
         File /r ${VIMRT}\lang\*.*
@@ -526,21 +641,26 @@ SectionEnd
         File ${VIMRT}\keymap\*.vim
         SetOutPath $0
         File ${VIMRT}\libintl.dll
+
+        ${LogSectionEnd}
     SectionEnd
 !endif
 
 Section -call_install_exe
-    SetOutPath $0
-    nsExec::ExecToLog '"$0\install.exe" $1'
+    ${Logged1} SetOutPath $0
+    ${Logged1} nsExec::ExecToLog '"$0\install.exe" $1'
 
     # TODO: Check return value:
     Exch $R0
-    DetailPrint "install.exe exit code - $R0"
+    ${Log} "install.exe exit code - $R0"
     Pop $R0
 SectionEnd
 
 Section -post
     BringToFront
+
+    # Close log:
+    ${LogClose}
 SectionEnd
 
 
@@ -577,7 +697,7 @@ Section "un.$(str_unsection_register)" id_unsection_register
     # Do not allow user to keep this section:
     SectionIn RO
 
-    DetailPrint $(str_msg_unregister)
+    ${LogSectionStart}
 
     # Apparently $INSTDIR is set to the directory where the uninstaller is
     # created.  Thus the "vim61" directory is included in it.
@@ -585,51 +705,53 @@ Section "un.$(str_unsection_register)" id_unsection_register
 
     # If VisVim was installed, unregister the DLL.
     ${If} ${FileExists} "$0\VisVim.dll"
-        ExecWait "regsvr32.exe /u /s $0\VisVim.dll"
+        ${Logged1} ExecWait "regsvr32.exe /u /s $0\VisVim.dll"
     ${EndIf}
 
     # Delete the context menu entry and batch files:
-    nsExec::ExecToLog '"$0\uninstal.exe" -nsis'
+    ${Logged1} nsExec::ExecToLog '"$0\uninstal.exe" -nsis'
     # TODO: Check return value:
     Exch $R0
-    DetailPrint "uninstall.exe exit code - $R0"
+    ${Log} "uninstall.exe exit code - $R0"
     Pop $R0
 
     # Delete quick launch:
-    Delete "$QUICKLAUNCH\${VIM_LNK_NAME}.lnk"
+    ${Logged1} Delete "$QUICKLAUNCH\${VIM_LNK_NAME}.lnk"
 
     # We may have been put to the background when uninstall did something.
     BringToFront
+
+    ${LogSectionEnd}
 SectionEnd
 
 Section "un.$(str_unsection_exe)" id_unsection_exe
-    DetailPrint $(str_msg_rm_exe)
+    ${LogSectionStart}
 
     # It contains the Vim executables and runtime files.
-    Delete /REBOOTOK $0\*.dll
+    ${Logged2} Delete /REBOOTOK $0\*.dll
     ClearErrors
 
     # Remove everything but *.dll files.  Avoids that
     # a lot remains when gvimext.dll cannot be deleted.
-    RMDir /r $0\autoload
-    RMDir /r $0\colors
-    RMDir /r $0\compiler
-    RMDir /r $0\doc
-    RMDir /r $0\ftplugin
-    RMDir /r $0\indent
-    RMDir /r $0\macros
-    RMDir /r $0\plugin
-    RMDir /r $0\spell
-    RMDir /r $0\syntax
-    RMDir /r $0\tools
-    RMDir /r $0\tutor
-    RMDir /r $0\VisVim
-    RMDir /r $0\lang
-    RMDir /r $0\keymap
-    Delete $0\*.exe
-    Delete $0\*.bat
-    Delete $0\*.vim
-    Delete $0\*.txt
+    ${Logged2} RMDir /r $0\autoload
+    ${Logged2} RMDir /r $0\colors
+    ${Logged2} RMDir /r $0\compiler
+    ${Logged2} RMDir /r $0\doc
+    ${Logged2} RMDir /r $0\ftplugin
+    ${Logged2} RMDir /r $0\indent
+    ${Logged2} RMDir /r $0\macros
+    ${Logged2} RMDir /r $0\plugin
+    ${Logged2} RMDir /r $0\spell
+    ${Logged2} RMDir /r $0\syntax
+    ${Logged2} RMDir /r $0\tools
+    ${Logged2} RMDir /r $0\tutor
+    ${Logged2} RMDir /r $0\VisVim
+    ${Logged2} RMDir /r $0\lang
+    ${Logged2} RMDir /r $0\keymap
+    ${Logged1} Delete $0\*.exe
+    ${Logged1} Delete $0\*.bat
+    ${Logged1} Delete $0\*.vim
+    ${Logged1} Delete $0\*.txt
 
     ${If} ${Errors}
         ${ShowErrMsg} $(str_msg_rm_exe_fail)
@@ -637,17 +759,26 @@ Section "un.$(str_unsection_exe)" id_unsection_exe
 
     # No error message if the "vim62" directory can't be removed, the
     # gvimext.dll may still be there.
-    RMDir /r /REBOOTOK $0
+    ${Logged3} RMDir /r /REBOOTOK $0
+
+    ${LogSectionEnd}
 SectionEnd
 
 Section /o "un.$(str_unsection_plugin)" id_unsection_plugin
-    DetailPrint $(str_msg_rm_plugin)
-    RMDir /r /REBOOTOK $vim_plugin_path
+    ${LogSectionStart}
+    ${Logged3} RMDir /r /REBOOTOK $vim_plugin_path
+    ${LogSectionEnd}
 SectionEnd
 
 Section /o "un.$(str_unsection_root)" id_unsection_root
-    DetailPrint $(str_msg_rm_root)
-    RMDir /r /REBOOTOK $vim_install_root
+    ${LogSectionStart}
+    ${Logged3} RMDir /r /REBOOTOK $vim_install_root
+    ${LogSectionEnd}
+SectionEnd
+
+Section -un.post
+    # Close log:
+    ${LogClose}
 SectionEnd
 
 
@@ -669,11 +800,14 @@ SectionEnd
 Function un.onInit
     Push $R0
 
+    # Initialize log:
+    ${LogInit} ${VIM_LOG_FILE}
+
     # Get root path of the installation:
     ${GetParent} $INSTDIR $vim_install_root
 
     # Check to make sure this is a valid directory:
-    !insertmacro VerifyInstDir $vim_install_root $R0
+    ${VerifyInstDir} $vim_install_root $R0
     ${If} $R0 = 0
         ${ShowErrMsg} $(str_msg_invalid_root)
         Pop $R0

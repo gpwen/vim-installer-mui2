@@ -153,20 +153,8 @@ LangString str_msg_vim_running   ${LANG_TRADCHINESE} \
 LangString str_msg_install_fail  ${LANG_TRADCHINESE} \
     "安裝失敗。預祝下次好運。"
 
-LangString str_msg_unregister    ${LANG_TRADCHINESE} \
-    "正移除與 Vim 相關的系統設定 ..."
-
-LangString str_msg_rm_exe        ${LANG_TRADCHINESE} \
-    "正移除 Vim 程式及腳本 ..."
-
 LangString str_msg_rm_exe_fail   ${LANG_TRADCHINESE} \
     "資料夾 $0 下有部分檔案未能移除！$\n閣下必須手工移除該資料夾。"
-
-LangString str_msg_rm_plugin     ${LANG_TRADCHINESE} \
-    "正移除 Vim 插件資料夾 $vim_plugin_path ..."
-
-LangString str_msg_rm_root       ${LANG_TRADCHINESE} \
-    "正移除 Vim 安裝資料夾 $vim_install_root ..."
 
 LangString str_msg_invalid_root  ${LANG_TRADCHINESE} \
     "安裝資料夾 $vim_install_root 無效！$\n卸載程式將終止。"

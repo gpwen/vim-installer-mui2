@@ -153,20 +153,8 @@ LangString str_msg_vim_running   ${LANG_SIMPCHINESE} \
 LangString str_msg_install_fail  ${LANG_SIMPCHINESE} \
     "安装失败。祝您下次好运。"
 
-LangString str_msg_unregister    ${LANG_SIMPCHINESE} \
-    "正在删除与 Vim 相关的系统配置 ..."
-
-LangString str_msg_rm_exe        ${LANG_SIMPCHINESE} \
-    "正在删除 Vim 执行文件和脚本 ..."
-
 LangString str_msg_rm_exe_fail   ${LANG_SIMPCHINESE} \
     "目录 $0 下有部分文件删除失败！$\n您必须手工删除该目录。"
-
-LangString str_msg_rm_plugin     ${LANG_SIMPCHINESE} \
-    "正在删除 Vim 插件目录 $vim_plugin_path ..."
-
-LangString str_msg_rm_root       ${LANG_SIMPCHINESE} \
-    "正在删除 Vim 安装目录 $vim_install_root ..."
 
 LangString str_msg_invalid_root  ${LANG_SIMPCHINESE} \
     "安装路径 $vim_install_root 无效！$\n卸载程序将终止。"

@@ -162,20 +162,8 @@ LangString str_msg_vim_running   ${LANG_ENGLISH} \
 LangString str_msg_install_fail  ${LANG_ENGLISH} \
     "Installation failed. Better luck next time."
 
-LangString str_msg_unregister    ${LANG_ENGLISH} \
-    "Unregistering Vim ..."
-
-LangString str_msg_rm_exe        ${LANG_ENGLISH} \
-    "Removing Vim excutables/runtime files ..."
-
 LangString str_msg_rm_exe_fail   ${LANG_ENGLISH} \
     "Some files in $0 have not been deleted!$\nYou must do it manually."
-
-LangString str_msg_rm_plugin     ${LANG_ENGLISH} \
-    "Removing Vim plugin directory $vim_plugin_path ..."
-
-LangString str_msg_rm_root       ${LANG_ENGLISH} \
-    "Removing Vim root directory $vim_install_root ..."
 
 LangString str_msg_invalid_root  ${LANG_ENGLISH} \
     "Invalid install path $vim_install_root!$\nAbort uninstaller."
