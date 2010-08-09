@@ -134,8 +134,9 @@ LangString str_desc_rm_exe       ${LANG_TRADCHINESE} \
     "移除所有的 Vim 程式及腳本。"
 
 LangString str_desc_rm_plugin    ${LANG_TRADCHINESE} \
-    "移除您的 Vim 插件資料夾 $vim_plugin_path。$\n$\n請注意該資料夾下所有\
-     檔案都會被移除。若閣下在該資料夾下有希望保留的檔案，切勿勾選該項！"
+    "移除您的 Vim 插件資料夾 $vim_plugin_path。$\r$\n$\r$\n\
+     請注意該資料夾下所有檔案都會被移除。若閣下在該資料夾下有希望保留的檔案，\
+     切勿勾選該項！"
 
 LangString str_desc_rm_root      ${LANG_TRADCHINESE} \
     "移除 Vim 安裝資料夾 $vim_install_root。請注意該資料夾下可能有閣下的 Vim \
@@ -147,14 +148,14 @@ LangString str_desc_rm_root      ${LANG_TRADCHINESE} \
 ##############################################################################
 
 LangString str_msg_vim_running   ${LANG_TRADCHINESE} \
-    "閣下的電腦上尚有正在運行之 Vim，$\n\
+    "閣下的電腦上尚有正在運行之 Vim，$\r$\n\
      煩請閣下在執行后續步驟前將其全部退出。"
 
 LangString str_msg_install_fail  ${LANG_TRADCHINESE} \
     "安裝失敗。預祝下次好運。"
 
 LangString str_msg_rm_exe_fail   ${LANG_TRADCHINESE} \
-    "資料夾 $0 下有部分檔案未能移除！$\n閣下必須手工移除該資料夾。"
+    "資料夾 $0 下有部分檔案未能移除！$\r$\n閣下必須手工移除該資料夾。"
 
 LangString str_msg_invalid_root  ${LANG_TRADCHINESE} \
-    "安裝資料夾 $vim_install_root 無效！$\n卸載程式將終止。"
+    "安裝資料夾 $vim_install_root 無效！$\r$\n卸載程式將終止。"

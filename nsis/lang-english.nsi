@@ -141,7 +141,8 @@ LangString str_desc_rm_exe       ${LANG_ENGLISH} \
     "Remove all Vim excutables and runtime files."
 
 LangString str_desc_rm_plugin    ${LANG_ENGLISH} \
-    "Remove all files in your Vim plugin directory $vim_plugin_path.$\n$\n\
+    "Remove all files in your Vim plugin directory $vim_plugin_path.\
+     $\r$\n$\r$\n\
      CAREFUL: Do NOT remove the directory if you have created something \
      there that you want to keep."
 
@@ -156,14 +157,14 @@ LangString str_desc_rm_root      ${LANG_ENGLISH} \
 ##############################################################################
 
 LangString str_msg_vim_running   ${LANG_ENGLISH} \
-    "Vim is still running on your system.$\n\
+    "Vim is still running on your system.$\r$\n\
      Please close all instances of Vim before you continue."
 
 LangString str_msg_install_fail  ${LANG_ENGLISH} \
     "Installation failed. Better luck next time."
 
 LangString str_msg_rm_exe_fail   ${LANG_ENGLISH} \
-    "Some files in $0 have not been deleted!$\nYou must do it manually."
+    "Some files in $0 have not been deleted!$\r$\nYou must do it manually."
 
 LangString str_msg_invalid_root  ${LANG_ENGLISH} \
-    "Invalid install path $vim_install_root!$\nAbort uninstaller."
+    "Invalid install path $vim_install_root!$\r$\nAbort uninstaller."

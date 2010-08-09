@@ -134,8 +134,9 @@ LangString str_desc_rm_exe       ${LANG_SIMPCHINESE} \
     "删除 Vim 的所有执行文件及脚本。"
 
 LangString str_desc_rm_plugin    ${LANG_SIMPCHINESE} \
-    "删除您的 Vim  插件目录 $vim_plugin_path。$\n$\n请注意该目录下所有文件\
-     都会被删除。如果您在该目录下有需要保留的文件，切勿选择该项！"
+    "删除您的 Vim  插件目录 $vim_plugin_path。$\r$\n$\r$\n\
+     请注意该目录下所有文件都会被删除。如果您在该目录下有需要保留的文件，\
+     切勿选择该项！"
 
 LangString str_desc_rm_root      ${LANG_SIMPCHINESE} \
     "删除 Vim 安装目录 $vim_install_root。请注意该目录下可能有您的 Vim 配置\
@@ -147,14 +148,14 @@ LangString str_desc_rm_root      ${LANG_SIMPCHINESE} \
 ##############################################################################
 
 LangString str_msg_vim_running   ${LANG_SIMPCHINESE} \
-    "您的系统上仍有 Vim 在运行，$\n\
+    "您的系统上仍有 Vim 在运行，$\r$\n\
      请您在执行后续步骤前退出这些 Vim。"
 
 LangString str_msg_install_fail  ${LANG_SIMPCHINESE} \
     "安装失败。祝您下次好运。"
 
 LangString str_msg_rm_exe_fail   ${LANG_SIMPCHINESE} \
-    "目录 $0 下有部分文件删除失败！$\n您必须手工删除该目录。"
+    "目录 $0 下有部分文件删除失败！$\r$\n您必须手工删除该目录。"
 
 LangString str_msg_invalid_root  ${LANG_SIMPCHINESE} \
-    "安装路径 $vim_install_root 无效！$\n卸载程序将终止。"
+    "安装路径 $vim_install_root 无效！$\r$\n卸载程序将终止。"

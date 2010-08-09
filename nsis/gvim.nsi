@@ -38,6 +38,9 @@
 # Uncomment the following line to enable debug log:
 !define VIM_LOG_FILE "$TEMP\vim-install-debug.log"
 
+# Maximum number of old Vim installation to support on GUI
+!define VIM_MAX_OLD_VER 5
+
 !define VER_MAJOR 7
 !define VER_MINOR 3d
 
@@ -48,17 +51,24 @@
 !include Sections.nsh    # For section control
 !include LogicLib.nsh
 !include FileFunc.nsh
+!include WordFunc.nsh
 !include x64.nsh
 
 # Global variables:
 Var vim_install_root
 Var vim_plugin_path
+Var vim_old_ver_keys
+Var vim_old_ver_count
 Var fh_log
 
-!define VIM_LNK_NAME  "gVim ${VER_MAJOR}.${VER_MINOR}"
+# Uninstallation registry key:
+!define VER_SHORT         "${VER_MAJOR}.${VER_MINOR}"
+!define REG_KEY_UNINSTALL "software\Microsoft\Windows\CurrentVersion\Uninstall"
+!define VIM_PRODUCT_NAME  "Vim ${VER_SHORT}"
+!define VIM_LNK_NAME      "gVim ${VER_SHORT}"
 
-Name                  "Vim ${VER_MAJOR}.${VER_MINOR}"
-OutFile               gvim${VER_MAJOR}${VER_MINOR}.exe
+Name                  "${VIM_PRODUCT_NAME}"
+OutFile               gvim${VER_SHORT}.exe
 CRCCheck              force
 SetCompressor         lzma
 SetDatablockOptimize  on
@@ -110,7 +120,6 @@ SilentInstall         normal
 !endif
 
 # Installer pages
-!define MUI_PAGE_CUSTOMFUNCTION_LEAVE UninstallOldVer
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "${VIMRT}\doc\uganda.nsis.txt"
 !insertmacro MUI_PAGE_COMPONENTS
@@ -185,14 +194,20 @@ SilentInstall         normal
 
 !define Logged2 "!insertmacro _Logged2"
 !macro _Logged2 _CMD _PARAM1 _PARAM2
-    ${Log} "${_CMD} ${_PARAM1} ${_PARAM2}"
+    ${Log} `${_CMD} ${_PARAM1} ${_PARAM2}`
     `${_CMD}` `${_PARAM1}` `${_PARAM2}`
 !macroend
 
 !define Logged3 "!insertmacro _Logged3"
-!macro _Logged3 _CMD _PARAM1 _PARAM2  _PARAM3
-    ${Log} `${_CMD} ${_PARAM1} ${_PARAM2}  ${_PARAM3}`
-    `${_CMD}` `${_PARAM1}` `${_PARAM2}`  `${_PARAM3}`
+!macro _Logged3 _CMD _PARAM1 _PARAM2 _PARAM3
+    ${Log} `${_CMD} ${_PARAM1} ${_PARAM2} ${_PARAM3}`
+    `${_CMD}` `${_PARAM1}` `${_PARAM2}` `${_PARAM3}`
+!macroend
+
+!define Logged4 "!insertmacro _Logged4"
+!macro _Logged4 _CMD _PARAM1 _PARAM2 _PARAM3 _PARAM4
+    ${Log} `${_CMD} ${_PARAM1} ${_PARAM2} ${_PARAM3} ${_PARAM4}`
+    `${_CMD}` `${_PARAM1}` `${_PARAM2}` `${_PARAM3}` `${_PARAM4}`
 !macroend
 
 !define LogSectionStart "!insertmacro _LogSectionStart"
@@ -209,25 +224,25 @@ SilentInstall         normal
     !endif
 !macroend
 
-# Verify VIM install path $INPUT_DIR.  If the input path is a valid VIM
-# install path (ends with "vim"), $VALID will be set to 1; Otherwise $VALID
+# Verify VIM install path $_INPUT_DIR.  If the input path is a valid VIM
+# install path (ends with "vim"), $_VALID will be set to 1; Otherwise $_VALID
 # will be set to 0.
 !define VerifyInstDir "!insertmacro _VerifyInstDir"
-!macro _VerifyInstDir INPUT_DIR VALID
+!macro _VerifyInstDir _INPUT_DIR _VALID
     push $R0
-    StrCpy $R0 ${INPUT_DIR} 3 -3
+    StrCpy $R0 ${_INPUT_DIR} 3 -3
     ${If} $R0 != "vim"
         StrCpy $R0 0
     ${Else}
         StrCpy $R0 1
     ${EndIf}
     Exch $R0
-    Pop ${VALID}
+    Pop ${_VALID}
 !macroend
 
 # Extract different version of vim console executable based on detected
 # Windows version.  The output path is whatever has already been set before
-# this marcro.
+# this macro.
 !define ExtractVimConsole "!insertmacro _ExtractVimConsole"
 !macro _ExtractVimConsole
     ReadRegStr $R0 HKLM \
@@ -251,7 +266,7 @@ SilentInstall         normal
     Push $R0
     Push $R1
 
-    nsExec::ExecToStack '"${_VIM_CONSOLE_PATH}\vim.exe" --serverlist'
+    ${Logged1} nsExec::ExecToStack '"${_VIM_CONSOLE_PATH}\vim.exe" --serverlist'
     Pop $R0  # Execution status
     Pop $R1  # Output string (server list)
 
@@ -281,45 +296,60 @@ SilentInstall         normal
 !macro _ShowErrMsg _ERR_MSG
     # Show message box only if we're not in silent install mode:
     ${IfNot} ${Silent}
-        MessageBox MB_OK|MB_ICONEXCLAMATION ${_ERR_MSG} /SD IDOK
+        MessageBox MB_OK|MB_ICONEXCLAMATION "${_ERR_MSG}" /SD IDOK
     ${EndIf}
 
     # Also send error message to detail log.  Might not work if the log window
     # has not been created yet.
-    ${Log} ${_ERR_MSG}
+    ${Log} "${_ERR_MSG}"
 !macroend
 
+!define GetOldVerSectionID "!insertmacro _GetOldVerSectionID"
+!macro _GetOldVerSectionID _INDEX _ID
+    Push ${_INDEX}
+    Call GetOldVerSectionIDFunc
+    Pop  ${_ID}
+!macroend
+
+!define VimGetOldVerKey "!insertmacro _VimGetOldVerKey"
+!macro _VimGetOldVerKey _INDEX _KEY
+    Push ${_INDEX}
+    Call VimGetOldVerKeyFunc
+    Pop  ${_KEY}
+!macroend
 
 ##############################################################################
 # Installer Functions
 ##############################################################################
 
 Function .onInit
-    Push $R0
-    Push $R1
+
+    # Initialize all globals:
+    StrCpy $vim_install_root  ""
+    StrCpy $vim_plugin_path   ""
+    StrCpy $vim_old_ver_keys  ""
+    StrCpy $vim_old_ver_count 0
+    StrCpy $fh_log            ""
 
     # Initialize log:
     ${LogInit} ${VIM_LOG_FILE}
 
-    # If VIM environment string contains a valid VIM install path, use that as
-    # install path:
-    ReadEnvStr $R0 "VIM"
-    ${If}    $R0 != ""
-    ${AndIf} ${FileExists} "$R0"
-        ${GetParent} $R0 $R0
-        ${VerifyInstDir} $R0 $R1
-        ${If} $R1 = 0
-            ${Log} "Set install path per VIM env: $R0"
-            StrCpy $INSTDIR $R0
-        ${EndIf}
+    # Read all Vim uninstall keys from registry.  Please note we only support
+    # limited number of old version.  Extra version will be ignored!
+    Call LoadVimUninstallKeys
+    ${If} $vim_old_ver_count > ${VIM_MAX_OLD_VER}
+        # TODO: Change to error and abort!
+        ${Log} "WARNING: $vim_old_ver_count versions found, \
+                exceeds upper limit ${VIM_MAX_OLD_VER}. \
+                Extra versions ignored!"
+        StrCpy $vim_old_ver_count ${VIM_MAX_OLD_VER}
     ${EndIf}
 
-    # Default install path:
-    ${VerifyInstDir} $INSTDIR $R0
-    ${If} $R0 = 0
-        StrCpy $INSTDIR "$PROGRAMFILES\Vim"
-        ${Log} "Set default install path to: $INSTDIR"
-    ${EndIf}
+    # Determine default install path:
+    Call SetInstallPath
+
+    # Config sections for removal of old version:
+    Call ConfigOldVerSections
 
     # Initialize user variables:
     # $0 - holds the directory the executables are installed to
@@ -327,13 +357,14 @@ Function .onInit
     #      registration (since a non-OLE gvim will not complain, and we want
     #      to always register an OLE gvim).
     # $2 - holds the names to create batch files for
+    # TODO: Log
+    # TODO: User user var instead
     StrCpy $0 "$INSTDIR\vim${VER_MAJOR}${VER_MINOR}"
     StrCpy $1 "-register-OLE"
     StrCpy $2 "gvim evim gview gvimdiff vimtutor"
 
-    Pop $R1
-    Pop $R0
-
+    # TODO: Shouldn't we move this to the beginning?
+    #
     # Show language selection dialog:  User selected language will be
     # represented by Local ID (LCID) and assigned to $LANGUAGE.  If registry
     # key defined, the LCID will also be stored in Windows registry.  For list
@@ -344,44 +375,260 @@ Function .onInit
     !endif
 FunctionEnd
 
+Function LoadVimUninstallKeys
+    Push $R0
+    Push $R1
+    Push $R2
+
+    ClearErrors
+    StrCpy $R0 0    # Sub-key index
+    StrCpy $R1 ""   # Sub-key
+    StrCpy $vim_old_ver_keys  ""
+    StrCpy $vim_old_ver_count 0
+    ${Do}
+        # Eumerate the sub-key:
+        EnumRegKey $R1 HKLM ${REG_KEY_UNINSTALL} $R0
+
+        # Stop if no more sub-key:
+        ${If}   ${Errors}
+        ${OrIf} $R1 == ""
+            ${ExitDo}
+        ${EndIf}
+
+        # Move to the next sub-key:
+        IntOp $R0 $R0 + 1
+
+        # Check if the key is Vim uninstall key or not:
+        StrCpy $R2 $R1 4
+        ${IfThen} $R2 S!= "Vim " ${|} ${Continue} ${|}
+
+        # Verifies required sub-keys:
+        ReadRegStr $R2 HKLM "${REG_KEY_UNINSTALL}\$R1" "DisplayName"
+        ${If}   ${Errors}
+        ${OrIf} $R2 == ""
+            ${Log} "WARNING: Skip uninstall key [$R1]: \
+                    Cannot find sub-key 'DisplayName'!"
+            ${Continue}
+        ${EndIf}
+
+        ReadRegStr $R2 HKLM "${REG_KEY_UNINSTALL}\$R1" "UninstallString"
+        ${If}   ${Errors}
+        ${OrIf} $R2 == ""
+            ${Log} "WARNING: Skip uninstall key [$R1]: \
+                    Cannot find sub-key 'UninstallString'!"
+            ${Continue}
+        ${EndIf}
+
+        ${IfNot} ${FileExists} $R2
+            ${Log} "WARNING: Skip uninstall key [$R1]: \
+                    Cannot access uninstall executable [$R2]"
+            ${Continue}
+        ${EndIf}
+
+        # Store the found sub-key:
+        IntOp  $vim_old_ver_count $vim_old_ver_count + 1
+        StrCpy $vim_old_ver_keys "$vim_old_ver_keys$R1$\r$\n"
+        ${Log} "Found Vim uninstall key No.$vim_old_ver_count: [$R1]"
+    ${Loop}
+
+    ${Log} "Found $vim_old_ver_count uninstall keys:$\r$\n\
+            $vim_old_ver_keys"
+    ClearErrors
+
+    Pop $R2
+    Pop $R1
+    Pop $R0
+FunctionEnd
+
+Function ConfigOldVerSections
+    Push $R0
+    Push $R1
+    Push $R2
+
+    StrCpy $R0 0
+    ${DoWhile} $R0 < $vim_old_ver_count
+        ${GetOldVerSectionID} $R0 $R1
+        ${VimGetOldVerKey}    $R0 $R2
+        ${Log} "Old ver section No.$R0, ID=$R1, Key=[$R2]"
+
+        !insertmacro SelectSection $R1
+
+        # If the same version installed, we must remove it:
+        ${If} $R2 S== "${VIM_PRODUCT_NAME}"
+            !insertmacro SetSectionFlag   $R1 ${SF_RO}
+        ${EndIf}
+
+        # Set section title to readable form:
+        ReadRegStr $R2 HKLM "${REG_KEY_UNINSTALL}\$R2" "DisplayName"
+        SectionSetText $R1 'Uninstall $R2'
+
+        IntOp $R0 $R0 + 1
+    ${Loop}
+
+    ${DoWhile} $R0 < ${VIM_MAX_OLD_VER}
+        ${GetOldVerSectionID} $R0 $R1
+        ${Log} "Disable old ver section No.$R0, ID=$R1"
+        !insertmacro UnselectSection  $R1
+        !insertmacro SetSectionFlag   $R1 ${SF_RO}
+        SectionSetText $R1 ""
+
+        IntOp $R0 $R0 + 1
+    ${Loop}
+
+    Pop $R2
+    Pop $R1
+    Pop $R0
+FunctionEnd
+
+Function SetInstallPath
+    Push $R0
+    Push $R1
+    Push $R2  # Valid flag
+
+    # Initialize to invalid:
+    StrCpy $R2 0
+
+    # First try VIMRUNTIME environment string, use its parent directory as
+    # install path if valid.
+    ReadEnvStr $R0 "VIMRUNTIME"
+    ${IfThen} $R0 != "" ${|} ${GetParent} $R0 $R0 ${|}
+    ${If} $R0 != ""
+        ${VerifyInstDir} $R0 $R2
+        ${If} $R2 = 1
+            ${Log} "Set install path per VIMRUNTIME: $R0"
+            StrCpy $INSTDIR $R0
+        ${EndIf}
+    ${EndIf}
+
+    # Then try VIM environment, use it as install path directly if valid.
+    ${If} $R2 = 0
+        ReadEnvStr $R0 "VIM"
+        ${If} $R0 != ""
+            ${VerifyInstDir} $R0 $R2
+            ${If} $R2 = 1
+                ${Log} "Set install path per VIM env: $R0"
+                StrCpy $INSTDIR $R0
+            ${EndIf}
+        ${EndIf}
+    ${EndIf}
+
+    # Next try previously installed version.  If any, derive the install path
+    # from the uninstall key of the last installed version:
+    ${If} $vim_old_ver_count > 0
+        # Find the uninstall key for the last installed version ($R1):
+        IntOp $R0 $vim_old_ver_count - 1
+        ${VimGetOldVerKey} $R0 $R1
+
+        # Read path of the unintaller for registry ($R0):
+        ${IfNot} ${Errors}
+        ${AndIf} $R1 != ""
+            ReadRegStr $R0 HKLM "${REG_KEY_UNINSTALL}\$R1" "UninstallString"
+        ${Else}
+            StrCpy $R0 ""
+        ${EndIf}
+
+        # Derive install path from unintaller path name:
+        ${GetParent} $R0 $R0
+        ${GetParent} $R0 $R0
+        ${VerifyInstDir} $R0 $R2
+        ${If} $R2 = 1
+            ${Log} "Set install path per registry key [$R1]: $R0"
+            StrCpy $INSTDIR $R0
+        ${EndIf}
+    ${EndIf}
+
+    # If all of the above failed, set default install path:
+    ${If} $R2 = 0
+        StrCpy $INSTDIR "$PROGRAMFILES\Vim"
+        ${Log} "Set default install path to: $INSTDIR"
+    ${EndIf}
+
+    Pop $R2
+    Pop $R1
+    Pop $R0
+FunctionEnd
+
 # Unintall existing Vim if found.  The install path of the existing Vim will
 # be used as the default install path.
-Function UninstallOldVer
-    # We're going to call the uninstaller below to make change, make sure Vim
-    # is not running:
-    Call CheckRunningVim
+Function VimRmOldVer
+    Exch $R0
+    # Silently ignore invalid sections:
+    ${If} $R0 >= $vim_old_ver_count
+        ${Log} "Skip non-exist older ver No. $R0"
+        Pop $R0
+        Return
+    ${EndIf}
 
-    # Run the install program to check for already installed versions:
-    SetOutPath $TEMP
-    File /oname=install.exe ${VIMSRC}\installw32.exe
-    ExecWait "$TEMP\install.exe -uninstall-check"
-    Delete $TEMP\install.exe
+    Push $R1
+    Push $R2
+    Push $R3
+
+    #
+    ${VimGetOldVerKey} $R0 $R1
+    ${If} $R1 == ""
+        # TODO: Add lang string
+        ${ShowErrMsg} "Cannot find ..."
+        Abort
+    ${EndIf}
+
+    StrCpy $R0 $R1
+    ${Log} "Try to uninstall $R0 ..."
+
+    # Read path of the unintaller for registry ($R1):
+    ReadRegStr $R1 HKLM "${REG_KEY_UNINSTALL}\$R0" "UninstallString"
+    ${If}   ${Errors}
+    ${OrIf} $R1 == ""
+        # TODO: Add lang string
+        ${ShowErrMsg} "Cannot read ..."
+        Abort
+    ${EndIf}
+
+    ${IfNot} ${FileExists} $R1
+        # TODO: Add lang string
+        ${ShowErrMsg} "Cannot access ..."
+        Abort
+    ${EndIf}
+
+    # Path of uninstaller ($R2) and name of uninstaller($R3):
+    ${GetParent}   $R1 $R2
+    ${GetFileName} $R1 $R3
+
+    # Copy unintall to temporary path:
+    ${Logged4} CopyFiles /SILENT /FILESONLY $R1 $TEMP
+    ${If}      ${Errors}
+    ${OrIfNot} ${FileExists} "$TEMP\$R3"
+        # TODO: Add lang string
+        ${ShowErrMsg} "Fail to copy ..."
+        Abort
+    ${EndIf}
+
+    # Execute the uninstaller in TEMP, exit code stores in $R2:
+    ${Logged2} ExecWait '"$TEMP\$R3" _?=$R2' $R2
+    ${If} ${Errors}
+        ${Logged1} Delete "$TEMP\$R3"
+        # TODO: Add lang string
+        ${ShowErrMsg} "Fail to exec ..."
+        Abort
+    ${EndIf}
+
+    ${Logged1} Delete "$TEMP\$R3"
+
+    ${Log} "Uninstaller exit code: $R2"
+
+    # If this is the uninstaller for the same version we're trying to
+    # installer, it's not possible to continue intallation:
+    ${If}    $R2 <> 0
+    ${AndIf} $R0 S== "${VIM_PRODUCT_NAME}"
+        # TODO: Add lang string
+        ${ShowErrMsg} "Install abort ..."
+        Abort
+    ${EndIf}
 
     # We may have been put to the background when uninstall did something:
     BringToFront
 
-    # Install will have created a file for us that contains the directory where
-    # we should install.  This is $VIM if it's set.  This appears to be the only
-    # way to get the value of $VIM here!?
-    Push $R0
-    Push $R1
-    ${If} ${FileExists} "$TEMP\vimini.ini"
-        ReadINIStr $R0 $TEMP\vimini.ini vimini dir
-        Delete $TEMP\vimini.ini
-
-        # Make sure the loaded path name is valid:
-        ${VerifyInstDir} $R0 $R1
-        ${IfThen} $R1 = 0 ${|} StrCpy $R0 "" ${|}
-    ${Else}
-        StrCpy $R0 ""
-    ${EndIf}
-
-    # If ReadINIStr find a valid path: use it as the default dir:
-    ${If} $R0 != ""
-        StrCpy $INSTDIR $R0
-        StrCpy $0 "$R0\vim${VER_MAJOR}${VER_MINOR}"
-    ${EndIf}
-
+    Pop $R3
+    Pop $R2
     Pop $R1
     Pop $R0
 FunctionEnd
@@ -423,6 +670,81 @@ FunctionEnd
 
 Function .onInstFailed
     ${ShowErrMsg} $(str_msg_install_fail)
+FunctionEnd
+
+Function GetOldVerSectionIDFunc
+    Exch $R0  # Index of the section
+    Push $R1
+    Push $R2
+
+    # Push all section ID onto the stack in reverse order, so the first
+    # seciton ID should be the one on the top of the stack:
+    Call PushOldVerSectionIDs
+
+    # Pop out the required one:
+    StrCpy $R1 0
+    ${While} $R1 <= $R0
+        Pop $R2
+        IntOp $R1 $R1 + 1
+    ${EndWhile}
+
+    # Store result in $R0:
+    StrCpy $R0 $R2
+
+    ${While} $R1 < ${VIM_MAX_OLD_VER}
+        Pop $R2
+        IntOp $R1 $R1 + 1
+    ${EndWhile}
+
+    Pop  $R2
+    Pop  $R1
+    Exch $R0
+FunctionEnd
+
+Function VimGetOldVerKeyFunc
+    Exch $R0  # Index of the uninstall key
+
+    ${If} $R0 >= $vim_old_ver_count
+        StrCpy $R0 ""
+    ${Else}
+        # WordFind uses 1 based index:
+        IntOp $R0 $R0 + 1
+        ${WordFind} $vim_old_ver_keys "$\r$\n" "+$R0" $R0
+    ${EndIf}
+
+    Exch $R0
+FunctionEnd
+
+
+##############################################################################
+# Dynamic sections to support removal of existing versions
+##############################################################################
+
+!define OldVerSection "!insertmacro _OldVerSection"
+!macro _OldVerSection _ID
+    Section "Uninstall exising version ${_ID}" `id_section_old_install_${_ID}`
+        SectionIn 1 2 3
+
+        ${Log} "$\r$\nEnter old ver section ${_ID}"
+        Push ${_ID}
+        Call VimRmOldVer
+        ${Log} "Leave old ver section ${_ID}"
+    SectionEnd
+!macroend
+
+${OldVerSection} 0
+${OldVerSection} 1
+${OldVerSection} 2
+${OldVerSection} 3
+${OldVerSection} 4
+
+# Push section ID of all above sections onto stack.
+Function PushOldVerSectionIDs
+    Push ${id_section_old_install_4}
+    Push ${id_section_old_install_3}
+    Push ${id_section_old_install_2}
+    Push ${id_section_old_install_1}
+    Push ${id_section_old_install_0}
 FunctionEnd
 
 
@@ -728,6 +1050,7 @@ Section "un.$(str_unsection_exe)" id_unsection_exe
     ${LogSectionStart}
 
     # It contains the Vim executables and runtime files.
+    StrCpy $0 "$INSTDIR"
     ${Logged2} Delete /REBOOTOK $0\*.dll
     ClearErrors
 
