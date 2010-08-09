@@ -1,4 +1,4 @@
-# vi:set ts=8 sts=4 sw=4:
+# vi:set ts=8 sts=4 sw=4 fdm=marker:
 #
 # NSIS file to create a self-installing exe for Vim.
 # It requires NSIS version 2.34 or later (for Modern UI 2.0).
@@ -91,7 +91,7 @@ SilentInstall         normal
 # BGGradient 004000 008200 FFFFFF
 
 ##############################################################################
-# MUI Settings
+# MUI Settings                                                            {{{1
 ##############################################################################
 !define MUI_ICON   "icons\vim_16c.ico"
 !define MUI_UNICON "icons\vim_uninst_16c.ico"
@@ -136,7 +136,7 @@ SilentInstall         normal
 !insertmacro MUI_UNPAGE_FINISH
 
 ##############################################################################
-# Languages Files
+# Languages Files                                                         {{{1
 ##############################################################################
 # Please note English language file should be listed first as the first one
 # will be used as the default.
@@ -150,7 +150,7 @@ SilentInstall         normal
 !endif
 
 ##############################################################################
-# Macros
+# Macros                                                                  {{{1
 ##############################################################################
 
 !define LogInit "!insertmacro _LogInit"
@@ -178,6 +178,12 @@ SilentInstall         normal
     ${If} $fh_log != ""
         FileWrite $fh_log `${_LOG_MSG}$\r$\n`
     ${EndIf}
+!macroend
+
+!define LogPrint "!insertmacro _LogPrint"
+!macro _LogPrint _LOG_MSG
+    ${Log} `${_LOG_MSG}`
+    DetailPrint `${_LOG_MSG}`
 !macroend
 
 !define Logged0 "!insertmacro _Logged0"
@@ -299,9 +305,12 @@ SilentInstall         normal
         MessageBox MB_OK|MB_ICONEXCLAMATION "${_ERR_MSG}" /SD IDOK
     ${EndIf}
 
-    # Also send error message to detail log.  Might not work if the log window
+    # Send error message to debug log:
+    ${Log} "ERROR: ${_ERR_MSG}"
+
+    # Also send error message to debug log.  Might not work if the log window
     # has not been created yet.
-    ${Log} "${_ERR_MSG}"
+    DetailPrint "${_ERR_MSG}"
 !macroend
 
 !define GetOldVerSectionID "!insertmacro _GetOldVerSectionID"
@@ -319,7 +328,7 @@ SilentInstall         normal
 !macroend
 
 ##############################################################################
-# Installer Functions
+# Installer Functions                                                     {{{1
 ##############################################################################
 
 Function .onInit
@@ -548,13 +557,19 @@ Function SetInstallPath
     Pop $R0
 FunctionEnd
 
-# Unintall existing Vim if found.  The install path of the existing Vim will
-# be used as the default install path.
+# Unintalls the n-th old Vim version found on the system.
+#
+# This function will be called by dynamic "old version" sections to remove the
+# specified old vim version found on the system.  The index (ID) of the old
+# vim version will be put on the top of the stack.  This function does not
+# provide any output.
 Function VimRmOldVer
-    Exch $R0
-    # Silently ignore invalid sections:
-    ${If} $R0 >= $vim_old_ver_count
-        ${Log} "Skip non-exist older ver No. $R0"
+    Exch $R0  # ID of the Vim version to remove.
+
+    # Silently ignore out of bound IDs:
+    ${If}   $R0 >= $vim_old_ver_count
+    ${OrIf} $R0 < 0
+        ${Log} "Skip non-exist old ver No. $R0"
         Pop $R0
         Return
     ${EndIf}
@@ -563,29 +578,26 @@ Function VimRmOldVer
     Push $R2
     Push $R3
 
-    #
+    # Get (cached) registry key for the specified old version:
     ${VimGetOldVerKey} $R0 $R1
     ${If} $R1 == ""
-        # TODO: Add lang string
-        ${ShowErrMsg} "Cannot find ..."
+        ${ShowErrMsg} "$(str_msg_rm_fail) $R0$\r$\n$(str_msg_no_rm_key)"
         Abort
     ${EndIf}
 
     StrCpy $R0 $R1
-    ${Log} "Try to uninstall $R0 ..."
+    ${LogPrint} "$(str_msg_rm_start) $R0 ..."
 
-    # Read path of the unintaller for registry ($R1):
+    # Read path of the unintaller from registry ($R1):
     ReadRegStr $R1 HKLM "${REG_KEY_UNINSTALL}\$R0" "UninstallString"
     ${If}   ${Errors}
     ${OrIf} $R1 == ""
-        # TODO: Add lang string
-        ${ShowErrMsg} "Cannot read ..."
+        ${ShowErrMsg} "$(str_msg_rm_fail) $R0$\r$\n$(str_msg_no_rm_reg)"
         Abort
     ${EndIf}
 
     ${IfNot} ${FileExists} $R1
-        # TODO: Add lang string
-        ${ShowErrMsg} "Cannot access ..."
+        ${ShowErrMsg} "$(str_msg_rm_fail) $R0$\r$\n$(str_msg_no_rm_exe)"
         Abort
     ${EndIf}
 
@@ -597,8 +609,7 @@ Function VimRmOldVer
     ${Logged4} CopyFiles /SILENT /FILESONLY $R1 $TEMP
     ${If}      ${Errors}
     ${OrIfNot} ${FileExists} "$TEMP\$R3"
-        # TODO: Add lang string
-        ${ShowErrMsg} "Fail to copy ..."
+        ${ShowErrMsg} "$(str_msg_rm_fail) $R0$\r$\n$(str_msg_rm_copy_fail)"
         Abort
     ${EndIf}
 
@@ -606,8 +617,7 @@ Function VimRmOldVer
     ${Logged2} ExecWait '"$TEMP\$R3" _?=$R2' $R2
     ${If} ${Errors}
         ${Logged1} Delete "$TEMP\$R3"
-        # TODO: Add lang string
-        ${ShowErrMsg} "Fail to exec ..."
+        ${ShowErrMsg} "$(str_msg_rm_fail) $R0$\r$\n$(str_msg_rm_run_fail)"
         Abort
     ${EndIf}
 
@@ -616,11 +626,10 @@ Function VimRmOldVer
     ${Log} "Uninstaller exit code: $R2"
 
     # If this is the uninstaller for the same version we're trying to
-    # installer, it's not possible to continue intallation:
+    # installer, it's not possible to continue with installation:
     ${If}    $R2 <> 0
     ${AndIf} $R0 S== "${VIM_PRODUCT_NAME}"
-        # TODO: Add lang string
-        ${ShowErrMsg} "Install abort ..."
+        ${ShowErrMsg} "$(str_msg_rm_fail) $R0$\r$\n$(str_msg_abort_install)"
         Abort
     ${EndIf}
 
@@ -717,7 +726,7 @@ FunctionEnd
 
 
 ##############################################################################
-# Dynamic sections to support removal of existing versions
+# Dynamic sections to support removal of old versions                     {{{1
 ##############################################################################
 
 !define OldVerSection "!insertmacro _OldVerSection"
@@ -749,7 +758,7 @@ FunctionEnd
 
 
 ##############################################################################
-# Installer Sections
+# Installer Sections                                                      {{{1
 ##############################################################################
 
 Section $(str_section_exe) id_section_exe
@@ -987,7 +996,7 @@ SectionEnd
 
 
 ##############################################################################
-# Description for Installer Sections
+# Description for Installer Sections                                      {{{1
 ##############################################################################
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_exe}         $(str_desc_exe)
@@ -1012,7 +1021,7 @@ SectionEnd
 
 
 ##############################################################################
-# Uninstaller Sections
+# Uninstaller Sections                                                    {{{1
 ##############################################################################
 
 Section "un.$(str_unsection_register)" id_unsection_register
@@ -1106,7 +1115,7 @@ SectionEnd
 
 
 ##############################################################################
-# Description for Uninstaller Sections
+# Description for Uninstaller Sections                                    {{{1
 ##############################################################################
 !insertmacro MUI_UNFUNCTION_DESCRIPTION_BEGIN
     !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_register}  $(str_desc_unregister)
@@ -1117,7 +1126,7 @@ SectionEnd
 
 
 ##############################################################################
-# Uninstaller Functions
+# Uninstaller Functions                                                   {{{1
 ##############################################################################
 
 Function un.onInit

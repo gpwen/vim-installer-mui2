@@ -151,6 +151,30 @@ LangString str_msg_vim_running   ${LANG_TRADCHINESE} \
     "閣下的電腦上尚有正在運行之 Vim，$\r$\n\
      煩請閣下在執行后續步驟前將其全部退出。"
 
+LangString str_msg_rm_start      ${LANG_TRADCHINESE} \
+    "正移除如下版本："
+
+LangString str_msg_rm_fail       ${LANG_TRADCHINESE} \
+    "以下版本移除失敗："
+
+LangString str_msg_no_rm_key     ${LANG_TRADCHINESE} \
+    "找不到反安裝程式的登錄檔入口。"
+
+LangString str_msg_no_rm_reg     ${LANG_TRADCHINESE} \
+    "在登錄檔中未找到反安裝程式路徑。"
+
+LangString str_msg_no_rm_exe     ${LANG_TRADCHINESE} \
+    "找不到反安裝程式。"
+
+LangString str_msg_rm_copy_fail  ${LANG_TRADCHINESE} \
+    "無法將法將反安裝程式复制到臨時目錄。"
+
+LangString str_msg_rm_run_fail   ${LANG_TRADCHINESE} \
+    "執行反安裝程式失敗。"
+
+LangString str_msg_abort_install ${LANG_TRADCHINESE} \
+    "安裝程式將退出。"
+
 LangString str_msg_install_fail  ${LANG_TRADCHINESE} \
     "安裝失敗。預祝下次好運。"
 

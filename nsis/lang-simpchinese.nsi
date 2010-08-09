@@ -151,6 +151,30 @@ LangString str_msg_vim_running   ${LANG_SIMPCHINESE} \
     "您的系统上仍有 Vim 在运行，$\r$\n\
      请您在执行后续步骤前退出这些 Vim。"
 
+LangString str_msg_rm_start      ${LANG_SIMPCHINESE} \
+    "开始卸载以下版本："
+
+LangString str_msg_rm_fail       ${LANG_SIMPCHINESE} \
+    "以下版本卸载失败："
+
+LangString str_msg_no_rm_key     ${LANG_SIMPCHINESE} \
+    "找不到卸载程序的注册表键。"
+
+LangString str_msg_no_rm_reg     ${LANG_SIMPCHINESE} \
+    "在注册表中未找到卸载程序路径。"
+
+LangString str_msg_no_rm_exe     ${LANG_SIMPCHINESE} \
+    "找不到卸载程序。"
+
+LangString str_msg_rm_copy_fail  ${LANG_SIMPCHINESE} \
+    "无法将卸载程序复制到临时目录。"
+
+LangString str_msg_rm_run_fail   ${LANG_SIMPCHINESE} \
+    "执行卸载程序失败。"
+
+LangString str_msg_abort_install ${LANG_SIMPCHINESE} \
+    "安装程序将退出。"
+
 LangString str_msg_install_fail  ${LANG_SIMPCHINESE} \
     "安装失败。祝您下次好运。"
 

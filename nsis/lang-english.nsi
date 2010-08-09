@@ -160,6 +160,30 @@ LangString str_msg_vim_running   ${LANG_ENGLISH} \
     "Vim is still running on your system.$\r$\n\
      Please close all instances of Vim before you continue."
 
+LangString str_msg_rm_start      ${LANG_ENGLISH} \
+    "Uninstalling the following version:"
+
+LangString str_msg_rm_fail       ${LANG_ENGLISH} \
+    "Fail to uninstall the following version:"
+
+LangString str_msg_no_rm_key     ${LANG_ENGLISH} \
+    "Cannot find uninstaller registry key."
+
+LangString str_msg_no_rm_reg     ${LANG_ENGLISH} \
+    "Cannot find uninstaller from registry."
+
+LangString str_msg_no_rm_exe     ${LANG_ENGLISH} \
+    "Cannot access uninstaller."
+
+LangString str_msg_rm_copy_fail  ${LANG_ENGLISH} \
+    "Fail to copy uninstaller to temporary directory."
+
+LangString str_msg_rm_run_fail   ${LANG_ENGLISH} \
+    "Fail to run uninstaller."
+
+LangString str_msg_abort_install ${LANG_ENGLISH} \
+    "Installer will abort."
+
 LangString str_msg_install_fail  ${LANG_ENGLISH} \
     "Installation failed. Better luck next time."
 
