@@ -316,6 +316,7 @@ SRC_DOS =	\
 		nsis/lang-english.nsi \
 		nsis/lang-simpchinese.nsi \
 		nsis/lang-tradchinese.nsi \
+		nsis/simple-log.nsh \
 		nsis/README.txt \
 		uninstal.txt \
 		src/VisVim/Commands.cpp \
