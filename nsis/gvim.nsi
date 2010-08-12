@@ -270,6 +270,9 @@ Function .onInit
     # Initialize log:
     ${LogInit} ${VIM_LOG_FILE} "Vim installer log"
 
+    # 64-bit view should be used on Windows x64:
+    ${Logged1} SetRegView 64
+
     # Read all Vim uninstall keys from registry.  Please note we only support
     # limited number of old version.  Extra version will be ignored!
     Call VimLoadUninstallKeys
@@ -1173,6 +1176,9 @@ Function un.onInit
 
     # Initialize log:
     ${LogInit} ${VIM_LOG_FILE} "Vim uninstaller log"
+
+    # 64-bit view should be used on Windows x64:
+    ${Logged1} SetRegView 64
 
     # Get root path of the installation:
     ${GetParent} $INSTDIR $vim_install_root
