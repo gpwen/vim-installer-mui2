@@ -135,12 +135,12 @@ SilentInstall         normal
 # Please note English language file should be listed first as the first one
 # will be used as the default.
 !insertmacro MUI_RESERVEFILE_LANGDLL
-!include lang-english.nsi
+!include "lang\english.nsi"
 
 # Include support for other languages:
 !ifdef HAVE_MULTI_LANG
-    !include lang-simpchinese.nsi
-    !include lang-tradchinese.nsi
+    !include "lang\simpchinese.nsi"
+    !include "lang\tradchinese.nsi"
 !endif
 
 ##############################################################################
