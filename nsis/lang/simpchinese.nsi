@@ -131,6 +131,10 @@ LangString str_desc_rm_root         ${LANG_SIMPCHINESE} \
 # Messages                                                                {{{1
 ##############################################################################
 
+LangString str_msg_invalid_root  ${LANG_SIMPCHINESE} \
+    "安装路径 $vim_install_root 无效！$\r$\n\
+     该路径必须以 vim 结尾。"
+
 LangString str_msg_vim_running   ${LANG_SIMPCHINESE} \
     "您的系统上仍有 Vim 在运行，$\r$\n\
      请您在执行后续步骤前退出这些 Vim。"
@@ -163,7 +167,5 @@ LangString str_msg_install_fail  ${LANG_SIMPCHINESE} \
     "安装失败。祝您下次好运。"
 
 LangString str_msg_rm_exe_fail   ${LANG_SIMPCHINESE} \
-    "目录 $0 下有部分文件删除失败！$\r$\n您必须手工删除该目录。"
-
-LangString str_msg_invalid_root  ${LANG_SIMPCHINESE} \
-    "安装路径 $vim_install_root 无效！$\r$\n卸载程序将终止。"
+    "目录 $INSTDIR 下有部分文件删除失败！$\r$\n\
+     您必须手工删除该目录。"

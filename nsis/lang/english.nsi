@@ -140,6 +140,10 @@ LangString str_desc_rm_root         ${LANG_ENGLISH} \
 # Messages                                                                {{{1
 ##############################################################################
 
+LangString str_msg_invalid_root  ${LANG_ENGLISH} \
+    "Invalid install path: $vim_install_root!$\r$\n\
+     It should end with $\"vim$\"."
+
 LangString str_msg_vim_running   ${LANG_ENGLISH} \
     "Vim is still running on your system.$\r$\n\
      Please close all instances of Vim before you continue."
@@ -172,7 +176,5 @@ LangString str_msg_install_fail  ${LANG_ENGLISH} \
     "Installation failed. Better luck next time."
 
 LangString str_msg_rm_exe_fail   ${LANG_ENGLISH} \
-    "Some files in $0 have not been deleted!$\r$\nYou must do it manually."
-
-LangString str_msg_invalid_root  ${LANG_ENGLISH} \
-    "Invalid install path $vim_install_root!$\r$\nAbort uninstaller."
+    "Some files in $INSTDIR have not been deleted!$\r$\n\
+     You must do it manually."

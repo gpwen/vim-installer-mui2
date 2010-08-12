@@ -131,6 +131,10 @@ LangString str_desc_rm_root         ${LANG_TRADCHINESE} \
 # Messages                                                                {{{1
 ##############################################################################
 
+LangString str_msg_invalid_root  ${LANG_TRADCHINESE} \
+    "安裝資料夾 $vim_install_root 無效！$\r$\n\
+     該資料夾必須以 vim 結尾。"
+
 LangString str_msg_vim_running   ${LANG_TRADCHINESE} \
     "閣下的電腦上尚有正在運行之 Vim，$\r$\n\
      煩請閣下在執行后續步驟前將其全部退出。"
@@ -163,7 +167,5 @@ LangString str_msg_install_fail  ${LANG_TRADCHINESE} \
     "安裝失敗。預祝下次好運。"
 
 LangString str_msg_rm_exe_fail   ${LANG_TRADCHINESE} \
-    "資料夾 $0 下有部分檔案未能移除！$\r$\n閣下必須手工移除該資料夾。"
-
-LangString str_msg_invalid_root  ${LANG_TRADCHINESE} \
-    "安裝資料夾 $vim_install_root 無效！$\r$\n卸載程式將終止。"
+    "資料夾 $INSTDIR 下有部分檔案未能移除！$\r$\n\
+     閣下必須手工移除該資料夾。"
