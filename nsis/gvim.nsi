@@ -46,15 +46,15 @@
 
 # ---------------- No configurable settings below this line ------------------
 
-!include MUI2.nsh
-!include UpgradeDLL.nsh  # For VisVim.dll
-!include Sections.nsh    # For section control
-!include LogicLib.nsh
-!include FileFunc.nsh
-!include WordFunc.nsh
-!include x64.nsh
-!include Util.nsh
-!include simple-log.nsh
+!include "MUI2.nsh"
+!include "UpgradeDLL.nsh"  # For VisVim.dll
+!include "Sections.nsh"    # For section control
+!include "LogicLib.nsh"
+!include "FileFunc.nsh"
+!include "WordFunc.nsh"
+!include "x64.nsh"
+!include "Util.nsh"
+!include "simple-log.nsh"
 
 # Global variables:
 Var vim_install_root
@@ -117,14 +117,14 @@ SilentInstall         normal
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "${VIMRT}\doc\uganda.nsis.txt"
 !insertmacro MUI_PAGE_COMPONENTS
-!define MUI_PAGE_CUSTOMFUNCTION_LEAVE CheckRunningVim
+!define MUI_PAGE_CUSTOMFUNCTION_LEAVE VimCheckRunning
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
 
 # Uninstaller pages:
 !insertmacro MUI_UNPAGE_CONFIRM
-!define MUI_PAGE_CUSTOMFUNCTION_LEAVE un.CheckRunningVim
+!define MUI_PAGE_CUSTOMFUNCTION_LEAVE un.VimCheckRunning
 !insertmacro MUI_UNPAGE_COMPONENTS
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_UNPAGE_FINISH
@@ -147,9 +147,12 @@ SilentInstall         normal
 # Macros                                                                  {{{1
 ##############################################################################
 
-# Verify VIM install path $_INPUT_DIR.  If the input path is a valid VIM
-# install path (ends with "vim"), $_VALID will be set to 1; Otherwise $_VALID
-# will be set to 0.
+# ----------------------------------------------------------------------------
+# macro VimVerifyRootDir                                                  {{{2
+#   Verify VIM install path $_INPUT_DIR.  If the input path is a valid VIM
+#   install path (ends with "vim"), $_VALID will be set to 1; Otherwise
+#   $_VALID will be set to 0.
+# ----------------------------------------------------------------------------
 !define VimVerifyRootDir "!insertmacro _VimVerifyRootDir"
 !macro _VimVerifyRootDir _INPUT_DIR _VALID
     push $R0
@@ -163,9 +166,12 @@ SilentInstall         normal
     Pop ${_VALID}
 !macroend
 
-# Extract different version of vim console executable based on detected
-# Windows version.  The output path is whatever has already been set before
-# this macro.
+# ----------------------------------------------------------------------------
+# macro VimExtractConsoleExe                                              {{{2
+#   Extract different version of vim console executable based on detected
+#   Windows version.  The output path is whatever has already been set before
+#   this macro.
+# ----------------------------------------------------------------------------
 !define VimExtractConsoleExe "!insertmacro _VimExtractConsoleExe"
 !macro _VimExtractConsoleExe
     ReadRegStr $R0 HKLM \
@@ -179,13 +185,16 @@ SilentInstall         normal
     ${EndIf}
 !macroend
 
-# Detect whether an instance of Vim is running or not.  The console version of
-# Vim will be executed (silently) to list Vim servers.  If found, there must
-# be some instances of Vim running.
-# Parameters:
-#   $_VIM_CONSOLE_PATH : Path to Vim console (vim.exe)
-# Returns:
-#   $_IS_RUNNING       : 1 if some instances running, 0 if not.
+# ----------------------------------------------------------------------------
+# macro VimIsRuning                                                       {{{2
+#   Detect whether an instance of Vim is running or not.  The console version
+#   of Vim will be executed (silently) to list Vim servers.  If found, there
+#   must be some instances of Vim running.
+#   Parameters:
+#     $_VIM_CONSOLE_PATH : Path to Vim console (vim.exe)
+#   Returns:
+#     $_IS_RUNNING       : 1 if some instances running, 0 if not.
+# ----------------------------------------------------------------------------
 !define VimIsRuning "!insertmacro _VimIsRuningCall"
 !macro _VimIsRuningCall _VIM_CONSOLE_PATH _IS_RUNNING
     Push `${_VIM_CONSOLE_PATH}`
@@ -220,6 +229,11 @@ SilentInstall         normal
     Exch $R0 # Restore R0 and put result on stack
 !macroend
 
+# ----------------------------------------------------------------------------
+# macro VimGetOldVerSecID                                                 {{{2
+#   Get ID of the specified old version section.  This is a wrapper for
+#   function VimGetOldVerSecIDFunc.
+# ----------------------------------------------------------------------------
 !define VimGetOldVerSecID "!insertmacro _VimGetOldVerSecID"
 !macro _VimGetOldVerSecID _INDEX _ID
     Push ${_INDEX}
@@ -227,6 +241,11 @@ SilentInstall         normal
     Pop  ${_ID}
 !macroend
 
+# ----------------------------------------------------------------------------
+# macro VimGetOldVerKey                                                   {{{2
+#   Get the uninstall registry key for the specified old version.  This is a
+#   wrapper for function VimGetOldVerKeyFunc.
+# ----------------------------------------------------------------------------
 !define VimGetOldVerKey "!insertmacro _VimGetOldVerKey"
 !macro _VimGetOldVerKey _INDEX _KEY
     Push ${_INDEX}
@@ -238,6 +257,9 @@ SilentInstall         normal
 # Installer Functions                                                     {{{1
 ##############################################################################
 
+# ----------------------------------------------------------------------------
+# Function .onInit                                                        {{{2
+# ----------------------------------------------------------------------------
 Function .onInit
     # Initialize all globals:
     StrCpy $vim_install_root  ""
@@ -246,7 +268,7 @@ Function .onInit
     StrCpy $vim_old_ver_count 0
 
     # Initialize log:
-    ${LogInit} ${VIM_LOG_FILE}
+    ${LogInit} ${VIM_LOG_FILE} "Vim installer log"
 
     # Read all Vim uninstall keys from registry.  Please note we only support
     # limited number of old version.  Extra version will be ignored!
@@ -289,17 +311,20 @@ Function .onInit
     !endif
 FunctionEnd
 
-# Load all uninstall keys from Windows registry.
+# ----------------------------------------------------------------------------
+# Function VimLoadUninstallKeys                                           {{{2
+#   Load all uninstall keys from Windows registry.
 #
-# All uninstall keys will be concatenate as a single string (delimited by
-# CR/LF).  This is a workaround since NSIS does not support array.
+#   All uninstall keys will be concatenate as a single string (delimited by
+#   CR/LF).  This is a workaround since NSIS does not support array.
 #
-# Parameters : None
-# Returns    : None
-# Globals    :
-#   The following globals will be changed by this functions:
-#   - $vim_old_ver_keys  : Concatenated of all uninstall keys found.
-#   - $vim_old_ver_count : Number of uninstall keys found.
+#   Parameters : None
+#   Returns    : None
+#   Globals    :
+#     The following globals will be changed by this functions:
+#     - $vim_old_ver_keys  : Concatenated of all uninstall keys found.
+#     - $vim_old_ver_count : Number of uninstall keys found.
+# ----------------------------------------------------------------------------
 Function VimLoadUninstallKeys
     Push $R0
     Push $R1
@@ -373,14 +398,17 @@ Function VimLoadUninstallKeys
     Pop $R0
 FunctionEnd
 
-# Create/config dynamic sections to uninstall old Vim versions on the system.
+# ----------------------------------------------------------------------------
+# Function VimCfgOldVerSections                                           {{{2
+#   Create/config dynamic sections to uninstall old Vim versions on the system.
 #
-# All old versions will be uninstalled by default.  User is allowed to keep
-# some old versions as long as it's not the same version as the one being
-# installed.
+#   All old versions will be uninstalled by default.  User is allowed to keep
+#   some old versions as long as it's not the same version as the one being
+#   installed.
 #
-# Parameters : None
-# Returns    : None
+#   Parameters : None
+#   Returns    : None
+# ----------------------------------------------------------------------------
 Function VimCfgOldVerSections
     Push $R0
     Push $R1
@@ -401,7 +429,7 @@ Function VimCfgOldVerSections
 
         # Set section title to readable form:
         ReadRegStr $R2 HKLM "${REG_KEY_UNINSTALL}\$R2" "DisplayName"
-        SectionSetText $R1 'Uninstall $R2'
+        SectionSetText $R1 '$(str_section_old_ver) $R2'
 
         IntOp $R0 $R0 + 1
     ${Loop}
@@ -421,21 +449,25 @@ Function VimCfgOldVerSections
     Pop $R0
 FunctionEnd
 
-# Set default install path.
+# ----------------------------------------------------------------------------
+# Function VimSetDefRootPath                                              {{{2
+#   Set default install path.
 #
-# Default install path will be determined in the following order:
-# - VIMRUNTIME environment string:
-#   If set and its parent directory is a valid Vim install directory, its
-#   parent directory will be used as default install path.
-# - VIM environment string:
-#   If set and valid, its value will be used as default install path directly.
-# - Install path of old versions found on the system.
-# - "Program Files/Vim" if all above fails.
+#   Default install path will be determined in the following order:
+#   - VIMRUNTIME environment string:
+#     If set and its parent directory is a valid Vim install directory, its
+#     parent directory will be used as default install path.
+#   - VIM environment string:
+#     If set and valid, its value will be used as default install path
+#     directly.
+#   - Install path of old versions found on the system.
+#   - "Program Files/Vim" if all above fails.
 #
-# Parameters : None
-# Returns    : None
-# Globals    :
-#   $INSTDIR will be set to the default install path by this function.
+#   Parameters : None
+#   Returns    : None
+#   Globals    :
+#     $INSTDIR will be set to the default install path by this function.
+# ----------------------------------------------------------------------------
 Function VimSetDefRootPath
     Push $R0
     Push $R1
@@ -503,14 +535,18 @@ Function VimSetDefRootPath
     Pop $R0
 FunctionEnd
 
-# Unintalls the n-th old Vim version found on the system.
+# ----------------------------------------------------------------------------
+# Function VimRmOldVer                                                    {{{2
+#   Unintalls the n-th old Vim version found on the system.
 #
-# This function will be called by dynamic "old version" sections to remove the
-# specified old vim version found on the system.  Abort on error.
-# Parameters:
-#   The index (ID) of the old vim version will be put on the top of the stack.
-# Returns:
-#   None
+#   This function will be called by dynamic "old version" sections to remove
+#   the specified old vim version found on the system.  Abort on error.
+#   Parameters:
+#     The index (ID) of the old vim version will be put on the top of the
+#     stack.
+#   Returns:
+#     None
+# ----------------------------------------------------------------------------
 Function VimRmOldVer
     Exch $R0  # ID of the Vim version to remove.
 
@@ -563,8 +599,7 @@ Function VimRmOldVer
 
     # Execute the uninstaller in TEMP, exit code stores in $R2.  Log is close
     # before launch so that uninstaller can write to the same log file.
-    ${LogClose}
-    ${Logged2} ExecWait '"$TEMP\$R3" _?=$R2' $R2
+    ${Logged2Close} ExecWait '"$TEMP\$R3" _?=$R2' $R2
     ${LogReinit}
     ${If} ${Errors}
         ${Logged1} Delete "$TEMP\$R3"
@@ -593,9 +628,12 @@ Function VimRmOldVer
     Pop $R0
 FunctionEnd
 
-# Check if there're running Vim instances or not before any change has been
-# made.  Refuse to install if Vim is still running.
-Function CheckRunningVim
+# ----------------------------------------------------------------------------
+# Function VimCheckRunning                                                {{{2
+#   Check if there're running Vim instances or not before any change has been
+#   made.  Refuse to install if Vim is still running.
+# ----------------------------------------------------------------------------
+Function VimCheckRunning
     Push $R0
 
     SetOutPath $TEMP
@@ -611,7 +649,10 @@ Function CheckRunningVim
     Pop $R0
 FunctionEnd
 
-# We only accept the directory if it ends in "vim":
+# ----------------------------------------------------------------------------
+# Function .onVerifyInstDir                                               {{{2
+#   We only accept the directory if it ends in "vim":
+# ----------------------------------------------------------------------------
 Function .onVerifyInstDir
     Push $R0
 
@@ -624,28 +665,37 @@ Function .onVerifyInstDir
     Pop $R0
 FunctionEnd
 
+# ----------------------------------------------------------------------------
+# Function .onInstSuccess                                                 {{{2
+# ----------------------------------------------------------------------------
 Function .onInstSuccess
     WriteUninstaller vim${VER_MAJOR}${VER_MINOR}\uninstall-gui.exe
 FunctionEnd
 
+# ----------------------------------------------------------------------------
+# Function .onInstFailed                                                  {{{2
+# ----------------------------------------------------------------------------
 Function .onInstFailed
     ${ShowErr} $(str_msg_install_fail)
 FunctionEnd
 
-# Get ID of the n-th dynamically generated old version section.
+# ----------------------------------------------------------------------------
+# Function VimGetOldVerSecIDFunc                                          {{{2
+#   Get ID of the n-th dynamically generated old version section.
 #
-# As NSIS does not support array, it's not straightforward to get ID of
-# dynamically generated sections from its index.  Here we'll call a special
-# function to push IDs of all dynamically generated sections on to stack in
-# order, the retrieve the required ID from stack.
+#   As NSIS does not support array, it's not straightforward to get ID of
+#   dynamically generated sections from its index.  Here we'll call a special
+#   function to push IDs of all dynamically generated sections on to stack in
+#   order, the retrieve the required ID from stack.
 #
-# This function should better be called using the wrapper macro
-# VimGetOldVerSecID.
+#   This function should better be called using the wrapper macro
+#   VimGetOldVerSecID.
 #
-# Parameters:
-#   Index of the section should be put on the top of stack.
-# Returns:
-#   ID of the corresponding old version section on the top of the stack.
+#   Parameters:
+#     Index of the section should be put on the top of stack.
+#   Returns:
+#     ID of the corresponding old version section on the top of the stack.
+# ----------------------------------------------------------------------------
 Function VimGetOldVerSecIDFunc
     Exch $R0  # Index of the section
     Push $R1
@@ -675,19 +725,22 @@ Function VimGetOldVerSecIDFunc
     Exch $R0
 FunctionEnd
 
-# Get the un-installer key for n-th old Vim version installed on the system.
+# ----------------------------------------------------------------------------
+# Function VimGetOldVerKeyFunc                                            {{{2
+#   Get the un-installer key for n-th old Vim version installed on the system.
 #
-# All un-installer keys found on the system will be stored in a string,
-# delimited by CR/LF.  This function will retrieve specified key from that
-# string.  This is a workaround since NSIS does not support array.
+#   All un-installer keys found on the system will be stored in a string,
+#   delimited by CR/LF.  This function will retrieve specified key from that
+#   string.  This is a workaround since NSIS does not support array.
 #
-# This function should better be called using the wrapper macro
-# VimGetOldVerKey
+#   This function should better be called using the wrapper macro
+#   VimGetOldVerKey
 #
-# Parameters:
-#   Index of the key to retrieve should be put on the top of stack.
-# Returns:
-#   Required key on the top of the stack.
+#   Parameters:
+#     Index of the key to retrieve should be put on the top of stack.
+#   Returns:
+#     Required key on the top of the stack.
+# ----------------------------------------------------------------------------
 Function VimGetOldVerKeyFunc
     Exch $R0  # Index of the un-install key
 
@@ -709,7 +762,7 @@ FunctionEnd
 
 !define OldVerSection "!insertmacro _OldVerSection"
 !macro _OldVerSection _ID
-    Section "Uninstall exising version ${_ID}" `id_section_old_install_${_ID}`
+    Section "Uninstall existing version ${_ID}" `id_section_old_ver_${_ID}`
         SectionIn 1 2 3
 
         ${Log} "$\r$\nEnter old ver section ${_ID}"
@@ -727,11 +780,11 @@ ${OldVerSection} 4
 
 # Push section ID of all above sections onto stack.
 Function PushOldVerSectionIDs
-    Push ${id_section_old_install_4}
-    Push ${id_section_old_install_3}
-    Push ${id_section_old_install_2}
-    Push ${id_section_old_install_1}
-    Push ${id_section_old_install_0}
+    Push ${id_section_old_ver_4}
+    Push ${id_section_old_ver_3}
+    Push ${id_section_old_ver_2}
+    Push ${id_section_old_ver_1}
+    Push ${id_section_old_ver_0}
 FunctionEnd
 
 
@@ -977,6 +1030,11 @@ SectionEnd
 # Description for Installer Sections                                      {{{1
 ##############################################################################
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
+    !insertmacro MUI_DESCRIPTION_TEXT ${id_section_old_ver_0}   $(str_desc_old_ver)
+    !insertmacro MUI_DESCRIPTION_TEXT ${id_section_old_ver_1}   $(str_desc_old_ver)
+    !insertmacro MUI_DESCRIPTION_TEXT ${id_section_old_ver_2}   $(str_desc_old_ver)
+    !insertmacro MUI_DESCRIPTION_TEXT ${id_section_old_ver_3}   $(str_desc_old_ver)
+    !insertmacro MUI_DESCRIPTION_TEXT ${id_section_old_ver_4}   $(str_desc_old_ver)
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_exe}         $(str_desc_exe)
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_console}     $(str_desc_console)
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_batch}       $(str_desc_batch)
@@ -1107,11 +1165,14 @@ SectionEnd
 # Uninstaller Functions                                                   {{{1
 ##############################################################################
 
+# ----------------------------------------------------------------------------
+# Function un.onInit                                                      {{{2
+# ----------------------------------------------------------------------------
 Function un.onInit
     Push $R0
 
     # Initialize log:
-    ${LogInit} ${VIM_LOG_FILE}
+    ${LogInit} ${VIM_LOG_FILE} "Vim uninstaller log"
 
     # Get root path of the installation:
     ${GetParent} $INSTDIR $vim_install_root
@@ -1156,6 +1217,9 @@ Function un.onInit
     !endif
 FunctionEnd
 
+# ----------------------------------------------------------------------------
+# Function un.onSelChange                                                 {{{2
+# ----------------------------------------------------------------------------
 Function un.onSelChange
     # Get selection status of the exe removal section:
     SectionGetFlags ${id_unsection_exe} $R0
@@ -1182,9 +1246,12 @@ Function un.onSelChange
     ${EndIf}
 FunctionEnd
 
-# Check if there're running Vim instances or not before any change has been
-# made.  Refuse to uninstall if Vim is still running.
-Function un.CheckRunningVim
+# ----------------------------------------------------------------------------
+# Function un.VimCheckRunning                                             {{{2
+#   Check if there're running Vim instances or not before any change has been
+#   made.  Refuse to uninstall if Vim is still running.
+# ----------------------------------------------------------------------------
+Function un.VimCheckRunning
     Push $R0
 
     ${VimIsRuning} $INSTDIR $R0

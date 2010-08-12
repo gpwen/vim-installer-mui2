@@ -33,6 +33,9 @@ LangString str_type_full            ${LANG_SIMPCHINESE} \
 # Section Titles
 ##############################################################################
 
+LangString str_section_old_ver      ${LANG_SIMPCHINESE} \
+    "卸载"
+
 LangString str_section_exe          ${LANG_SIMPCHINESE} \
     "安装 Vim 图形界面"
 
@@ -85,6 +88,9 @@ LangString str_unsection_root       ${LANG_SIMPCHINESE} \
 ##############################################################################
 # Description for Sections
 ##############################################################################
+
+LangString str_desc_old_ver      ${LANG_SIMPCHINESE} \
+    "卸载系统上旧版本的 Vim。"
 
 LangString str_desc_exe          ${LANG_SIMPCHINESE} \
     "安装 Vim 图形界面及脚本。此为必选安装。"

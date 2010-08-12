@@ -38,6 +38,9 @@ LangString str_type_full            ${LANG_ENGLISH} \
 # Section Titles
 ##############################################################################
 
+LangString str_section_old_ver      ${LANG_ENGLISH} \
+    "Uninstall"
+
 LangString str_section_exe          ${LANG_ENGLISH} \
     "Vim GUI"
 
@@ -90,6 +93,9 @@ LangString str_unsection_root       ${LANG_ENGLISH} \
 ##############################################################################
 # Description for Sections
 ##############################################################################
+
+LangString str_desc_old_ver      ${LANG_ENGLISH} \
+    "Uninstall existing Vim version(s) from your system."
 
 LangString str_desc_exe          ${LANG_ENGLISH} \
     "Vim GUI executables and runtime files.  This component is required."

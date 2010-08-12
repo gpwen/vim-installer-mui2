@@ -33,6 +33,9 @@ LangString str_type_full            ${LANG_TRADCHINESE} \
 # Section Titles
 ##############################################################################
 
+LangString str_section_old_ver      ${LANG_TRADCHINESE} \
+    "移除"
+
 LangString str_section_exe          ${LANG_TRADCHINESE} \
     "安裝 Vim 圖形界面程式"
 
@@ -85,6 +88,9 @@ LangString str_unsection_root       ${LANG_TRADCHINESE} \
 ##############################################################################
 # Description for Sections
 ##############################################################################
+
+LangString str_desc_old_ver      ${LANG_TRADCHINESE} \
+    "移除閣下電腦上老版本的 Vim。"
 
 LangString str_desc_exe          ${LANG_TRADCHINESE} \
     "安裝 Vim 圖形界面程式及腳本。此為必選安裝。"

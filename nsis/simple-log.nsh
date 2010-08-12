@@ -12,67 +12,133 @@
 !ifndef __SIMPLE_LOG__NSH__
 !define __SIMPLE_LOG__NSH__
 
-!include Util.nsh
+!include "FileFunc.nsh"
+!include "Util.nsh"
 
 # Global variables:
 Var _simple_log_fname   # Log file name
+Var _simple_log_title   # Log title
 Var _simple_log_fh      # Log file handle
+
+# Helper macro to get local time as ISO date/time string.  Please note this
+# macro will store output string in $R0 directly.
+!macro _LogGetLocalTime
+    Push $R1
+    Push $R2
+    Push $R3
+    Push $R4
+    Push $R5
+    Push $R6
+
+    # Get local time.  Please note this macro will be inserted into artificial
+    # function, so the simple GetTime macro cannot be used.
+    Push ""
+    Push "L"
+    ${CallArtificialFunction2} GetTime_
+    Pop $R0
+    Pop $R1
+    Pop $R2
+    Pop $R3
+    Pop $R4
+    Pop $R5
+    Pop $R6
+
+    # Construct ISO date/time string and stored in $R0 directly.
+    StrCpy $R0 "$R2-$R1-$R0 $R4:$R5:$R6"
+
+    # Restore the stack:
+    Pop  $R6
+    Pop  $R5
+    Pop  $R4
+    Pop  $R3
+    Pop  $R2
+    Pop  $R1
+!macroend
 
 # Log initialization.
 #
 # New file will be created if the specified log file does not exist;
 # Otherwise, existing log file will be opened for append.
 # Parameters:
-#   $_LOG_FILE : Name of the log file.
+#   $_LOG_FILE  : Name of the log file.
+#   $_LOG_TITLE : Title of the log.
 # Returns:
 #   None.
 !define LogInit `!insertmacro _LogInitCall`
-!macro _LogInitCall _LOG_FILE
+!macro _LogInitCall _LOG_FILE _LOG_TITLE
     Push `${_LOG_FILE}`
+    Push `${_LOG_TITLE}`
     ${CallArtificialFunction} _LogInit
 !macroend
 !macro _LogInit
     # Incoming parameters has been put on the stack:
-    Exch $R0
+    Exch $R1   # Log title
+    Exch
+    Exch $R0   # Log file name
+    Exch
 
     # Create/open the specified log file:
     ${If} ${FileExists} `$R0`
-        FileOpen $_simple_log_fh `$R0` w
-    ${Else}
         SetFileAttributes `$R0` NORMAL
         FileOpen $_simple_log_fh `$R0` a
         FileSeek $_simple_log_fh 0 END
+    ${Else}
+        FileOpen $_simple_log_fh `$R0` w
     ${EndIf}
 
-    # Save log file name:
+    # Save log file name & log title:
     StrCpy $_simple_log_fname ``
+    StrCpy $_simple_log_title ``
     ${If} $_simple_log_fh != ``
         StrCpy $_simple_log_fname `$R0`
+        StrCpy $_simple_log_title `$R1`
     ${EndIf}
 
+    # Get local time (stores in $R0):
+    !insertmacro _LogGetLocalTime
+
+    # Write log header:
+    ${Log} "$_simple_log_title started at $R0"
+
     # Restore the stack:
+    Pop $R1
     Pop $R0
 !macroend
 
 # Reinitialize log.
 #
-# This macro will use the last open log file to re-initialize log.
+# This macro will re-use the last open log file/title to re-initialize log.
 !define LogReinit `!insertmacro _LogReinit`
 !macro _LogReinit
     # Make log has been closed:
     ${LogClose}
 
     # Initialize it again using save log file name:
-    ${LogInit} $_simple_log_fname
+    ${LogInit} $_simple_log_fname $_simple_log_title
 !macroend
 
 # Close log.
-!define LogClose `!insertmacro _LogClose`
+!define LogClose `!insertmacro _LogCloseCall`
+!macro _LogCloseCall
+    ${CallArtificialFunction} _LogClose
+!macroend
 !macro _LogClose
     ${If} $_simple_log_fh != ``
+        Push $R0
+
+        # Get local time (stores in $R0):
+        !insertmacro _LogGetLocalTime
+
+        # Write close message:
+        ${Log} "$_simple_log_title closed at $R0"
+
+        # Restore the stack:
+        Pop $R0
+
+        # Close the log.  We'll leave file name and log title intact so that
+        # it's possible to reopen the log.
         FileClose $_simple_log_fh
         StrCpy $_simple_log_fh ``
-        # SetFileAttributes `${_LOG_FILE}` READONLY|SYSTEM|HIDDEN
     ${EndIf}
 !macroend
 
@@ -140,6 +206,24 @@ Var _simple_log_fh      # Log file handle
 !macro _Logged4 _CMD _PARAM1 _PARAM2 _PARAM3 _PARAM4
     ${Log} `${_CMD} ${_PARAM1} ${_PARAM2} ${_PARAM3} ${_PARAM4}`
     `${_CMD}` `${_PARAM1}` `${_PARAM2}` `${_PARAM3}` `${_PARAM4}`
+!macroend
+
+# The following are special variant of the above $Logged* macros, which will
+# close the log file before executing the command.  It's used to log execution
+# of external commands that will write to the same log file.
+# Parameters:
+#   $_CMD    : Command to run.
+#   $_PARAM1 : Parameter 1.
+#   $_PARAM2 : Parameter 2.
+#   $_PARAM3 : Parameter 3.
+#   $_PARAM4 : Parameter 4.
+# Returns:
+#   None.
+!define Logged2Close `!insertmacro _Logged2Close`
+!macro _Logged2Close _CMD _PARAM1 _PARAM2
+    ${Log} `${_CMD} ${_PARAM1} ${_PARAM2}`
+    ${LogClose}
+    `${_CMD}` `${_PARAM1}` `${_PARAM2}`
 !macroend
 
 # Log start of a section.
