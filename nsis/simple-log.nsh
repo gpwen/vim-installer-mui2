@@ -98,7 +98,7 @@ Var _simple_log_fh      # Log file handle
     !insertmacro _LogGetLocalTime
 
     # Write log header:
-    ${Log} "$_simple_log_title started at $R0"
+    ${Log} "$R0 - Start $_simple_log_title"
 
     # Restore the stack:
     Pop $R1
@@ -130,7 +130,7 @@ Var _simple_log_fh      # Log file handle
         !insertmacro _LogGetLocalTime
 
         # Write close message:
-        ${Log} "$_simple_log_title closed at $R0"
+        ${Log} "$R0 - Close $_simple_log_title"
 
         # Restore the stack:
         Pop $R0

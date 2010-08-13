@@ -26,16 +26,16 @@
 # Uncomment the following line to create a multilanguage installer:
 #!define HAVE_MULTI_LANG
 
-# Uncomment the following line so that the uninstaller would not jump to the
-# finish page automatically, this allows the user to check the uninstall log.
-# It's used for debug purpose.
+# Uncomment the following line so that the installer/uninstaller would not
+# jump to the finish page automatically, this allows the user to check the
+# detailed log.  It's used for debug purpose.
 #!define MUI_FINISHPAGE_NOAUTOCLOSE
 #!define MUI_UNFINISHPAGE_NOAUTOCLOSE
 
 # Uncomment the following line to enable debug log:
-!define VIM_LOG_FILE "$TEMP\vim-install-debug.log"
+!define VIM_LOG_FILE "vim-install.log"
 
-# Maximum number of old Vim installation to support on GUI
+# Maximum number of old Vim versions to support on GUI:
 !define VIM_MAX_OLD_VER 5
 
 !define VER_MAJOR 7
@@ -272,7 +272,9 @@ Function .onInit
     StrCpy $vim_batch_names   ""
 
     # Initialize log:
-    ${LogInit} ${VIM_LOG_FILE} "Vim installer log"
+    !ifdef VIM_LOG_FILE
+        ${LogInit} "$TEMP\${VIM_LOG_FILE}" "Vim installer log"
+    !endif
 
     # 64-bit view should be used on Windows x64:
     ${Logged1} SetRegView 64
@@ -327,6 +329,14 @@ FunctionEnd
 # ----------------------------------------------------------------------------
 Function .onInstSuccess
     WriteUninstaller ${VIM_BIN_DIR}\uninstall-gui.exe
+
+    # Close log:
+    !ifdef VIM_LOG_FILE
+        ${LogClose}
+
+        # Move log to install directory:
+        Rename "$TEMP\${VIM_LOG_FILE}" "$vim_bin_path\${VIM_LOG_FILE}"
+    !endif
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -334,6 +344,11 @@ FunctionEnd
 # ----------------------------------------------------------------------------
 Function .onInstFailed
     ${ShowErr} $(str_msg_install_fail)
+
+    # Close log:
+    !ifdef VIM_LOG_FILE
+        ${LogClose}
+    !endif
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -449,7 +464,7 @@ Function VimCfgOldVerSections
 
         # If the same version installed, we must remove it:
         ${If} $R2 S== "${VIM_PRODUCT_NAME}"
-            !insertmacro SetSectionFlag   $R1 ${SF_RO}
+            !insertmacro SetSectionFlag $R1 ${SF_RO}
         ${EndIf}
 
         # Set section title to readable form:
@@ -462,9 +477,10 @@ Function VimCfgOldVerSections
     ${DoWhile} $R0 < ${VIM_MAX_OLD_VER}
         ${VimGetOldVerSecID} $R0 $R1
         ${Log} "Disable old ver section No.$R0, ID=$R1"
-        !insertmacro UnselectSection  $R1
-        !insertmacro SetSectionFlag   $R1 ${SF_RO}
-        SectionSetText $R1 ""
+        !insertmacro UnselectSection $R1
+        !insertmacro SetSectionFlag  $R1 ${SF_RO}
+        SectionSetInstTypes $R1 0
+        SectionSetText      $R1 ""
 
         IntOp $R0 $R0 + 1
     ${Loop}
@@ -1037,9 +1053,6 @@ SectionEnd
 
 Section -post
     BringToFront
-
-    # Close log:
-    ${LogClose}
 SectionEnd
 
 
@@ -1101,6 +1114,11 @@ Section "un.$(str_unsection_register)" id_unsection_register
     # Delete quick launch:
     ${Logged1} Delete "$QUICKLAUNCH\${VIM_LNK_NAME}.lnk"
 
+    # Delete log file:
+    !ifdef VIM_LOG_FILE
+        ${Logged1} Delete "$INSTDIR\${VIM_LOG_FILE}"
+    !endif
+
     # We may have been put to the background when uninstall did something.
     BringToFront
 
@@ -1160,7 +1178,9 @@ SectionEnd
 
 Section -un.post
     # Close log:
-    ${LogClose}
+    !ifdef VIM_LOG_FILE
+        ${LogClose}
+    !endif
 SectionEnd
 
 
@@ -1186,7 +1206,9 @@ Function un.onInit
     Push $R0
 
     # Initialize log:
-    ${LogInit} ${VIM_LOG_FILE} "Vim uninstaller log"
+    !ifdef VIM_LOG_FILE
+        ${LogInit} "$TEMP\${VIM_LOG_FILE}" "Vim uninstaller log"
+    !endif
 
     # 64-bit view should be used on Windows x64:
     ${Logged1} SetRegView 64
