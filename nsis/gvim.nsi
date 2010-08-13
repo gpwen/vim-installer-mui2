@@ -276,6 +276,9 @@ Function .onInit
         ${LogInit} "$TEMP\${VIM_LOG_FILE}" "Vim installer log"
     !endif
 
+    # Use shell folders for "all" user:
+    ${Logged1} SetShellVarContext all
+
     # 64-bit view should be used on Windows x64:
     ${Logged1} SetRegView 64
 
@@ -1209,6 +1212,9 @@ Function un.onInit
     !ifdef VIM_LOG_FILE
         ${LogInit} "$TEMP\${VIM_LOG_FILE}" "Vim uninstaller log"
     !endif
+
+    # Use shell folders for "all" user:
+    ${Logged1} SetShellVarContext all
 
     # 64-bit view should be used on Windows x64:
     ${Logged1} SetRegView 64
