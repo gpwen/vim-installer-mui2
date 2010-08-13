@@ -39,7 +39,7 @@
 !define VIM_MAX_OLD_VER 5
 
 !define VER_MAJOR 7
-!define VER_MINOR 3d
+!define VER_MINOR 3f
 
 # ---------------- No configurable settings below this line ------------------
 
