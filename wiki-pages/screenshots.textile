@@ -1,0 +1,107 @@
+_Note: These screenshots are for version NSIS-MUI2-v0.1_
+
+h1. Installer Pages
+
+Installer has 7 to 8 pages.
+
+h3. Language selection dialog
+
+    !http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/screenshots/install/p1.png!
+    <br><br>
+
+    This dialog will be shown only if multiple language support has been
+    enabled.  It determines the language used in the following pages.
+
+    User selected language (as Windows(TM) LCID) will be written to
+    Windows(TM) registry:
+    <pre><code>HKLM\SOFTWARE\Vim\Installer Language</code></pre>
+    Global variable $LANGUAGE will also be set to that LCID.
+
+h3. Page 1 : Welcome page
+
+    !http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/screenshots/install/p2.png!
+    <br><br>
+
+    This serves as the old installation confirmation dialog.  Once user press
+    "next", the installer will check for running Vim instance, and try to
+    uninstall any existing Vim.
+
+    A black DOS window will flash by even if no Vim has installed.
+
+h3. Page 2 : License Agreement
+
+    !http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/screenshots/install/p3.png!
+    <br><br>
+
+    This page should be checked a little bit carefully.  This is the pristine
+    license page of NSIS, which makes it pretty clear what's been shown is a
+    license agreement and user must agree to it.  Please let me know if you
+    think that's not appropriate.
+
+h3. Page 3 : Components
+
+    !http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/screenshots/install/p4.png!
+    <br><br>
+
+    Detailed description of components will be shown here.
+
+h3. Page 4 : Destination Path
+
+    !http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/screenshots/install/p5.png!
+    <br><br>
+
+     The installer will check for running Vim instance again when user press
+     "install".
+
+h3. Page 5 : Installation
+
+    !http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/screenshots/install/p6.png!
+    <br><br>
+
+    There is a noticeable pause near the end when "install.exe" being executed
+    silently (2s delay in install.exe).
+
+h3. Page 6 : Finish
+
+    !http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/screenshots/install/p7.png!
+    <br><br>
+
+    User can determine whether README.txt should be shown or not on this page.
+
+h1. Uninstaller Pages
+
+Uninstaller has 4 pages.
+
+h3. Page 1: Confirmation.
+
+    !http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/screenshots/uninstall/u1.png!
+    <br><br>
+
+h3. Page 2: Components
+
+    !http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/screenshots/uninstall/u2.png!
+    <br><br>
+
+    Combination of components will be checked to make sure it's valid.  Vim
+    installation root is not allowed to be removed if user choose to keep some
+    components under it.
+
+    Uninstaller will check for running instances of Vim once user press
+    "Uninstall".
+
+h3. Page 3: Uninstallation
+
+    !http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/screenshots/uninstall/u3.png!
+    <br><br>
+
+    Noticeable pause when "Unregistering Vim ...", as "uninstall.exe" is been
+    executed silently there.
+
+h3. Page 4: Finish
+
+    !http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/screenshots/uninstall/u4.png!
+    <br><br>
+
+    If some components cannot be removed without reboot, the reboot selections
+    will be shown on this page.  Otherwise, those selections won't be shown.
+    This is a nice feature of NSIS.
