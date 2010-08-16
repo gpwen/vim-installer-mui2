@@ -12,7 +12,7 @@ The following table shown all branches in this repository:
 
 |_. Branch  |_. Description |
 | "@master@":http://github.com/gpwen/vim-installer-mui2 | NSIS scripts for the new installer. |
-| "@vim-official@":http://github.com/gpwen/vim-installer-mui2/tree/vim-official | NSIS scripts from the "official mercurial repository of Vim":http://www.vim.org/mercurial.php.  It's used to track the official repository (manually). |
+| "@vim-official@":http://github.com/gpwen/vim-installer-mui2/tree/vim-official | NSIS scripts from the "official mercurial repository of Vim":http://www.vim.org/mercurial.php.  It's used to track the official code base (manually). |
 | "@wiki-files@":http://github.com/gpwen/vim-installer-mui2/tree/wiki-files | Files to be used on Wiki pages.  It used to make it easier to upload images to github.  You should ignore this branch. |
 
 h1. Build Instruction
