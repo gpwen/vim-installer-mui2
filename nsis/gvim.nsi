@@ -62,15 +62,18 @@ Var vim_old_ver_count
 Var vim_install_param
 Var vim_batch_names
 
-# Uninstallation registry key:
+# Version strings:
 !define VER_SHORT         "${VER_MAJOR}.${VER_MINOR}"
-!define REG_KEY_UNINSTALL "software\Microsoft\Windows\CurrentVersion\Uninstall"
+!define VER_SHORT_NDOT    "${VER_MAJOR}${VER_MINOR}"
 !define VIM_PRODUCT_NAME  "Vim ${VER_SHORT}"
-!define VIM_BIN_DIR       "vim${VER_MAJOR}${VER_MINOR}"
+!define VIM_BIN_DIR       "vim${VER_SHORT_NDOT}"
 !define VIM_LNK_NAME      "gVim ${VER_SHORT}"
 
+# Registry keys:
+!define REG_KEY_UNINSTALL "software\Microsoft\Windows\CurrentVersion\Uninstall"
+
 Name                      "${VIM_PRODUCT_NAME}"
-OutFile                   gvim${VER_SHORT}.exe
+OutFile                   gvim${VER_SHORT_NDOT}.exe
 CRCCheck                  force
 SetCompressor             lzma
 SetDatablockOptimize      on
@@ -841,7 +844,7 @@ Section $(str_section_exe) id_section_exe
     ${Logged1} File ${VIMTOOLS}\diff.exe
     ${Logged1} File ${VIMRT}\vimtutor.bat
     ${Logged1} File ${VIMRT}\README.txt
-    ${Logged1} File ..\uninstal.txt
+    ${Logged1} File ${VIMRT}\uninstal.txt
     ${Logged1} File ${VIMRT}\*.vim
     ${Logged1} File ${VIMRT}\rgb.txt
 
