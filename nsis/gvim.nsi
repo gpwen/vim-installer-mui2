@@ -4,6 +4,10 @@
 # It requires NSIS version 2.34 or later (for Modern UI 2.0).
 # Last Change:	2010 Jul 30
 
+##############################################################################
+# Configurable Settings                                                   {{{1
+##############################################################################
+
 # Location of gvim_ole.exe, vimd32.exe, GvimExt/*, etc.
 !define VIMSRC "..\src"
 
@@ -26,6 +30,11 @@
 # Uncomment the following line to create a multilanguage installer:
 #!define HAVE_MULTI_LANG
 
+# Uncomment the following line if you have newer version of gettext that uses
+# iconv.dll for encoding conversion.  Please note you should rename "intl.dll"
+# from "gettext-win32" archive to "libintl.dll".
+#!define HAVE_ICONV
+
 # Uncomment the following line so that the installer/uninstaller would not
 # jump to the finish page automatically, this allows the user to check the
 # detailed log.  It's used for debug purpose.
@@ -43,14 +52,18 @@
 
 # ---------------- No configurable settings below this line ------------------
 
-!include "MUI2.nsh"
-!include "UpgradeDLL.nsh"  # For VisVim.dll
-!include "Sections.nsh"    # For section control
-!include "LogicLib.nsh"
+##############################################################################
+# Headers & Global Settings                                               {{{1
+##############################################################################
+
 !include "FileFunc.nsh"
+!include "Library.nsh"     # For DLL install
+!include "LogicLib.nsh"
+!include "MUI2.nsh"
+!include "Sections.nsh"    # For section control
+!include "Util.nsh"
 !include "WordFunc.nsh"
 !include "x64.nsh"
-!include "Util.nsh"
 !include "simple-log.nsh"
 
 # Global variables:
@@ -950,36 +963,22 @@ Section $(str_section_edit_with) id_section_editwith
 
     ${LogSectionStart}
 
-    # Be aware of this sequence of events:
-    # - user uninstalls Vim, gvimext.dll can't be removed (it's in use) and is
-    #   scheduled to be removed at next reboot.
-    # - user installs Vim in same directory, gvimext.dll still exists.
-    # If we now skip installing gvimext.dll, it will disappear at the next
-    # reboot.  Thus when copying gvimext.dll fails always schedule it to be
-    # installed at the next reboot.  Can't use UpgradeDLL!  We don't ask the
-    # user to reboot, the old dll will keep on working.
-    ${Logged1} SetOutPath $vim_bin_path
-    ClearErrors
-    SetOverwrite try
+    # Install/Upgrade gvimext.dll:
+    !define LIBRARY_SHELL_EXTENSION
+
     ${If} ${RunningX64}
-        ${Logged2} File /oname=gvimext.dll ${VIMSRC}\GvimExt\gvimext64.dll
+        !define LIBRARY_X64
+        !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
+            "${VIMSRC}\GvimExt\gvimext64.dll" \
+            "$vim_bin_path\gvimext.dll" "$vim_bin_path"
+        !undef LIBRARY_X64
     ${Else}
-        ${Logged2} File /oname=gvimext.dll ${VIMSRC}\GvimExt\gvimext.dll
+        !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
+            "${VIMSRC}\GvimExt\gvimext.dll" \
+            "$vim_bin_path\gvimext.dll" "$vim_bin_path"
     ${EndIf}
 
-    ${If} ${Errors}
-        # Can't copy gvimext.dll, create it under another name and rename it
-        # on next reboot.
-        GetTempFileName $3 $vim_bin_path
-        ${If} ${RunningX64}
-            ${Logged2} File /oname=$3 ${VIMSRC}\GvimExt\gvimext64.dll
-        ${Else}
-            ${Logged2} File /oname=$3 ${VIMSRC}\GvimExt\gvimext.dll
-        ${EndIf}
-        ${Logged3} Rename /REBOOTOK $3 $vim_bin_path\gvimext.dll
-    ${EndIf}
-
-    SetOverwrite lastused
+    !undef LIBRARY_SHELL_EXTENSION
 
     # We don't have a separate entry for the "Open With..." menu, assume
     # the user wants either both or none.
@@ -1019,9 +1018,12 @@ SectionEnd
 
         ${LogSectionStart}
 
+        # TODO: Check if this works on x64 or not.
+        !insertmacro InstallLib REGDLL NOTSHARED REBOOT_NOTPROTECTED \
+            "${VIMSRC}\VisVim\VisVim.dll" \
+            "$vim_bin_path\VisVim.dll" "$vim_bin_path"
+
         ${Logged1} SetOutPath $vim_bin_path
-        !insertmacro UpgradeDLL "${VIMSRC}\VisVim\VisVim.dll" \
-                                "$vim_bin_path\VisVim.dll" "$vim_bin_path"
         ${Logged1} File ${VIMSRC}\VisVim\README_VisVim.txt
 
         ${LogSectionEnd}
@@ -1039,8 +1041,18 @@ SectionEnd
         SetOutPath $vim_bin_path\keymap
         File ${VIMRT}\keymap\README.txt
         File ${VIMRT}\keymap\*.vim
+
+        # Install NLS support DLLs:
         SetOutPath $vim_bin_path
-        File ${VIMRT}\libintl.dll
+        !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
+            "${VIMRT}\libintl.dll" \
+            "$vim_bin_path\libintl.dll" "$vim_bin_path"
+
+        !ifdef HAVE_ICONV
+            !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
+                "${VIMRT}\iconv.dll" \
+                "$vim_bin_path\iconv.dll" "$vim_bin_path"
+        !endif
 
         ${LogSectionEnd}
     SectionEnd
@@ -1105,17 +1117,34 @@ Section "un.$(str_unsection_register)" id_unsection_register
     # Please note $INSTDIR is set to the directory where the uninstaller is
     # created.  Thus the "vim61" directory is included in it.
 
-    # If VisVim was installed, unregister the DLL.
-    ${If} ${FileExists} "$INSTDIR\VisVim.dll"
-        ${Logged1} ExecWait 'regsvr32.exe /u /s "$INSTDIR\VisVim.dll"'
-    ${EndIf}
-
     # Delete the context menu entry and batch files:
     ${Logged1} nsExec::ExecToLog '"$INSTDIR\uninstal.exe" -nsis'
     # TODO: Check return value:
     Exch $R0
     ${Log} "uninstall.exe exit code - $R0"
     Pop $R0
+
+    # Uninstall VisVim if it was included.
+    # TODO: Any special handling on x64?
+    !ifdef HAVE_VIS_VIM
+        !insertmacro UninstallLib REGDLL NOTSHARED REBOOT_NOTPROTECTED \
+            "$INSTDIR\VisVim.dll"
+    !endif
+
+    # Remove gvimext.dll:
+    !define LIBRARY_SHELL_EXTENSION
+
+    ${If} ${RunningX64}
+        !define LIBRARY_X64
+        !insertmacro UninstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
+            "$INSTDIR\gvimext.dll"
+        !undef LIBRARY_X64
+    ${Else}
+        !insertmacro UninstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
+            "$INSTDIR\gvimext.dll"
+    ${EndIf}
+
+    !undef LIBRARY_SHELL_EXTENSION
 
     # Delete quick launch:
     ${Logged1} Delete "$QUICKLAUNCH\${VIM_LNK_NAME}.lnk"
@@ -1134,30 +1163,39 @@ SectionEnd
 Section "un.$(str_unsection_exe)" id_unsection_exe
     ${LogSectionStart}
 
-    ${Logged2} Delete /REBOOTOK "$INSTDIR\*.dll"
-    ClearErrors
+    # Remove NLS support DLLs.  This is overkill.
+    !ifdef HAVE_NLS
+        !insertmacro UninstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
+            "$INSTDIR\libintl.dll"
 
-    # Remove everything but *.dll files.  Avoids that
-    # a lot remains when gvimext.dll cannot be deleted.
+        !ifdef HAVE_ICONV
+            !insertmacro UninstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
+                "$INSTDIR\iconv.dll"
+        !endif
+    !endif
+
+    # Remove everything but *.dll files.  Avoids that a lot remains when
+    # gvimext.dll cannot be deleted.
+    ClearErrors
+    ${Logged2} RMDir /r "$INSTDIR\VisVim"   # TODO: Does this exist?
     ${Logged2} RMDir /r "$INSTDIR\autoload"
     ${Logged2} RMDir /r "$INSTDIR\colors"
     ${Logged2} RMDir /r "$INSTDIR\compiler"
     ${Logged2} RMDir /r "$INSTDIR\doc"
     ${Logged2} RMDir /r "$INSTDIR\ftplugin"
     ${Logged2} RMDir /r "$INSTDIR\indent"
+    ${Logged2} RMDir /r "$INSTDIR\keymap"
+    ${Logged2} RMDir /r "$INSTDIR\lang"
     ${Logged2} RMDir /r "$INSTDIR\macros"
     ${Logged2} RMDir /r "$INSTDIR\plugin"
     ${Logged2} RMDir /r "$INSTDIR\spell"
     ${Logged2} RMDir /r "$INSTDIR\syntax"
     ${Logged2} RMDir /r "$INSTDIR\tools"
     ${Logged2} RMDir /r "$INSTDIR\tutor"
-    ${Logged2} RMDir /r "$INSTDIR\VisVim"
-    ${Logged2} RMDir /r "$INSTDIR\lang"
-    ${Logged2} RMDir /r "$INSTDIR\keymap"
-    ${Logged1} Delete "$INSTDIR\*.exe"
     ${Logged1} Delete "$INSTDIR\*.bat"
-    ${Logged1} Delete "$INSTDIR\*.vim"
+    ${Logged1} Delete "$INSTDIR\*.exe"
     ${Logged1} Delete "$INSTDIR\*.txt"
+    ${Logged1} Delete "$INSTDIR\*.vim"
 
     ${If} ${Errors}
         ${ShowErr} $(str_msg_rm_exe_fail)
@@ -1165,7 +1203,7 @@ Section "un.$(str_unsection_exe)" id_unsection_exe
 
     # No error message if the "vim62" directory can't be removed, the
     # gvimext.dll may still be there.
-    ${Logged3} RMDir /r /REBOOTOK "$INSTDIR"
+    ${Logged1} RMDir "$INSTDIR"
 
     ${LogSectionEnd}
 SectionEnd
