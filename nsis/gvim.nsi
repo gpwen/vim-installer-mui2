@@ -64,7 +64,7 @@
 !include "Util.nsh"
 !include "WordFunc.nsh"
 !include "x64.nsh"
-!include "simple-log.nsh"
+!include "simple_log.nsh"
 
 # Global variables:
 Var vim_install_root
@@ -992,7 +992,16 @@ Section $(str_section_vim_rc) id_section_vimrc
     SectionIn 1 3
 
     ${LogSectionStart}
-    StrCpy $vim_install_param "$vim_install_param -create-vimrc"
+
+    # Write default _vimrc only if the file does not exist.  We'll test for
+    # .vimrc (and its short version) and _vimrc:
+    SetOutPath $vim_install_root
+    ${IfNot}    ${FileExists} "$vim_install_root\_vimrc"
+    ${AndIfNot} ${FileExists} "$vim_install_root\.vimrc"
+    ${AndIfNot} ${FileExists} "$vim_install_root\vimrc~1"
+        ${Logged2} File /oname=_vimrc data\mswin_vimrc.vim
+    ${EndIf}
+
     ${LogSectionEnd}
 SectionEnd
 
