@@ -83,7 +83,8 @@ Var vim_batch_names
 !define VIM_LNK_NAME      "gVim ${VER_SHORT}"
 
 # Registry keys:
-!define REG_KEY_UNINSTALL "software\Microsoft\Windows\CurrentVersion\Uninstall"
+!define REG_KEY_WINDOWS   "software\Microsoft\Windows\CurrentVersion"
+!define REG_KEY_UNINSTALL "${REG_KEY_WINDOWS}\Uninstall"
 
 Name                      "${VIM_PRODUCT_NAME}"
 OutFile                   gvim${VER_SHORT_NDOT}.exe
@@ -125,7 +126,7 @@ SilentInstall             normal
 # Registry key to save installer language selection.  It will be removed by
 # the uninstaller:
 !ifdef HAVE_MULTI_LANG
-    !define MUI_LANGDLL_REGISTRY_ROOT      "HKLM"
+    !define MUI_LANGDLL_REGISTRY_ROOT      "SHCTX"
     !define MUI_LANGDLL_REGISTRY_KEY       "SOFTWARE\Vim"
     !define MUI_LANGDLL_REGISTRY_VALUENAME "Installer Language"
 !endif
@@ -326,7 +327,7 @@ Function .onInit
     #   Holds the names to create batch files for.
     StrCpy $vim_install_root  "$INSTDIR"
     StrCpy $vim_bin_path      "$INSTDIR\${VIM_BIN_DIR}"
-    StrCpy $vim_install_param "-register-OLE"
+    StrCpy $vim_install_param ""
     StrCpy $vim_batch_names   "gvim evim gview gvimdiff vimtutor"
 
     ${Log} "Default install path: $vim_install_root"
@@ -396,7 +397,7 @@ Function VimLoadUninstallKeys
     StrCpy $vim_old_ver_count 0
     ${Do}
         # Eumerate the sub-key:
-        EnumRegKey $R1 HKLM ${REG_KEY_UNINSTALL} $R0
+        EnumRegKey $R1 SHCTX ${REG_KEY_UNINSTALL} $R0
 
         # Stop if no more sub-key:
         ${If}   ${Errors}
@@ -412,7 +413,7 @@ Function VimLoadUninstallKeys
         ${IfThen} $R2 S!= "Vim " ${|} ${Continue} ${|}
 
         # Verifies required sub-keys:
-        ReadRegStr $R2 HKLM "${REG_KEY_UNINSTALL}\$R1" "DisplayName"
+        ReadRegStr $R2 SHCTX "${REG_KEY_UNINSTALL}\$R1" "DisplayName"
         ${If}   ${Errors}
         ${OrIf} $R2 == ""
             ${Log} "WARNING: Skip uninstall key [$R1]: \
@@ -420,7 +421,7 @@ Function VimLoadUninstallKeys
             ${Continue}
         ${EndIf}
 
-        ReadRegStr $R2 HKLM "${REG_KEY_UNINSTALL}\$R1" "UninstallString"
+        ReadRegStr $R2 SHCTX "${REG_KEY_UNINSTALL}\$R1" "UninstallString"
         ${If}   ${Errors}
         ${OrIf} $R2 == ""
             ${Log} "WARNING: Skip uninstall key [$R1]: \
@@ -487,7 +488,7 @@ Function VimCfgOldVerSections
         ${EndIf}
 
         # Set section title to readable form:
-        ReadRegStr $R2 HKLM "${REG_KEY_UNINSTALL}\$R2" "DisplayName"
+        ReadRegStr $R2 SHCTX "${REG_KEY_UNINSTALL}\$R2" "DisplayName"
         SectionSetText $R1 '$(str_section_old_ver) $R2'
 
         IntOp $R0 $R0 + 1
@@ -569,7 +570,7 @@ Function VimSetDefRootPath
 
         # Read path of the un-installer for registry ($R0):
         ${If} $R1 != ""
-            ReadRegStr $R0 HKLM "${REG_KEY_UNINSTALL}\$R1" "UninstallString"
+            ReadRegStr $R0 SHCTX "${REG_KEY_UNINSTALL}\$R1" "UninstallString"
         ${Else}
             StrCpy $R0 ""
         ${EndIf}
@@ -633,7 +634,7 @@ Function VimRmOldVer
     ${LogPrint} "$(str_msg_rm_start) $R0 ..."
 
     # Read path of the uninstaller from registry ($R1):
-    ReadRegStr $R1 HKLM "${REG_KEY_UNINSTALL}\$R0" "UninstallString"
+    ReadRegStr $R1 SHCTX "${REG_KEY_UNINSTALL}\$R0" "UninstallString"
     ${If}   ${Errors}
     ${OrIf} $R1 == ""
         ${ShowErr} "$(str_msg_rm_fail) $R0$\r$\n$(str_msg_no_rm_reg)"
