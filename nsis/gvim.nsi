@@ -657,10 +657,10 @@ Function VimRmOldVer
         Abort
     ${EndIf}
 
-    # Execute the uninstaller in TEMP, exit code stores in $R2.  Log is close
-    # before launch so that uninstaller can write to the same log file.
-    ${Logged2Close} ExecWait '"$TEMP\$R3" _?=$R2' $R2
-    ${LogReinit}
+    # Execute the uninstaller in TEMP, exit code stores in $R2.  Log is closed
+    # before launch and reopened after that, so that uninstaller can write to
+    # the same log file.
+    ${Logged2Reopen} ExecWait '"$TEMP\$R3" _?=$R2' $R2
     ${If} ${Errors}
         ${Logged1} Delete "$TEMP\$R3"
         ${ShowErr} "$(str_msg_rm_fail) $R0$\r$\n$(str_msg_rm_run_fail)"
@@ -798,9 +798,9 @@ Function VimGetOldVerKeyFunc
     ${If} $R0 >= $vim_old_ver_count
         StrCpy $R0 ""
     ${Else}
-        # WordFind uses 1 based index:
+        # WordFindS uses 1 based index:
         IntOp $R0 $R0 + 1
-        ${WordFind} $vim_old_ver_keys "$\r$\n" "+$R0" $R0
+        ${WordFindS} $vim_old_ver_keys "$\r$\n" "+$R0" $R0
     ${EndIf}
 
     Exch $R0

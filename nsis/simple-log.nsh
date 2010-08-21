@@ -167,6 +167,26 @@ Var _simple_log_fh      # Log file handle
     DetailPrint `${_LOG_MSG}`
 !macroend
 
+# Helper macro to log error status.
+#
+# Write error message to log if the error flag is set.  Otherwise, nothing
+# will be written.  Error flag will not be cleared.
+#
+# Parameters:
+#   $_CMD : Name of the command to be used in error log.
+# Returns:
+#   None.
+!define LogErrors `!insertmacro _LogErrors`
+!macro _LogErrors _CMD
+    ${If} ${Errors}
+        # Log error flag:
+        ${Log} `ERROR: The last ${_CMD} instruction has recoverable error!`
+
+        # Make sure error flag is not cleared:
+        SetErrors
+    ${EndIf}
+!macroend
+
 # The following macros are used to log commands of 0/1/2/3/4 parameter(s).
 # You can simply prefix these macros to NSIS commands, the command as well as
 # it's parameters will be logged before execution.
@@ -182,35 +202,42 @@ Var _simple_log_fh      # Log file handle
 !macro _Logged0 _CMD
     ${Log} `${_CMD}`
     `${_CMD}`
+    ${LogErrors} `${_CMD}`
 !macroend
 
 !define Logged1 `!insertmacro _Logged1`
 !macro _Logged1 _CMD _PARAM1
     ${Log} `${_CMD} ${_PARAM1}`
     `${_CMD}` `${_PARAM1}`
+    ${LogErrors} `${_CMD}`
 !macroend
 
 !define Logged2 `!insertmacro _Logged2`
 !macro _Logged2 _CMD _PARAM1 _PARAM2
     ${Log} `${_CMD} ${_PARAM1} ${_PARAM2}`
     `${_CMD}` `${_PARAM1}` `${_PARAM2}`
+    ${LogErrors} `${_CMD}`
 !macroend
 
 !define Logged3 `!insertmacro _Logged3`
 !macro _Logged3 _CMD _PARAM1 _PARAM2 _PARAM3
     ${Log} `${_CMD} ${_PARAM1} ${_PARAM2} ${_PARAM3}`
     `${_CMD}` `${_PARAM1}` `${_PARAM2}` `${_PARAM3}`
+    ${LogErrors} `${_CMD}`
 !macroend
 
 !define Logged4 `!insertmacro _Logged4`
 !macro _Logged4 _CMD _PARAM1 _PARAM2 _PARAM3 _PARAM4
     ${Log} `${_CMD} ${_PARAM1} ${_PARAM2} ${_PARAM3} ${_PARAM4}`
     `${_CMD}` `${_PARAM1}` `${_PARAM2}` `${_PARAM3}` `${_PARAM4}`
+    ${LogErrors} `${_CMD}`
 !macroend
 
 # The following are special variant of the above $Logged* macros, which will
-# close the log file before executing the command.  It's used to log execution
-# of external commands that will write to the same log file.
+# close the log file before execution the command, and reopen the log file
+# after that.  It's used to log execution of external commands that will write
+# to the same log file.
+#
 # Parameters:
 #   $_CMD    : Command to run.
 #   $_PARAM1 : Parameter 1.
@@ -219,11 +246,31 @@ Var _simple_log_fh      # Log file handle
 #   $_PARAM4 : Parameter 4.
 # Returns:
 #   None.
-!define Logged2Close `!insertmacro _Logged2Close`
-!macro _Logged2Close _CMD _PARAM1 _PARAM2
+!define Logged2Reopen `!insertmacro _Logged2Reopen`
+!macro _Logged2Reopen _CMD _PARAM1 _PARAM2
+    Push $R0
+
+    # Log command to be executed and close log file:
     ${Log} `${_CMD} ${_PARAM1} ${_PARAM2}`
     ${LogClose}
+
+    # Execute the command, save error status to $R0:
+    StrCpy $R0 0
     `${_CMD}` `${_PARAM1}` `${_PARAM2}`
+    ${If} ${Errors}
+        StrCpy $R0 1
+    ${EndIf}
+
+    # Reopen the log:
+    ${LogReinit}
+
+    # Log and restore error status:
+    ${If} $R0 <> 0
+        SetErrors
+        ${LogErrors} `${_CMD}`
+    ${EndIf}
+
+    Pop $R0
 !macroend
 
 # Log start of a section.
