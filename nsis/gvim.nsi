@@ -82,6 +82,11 @@ Var vim_batch_names
 !define VIM_BIN_DIR       "vim${VER_SHORT_NDOT}"
 !define VIM_LNK_NAME      "gVim ${VER_SHORT}"
 
+# List of names of all shortcuts to be created on the desktop, as well as
+# their command line arguments for gvim.exe.  Shortcuts are delimited with \n,
+# and name/argument are delimited with ":".
+!define VIM_SHORTCUTS     ":$\n Easy:-y$\n Read only:-R"
+
 # Registry keys:
 !define REG_KEY_WINDOWS   "software\Microsoft\Windows\CurrentVersion"
 !define REG_KEY_UNINSTALL "${REG_KEY_WINDOWS}\Uninstall"
@@ -933,7 +938,26 @@ Section $(str_section_desktop) id_section_desktop
     SectionIn 1 3
 
     ${LogSectionStart}
-    StrCpy $vim_install_param "$vim_install_param -install-icons"
+
+    ${Logged1} SetOutPath ""
+
+    # $R0 - Loop index, 1 based
+    # $R1 - Number of shortcuts
+    # $R2 - Setting for the current shortcut
+    # $R3 - Name of the shortcut
+    # $R4 - Argument for the shortcut
+    ${WordFindS} "${VIM_SHORTCUTS}" "$\n" "#" $R1
+    ${For} $R0 1 $R1
+        ${WordFindS} "${VIM_SHORTCUTS}" "$\n" "+$R0" $R2
+
+        # Note: Don't use +num here, it cannot handle empty field!
+        ${WordFindS} $R2 ":" "+1{" $R3
+        ${WordFindS} $R2 ":" "+1}" $R4
+
+        ${Logged5} CreateShortCut "$DESKTOP\gVim$R3 ${VER_SHORT}.lnk" \
+            "$vim_bin_path\gvim.exe" "$R4" "$vim_bin_path\gvim.exe" 0
+    ${Next}
+
     ${LogSectionEnd}
 SectionEnd
 
@@ -951,8 +975,8 @@ Section $(str_section_quick_launch) id_section_quicklaunch
     ${LogSectionStart}
 
     ${If} $QUICKLAUNCH != $TEMP
-        SetOutPath ""
-        CreateShortCut "$QUICKLAUNCH\${VIM_LNK_NAME}.lnk" \
+        ${Logged1} SetOutPath ""
+        ${Logged5} CreateShortCut "$QUICKLAUNCH\${VIM_LNK_NAME}.lnk" \
             "$vim_bin_path\gvim.exe" "" "$vim_bin_path\gvim.exe" 0
     ${EndIf}
 
@@ -1155,6 +1179,21 @@ Section "un.$(str_unsection_register)" id_unsection_register
     ${EndIf}
 
     !undef LIBRARY_SHELL_EXTENSION
+
+    # Delete desktop icons, if any:
+    # $R0 - Loop index, 1 based
+    # $R1 - Number of shortcuts
+    # $R2 - Setting for the current shortcut
+    # $R3 - Name of the shortcut
+    ${WordFindS} "${VIM_SHORTCUTS}" "$\n" "#" $R1
+    ${For} $R0 1 $R1
+        ${WordFindS} "${VIM_SHORTCUTS}" "$\n" "+$R0" $R2
+
+        # Note: Don't use +num here, it cannot handle empty field!
+        ${WordFindS} $R2 ":" "+1{" $R3
+
+        ${Logged1} Delete "$DESKTOP\gVim$R3 ${VER_SHORT}.lnk"
+    ${Next}
 
     # Delete quick launch:
     ${Logged1} Delete "$QUICKLAUNCH\${VIM_LNK_NAME}.lnk"

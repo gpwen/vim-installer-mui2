@@ -233,6 +233,13 @@ Var _simple_log_fh      # Log file handle
     ${LogErrors} `${_CMD}`
 !macroend
 
+!define Logged5 `!insertmacro _Logged5`
+!macro _Logged5 _CMD _PARAM1 _PARAM2 _PARAM3 _PARAM4 _PARAM5
+    ${Log} `${_CMD} ${_PARAM1} ${_PARAM2} ${_PARAM3} ${_PARAM4} ${_PARAM5}`
+    `${_CMD}` `${_PARAM1}` `${_PARAM2}` `${_PARAM3}` `${_PARAM4}` `${_PARAM5}`
+    ${LogErrors} `${_CMD}`
+!macroend
+
 # The following are special variant of the above $Logged* macros, which will
 # close the log file before execution the command, and reopen the log file
 # after that.  It's used to log execution of external commands that will write
