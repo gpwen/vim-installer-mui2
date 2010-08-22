@@ -73,6 +73,7 @@ Var vim_old_ver_keys
 Var vim_old_ver_count
 Var vim_install_param
 Var vim_batch_names
+Var vim_has_console
 
 # Version strings:
 !define VER_SHORT         "${VER_MAJOR}.${VER_MINOR}"
@@ -81,10 +82,38 @@ Var vim_batch_names
 !define VIM_BIN_DIR       "vim${VER_SHORT_NDOT}"
 !define VIM_LNK_NAME      "gVim ${VER_SHORT}"
 
-# List of names of all shortcuts to be created on the desktop, as well as
-# their command line arguments for gvim.exe.  Shortcuts are delimited with \n,
-# and name/argument are delimited with ":".
-!define VIM_SHORTCUTS     ":$\n Easy:-y$\n Read only:-R"
+# Specification for shortcuts on desktop.  Shortcuts are delimited with
+# newline (\n), fields in each shortcut are delimited with "|".  Please note
+# fields can NOT be empty, you have to add some whitespaces there even if it's
+# empty, otherwise the field cannot be handled correctly.  It's the limitation
+# of the macro used to parse such specification.
+!define VIM_DESKTOP_SHORTCUTS \
+    "gVim ${VER_SHORT}           | gvim.exe |    | $\n\
+     gVim Easy ${VER_SHORT}      | gvim.exe | -y | $\n\
+     gVim Read only ${VER_SHORT} | gvim.exe | -R | "
+
+# Specification for quick launch shortcuts:
+!define VIM_LAUNCH_SHORTCUTS \
+    "gVim ${VER_SHORT} | gvim.exe | | "
+
+# Specification for console version startmenu shortcuts:
+!define VIM_CONSOLE_STARTMENU \
+    "Vim           | vim.exe |    | $\n\
+     Vim Read-only | vim.exe | -R | $\n\
+     Vim Diff      | vim.exe | -d | "
+
+# Specification for GUI version startmenu shortcuts:
+!define VIM_GUI_STARTMENU \
+    "gVim           | gvim.exe |    | $\n\
+     gVim Easy      | gvim.exe | -y | $\n\
+     gVim Read-only | gvim.exe | -R | $\n\
+     gVim Diff      | gvim.exe | -d | "
+
+# Specification for miscellaneous startmenu shortcuts:
+!define VIM_MISC_STARTMENU \
+    "Uninstall | uninstall-gui.exe |      | $vim_bin_path$\n\
+     Vim tutor | vimtutor.bat      |      | $vim_bin_path$\n\
+     Help      | gvim.exe          | -c h | "
 
 # Subdirectories of VIMFILES, delimited by \n:
 !define VIM_PLUGIN_SUBDIR \
@@ -224,6 +253,7 @@ SilentInstall             normal
 #   Detect whether an instance of Vim is running or not.  The console version
 #   of Vim will be executed (silently) to list Vim servers.  If found, there
 #   must be some instances of Vim running.
+#
 #   Parameters:
 #     $_VIM_CONSOLE_PATH : Path to Vim console (vim.exe)
 #   Returns:
@@ -323,6 +353,132 @@ SilentInstall             normal
     Exch $R0
 !macroend
 
+# ----------------------------------------------------------------------------
+# macro VimTrimString                                                     {{{2
+#   Trim white spaces from both ends of the input string.
+#
+#   $_INPUT is the input string; $_OUTPUT is the output string.  " \r\n\t"
+#   will be considered as white space.
+# ----------------------------------------------------------------------------
+!define VimTrimString "!insertmacro _VimTrimStringCall"
+!macro _VimTrimStringCall _INPUT _OUTPUT
+    Push `${_INPUT}`
+    ${CallArtificialFunction} _VimTrimString
+    Pop ${_OUTPUT}
+!macroend
+!macro _VimTrimString
+    Exch $R0  # Input string
+
+    # Degenerated case: empty input string:
+    ${If} "$R0" == ""
+        Exch $R0
+        Return
+    ${EndIf}
+
+    Push $R1  # Character from the input string
+    Push $R2  # Start offset/length to copy
+
+    # Count number of white spaces at the beginning of the string:
+    StrCpy $R2 0
+    ${Do}
+        StrCpy $R1 $R0 1 $R2
+        ${If}   $R1 S== " "
+        ${OrIf} $R1 S== "$\t"
+        ${OrIf} $R1 S== "$\r"
+        ${OrIf} $R1 S== "$\n"
+            IntOp $R2 $R2 + 1
+        ${Else}
+            ${ExitDo}
+        ${EndIf}
+    ${Loop}
+
+    # Trim left:
+    ${If} $R2 > 0
+        StrCpy $R0 $R0 "" $R2
+    ${EndIf}
+
+    # Count number of white spaces at the end of the string:
+    ${If} $R0 != ""
+        StrCpy $R2 -1
+        ${Do}
+            StrCpy $R1 $R0 1 $R2
+            ${If}   $R1 S== " "
+            ${OrIf} $R1 S== "$\t"
+            ${OrIf} $R1 S== "$\r"
+            ${OrIf} $R1 S== "$\n"
+                IntOp $R2 $R2 - 1
+            ${Else}
+                ${ExitDo}
+            ${EndIf}
+        ${Loop}
+
+        # Trim right:
+        IntOp $R2 $R2 + 1
+        ${If} $R2 < 0
+            StrCpy $R0 $R0 $R2
+        ${EndIf}
+    ${EndIf}
+
+    # Output:
+    Pop  $R2
+    Pop  $R1
+    Exch $R0
+!macroend
+
+# ----------------------------------------------------------------------------
+# macro VimCountFields                                                    {{{2
+#   Count fields in the input string.
+#
+#   This macro works around a problem in the WordFindS macros.  That macro
+#   won't return correct field count if no delimiter found in the input
+#   string.
+#
+#   Parameters:
+#     $_STRING      : Input string.
+#     $_DELIMITER   : Input delimiter.
+#   Returns:
+#     $_FIELD_COUNT : Number of fields in the string.
+# ----------------------------------------------------------------------------
+!define VimCountFields "!insertmacro _VimCountFields"
+!macro _VimCountFields _STRING _DELIMITER _FIELD_COUNT
+    Push `${_DELIMITER}`
+    Push `${_STRING}`
+    Exch $R1  # String
+    Exch
+    Exch $R0  # Delimiter
+    Exch
+
+    # Count number of fields.  $R0 is number of fields on output if delimiter
+    # found in the input string.  Unfortunately, WordFindS cannot handle the
+    # case where delimiter is not present in the input string.  We have to
+    # work around the problem by appending an extra delimiter, and remove it
+    # from field count later.
+    ${WordFindS} `$R1$R0 ` `$R0` "#" $R0
+    IntOp $R0 $R0 - 1
+
+    # Output:
+    Pop  $R1
+    Exch $R0
+    Pop  ${_FIELD_COUNT}
+!macroend
+
+# ----------------------------------------------------------------------------
+# macro VimRmShortcuts                                                    {{{2
+#   Wrapper to call VimRmShortcutsFunc.
+#
+#   Parameters:
+#     $_SHORTCUT_SPEC : Shortcut specification.
+#     $_SHORTCUT_ROOT : Shortcut root.
+#   Returns:
+#     N/A
+# ----------------------------------------------------------------------------
+!define VimRmShortcuts "!insertmacro _VimRmShortcuts"
+!macro _VimRmShortcuts _SHORTCUT_SPEC _SHORTCUT_ROOT
+    Push `${_SHORTCUT_SPEC}`
+    Push `${_SHORTCUT_ROOT}`
+    Call un.VimRmShortcutsFunc
+!macroend
+
 ##############################################################################
 # Installer Functions                                                     {{{1
 ##############################################################################
@@ -338,6 +494,7 @@ Function .onInit
     StrCpy $vim_old_ver_count 0
     StrCpy $vim_install_param ""
     StrCpy $vim_batch_names   ""
+    StrCpy $vim_has_console   0
 
     # Initialize log:
     !ifdef VIM_LOG_FILE
@@ -884,12 +1041,95 @@ Function VimCreatePluginDir
     # $R1 - Loop index, 1 based
     # $R2 - Number of subdirectories
     # $R3 - Current subdirectory
-    ${WordFindS} "${VIM_PLUGIN_SUBDIR}" "$\n" "#" $R2
+    ${VimCountFields} "${VIM_PLUGIN_SUBDIR}" "$\n" $R2
     ${For} $R1 1 $R2
         ${WordFindS} "${VIM_PLUGIN_SUBDIR}" "$\n" "+$R1" $R3
         ${Logged1} CreateDirectory "$R0\$R3"
     ${Next}
 
+    Pop $R3
+    Pop $R2
+    Pop $R1
+    Pop $R0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function VimCreateShortcuts                                             {{{2
+#   Create specified shortcuts.
+#
+#   Parameters:
+#     The following parameters should be pushed onto stack in order.
+#     - Shortcut specification.
+#     - Shortcut root.
+#   Returns:
+#     N/A
+# ----------------------------------------------------------------------------
+!define VimCreateShortcuts "!insertmacro _VimCreateShortcuts"
+!macro _VimCreateShortcuts _SHORTCUT_SPEC _SHORTCUT_ROOT
+    Push `${_SHORTCUT_SPEC}`
+    Push `${_SHORTCUT_ROOT}`
+    Call VimCreateShortcutsFunc
+!macroend
+Function VimCreateShortcutsFunc
+    # Incoming parameters has been put on the stack:
+    Exch $R1   # Shortcut root
+    Exch
+    Exch $R0   # Shortcut specification
+    Exch
+    Push $R2   # Loop index, 1 based
+    Push $R3   # Number of shortcuts
+    Push $R4   # Specification for the current shortcut
+    Push $R5   # Name of the shortcut
+    Push $R6   # Target of the shortcut
+    Push $R7   # Argument of the shortcut
+    Push $R8   # Work directory of the shortcut
+
+    # Create shortcut root if necessary:
+    ${IfNot} ${FileExists} "$R1\*.*"
+        ${Logged1} CreateDirectory $R1
+    ${EndIf}
+
+    # Create all shortcuts one by one:
+    ${VimCountFields} "$R0" "$\n" $R3
+    ${For} $R2 1 $R3
+        # Specification for the current shortcut (No. $R2):
+        ${WordFindS} "$R0" "$\n" "+$R2" $R4
+
+        # Fields of the shortcut:
+        ${WordFindS} $R4 "|" "+1" $R5
+        ${WordFindS} $R4 "|" "+2" $R6
+        ${WordFindS} $R4 "|" "+3" $R7
+        ${WordFindS} $R4 "|" "+4" $R8
+
+        # Trim white space from both ends of fields.  WordFindS cannot support
+        # empty fields correctly, so we have to put white spaces in white
+        # fields and trim them afterward.
+        ${VimTrimString} $R5 $R5
+        ${VimTrimString} $R6 $R6
+        ${VimTrimString} $R7 $R7
+        ${VimTrimString} $R8 $R8
+
+        # Prefix binary path to the target:
+        StrCpy $R6 "$vim_bin_path\$R6"
+
+        # ??? Debug:
+        #${Log} "Create shortcut [$R4]"
+        #${Log} "   - Name     : [$R5]"
+        #${Log} "   - Target   : [$R6]"
+        #${Log} "   - Argument : [$R7]"
+        #${Log} "   - Work dir : [$R8]"
+
+        # Create the shortcut:
+        SetOutPath $R8
+        ${Logged5} CreateShortCut "$R1\$R5.lnk" "$R6" "$R7" "$R6" 0
+    ${Next}
+
+    # Restore the stack:
+    Pop $R8
+    Pop $R7
+    Pop $R6
+    Pop $R5
+    Pop $R4
     Pop $R3
     Pop $R2
     Pop $R1
@@ -1006,6 +1246,9 @@ Section $(str_section_console) id_section_console
     ${VimExtractConsoleExe}
     StrCpy $vim_batch_names "$vim_batch_names vim view vimdiff"
 
+    # Flags that console version has been installed:
+    StrCpy $vim_has_console 1
+
     ${LogSectionEnd}
 SectionEnd
 
@@ -1022,26 +1265,7 @@ Section $(str_section_desktop) id_section_desktop
     SectionIn 1 3
 
     ${LogSectionStart}
-
-    ${Logged1} SetOutPath ""
-
-    # $R0 - Loop index, 1 based
-    # $R1 - Number of shortcuts
-    # $R2 - Setting for the current shortcut
-    # $R3 - Name of the shortcut
-    # $R4 - Argument for the shortcut
-    ${WordFindS} "${VIM_SHORTCUTS}" "$\n" "#" $R1
-    ${For} $R0 1 $R1
-        ${WordFindS} "${VIM_SHORTCUTS}" "$\n" "+$R0" $R2
-
-        # Note: Don't use +num here, it cannot handle empty field!
-        ${WordFindS} $R2 ":" "+1{" $R3
-        ${WordFindS} $R2 ":" "+1}" $R4
-
-        ${Logged5} CreateShortCut "$DESKTOP\gVim$R3 ${VER_SHORT}.lnk" \
-            "$vim_bin_path\gvim.exe" "$R4" "$vim_bin_path\gvim.exe" 0
-    ${Next}
-
+    ${VimCreateShortcuts} "${VIM_DESKTOP_SHORTCUTS}" "$DESKTOP"
     ${LogSectionEnd}
 SectionEnd
 
@@ -1049,7 +1273,28 @@ Section $(str_section_start_menu) id_section_startmenu
     SectionIn 1 3
 
     ${LogSectionStart}
-    StrCpy $vim_install_param "$vim_install_param -add-start-menu"
+
+    # Create shortcuts for console version:
+    ${If} $vim_has_console <> 0
+        ${VimCreateShortcuts} "${VIM_CONSOLE_STARTMENU}" \
+            "$SMPROGRAMS\${VIM_PRODUCT_NAME}"
+    ${EndIf}
+
+    # Create shortcuts for GUI version:
+    ${VimCreateShortcuts} "${VIM_GUI_STARTMENU}"  \
+        "$SMPROGRAMS\${VIM_PRODUCT_NAME}"
+
+    # Create misc shortcuts:
+    ${VimCreateShortcuts} "${VIM_MISC_STARTMENU}" \
+        "$SMPROGRAMS\${VIM_PRODUCT_NAME}"
+
+    # Create URL shortcut to vim online:
+    # TODO: Which link should be used for vim online?
+    #   http://vim.sf.net/
+    #   http://www.vim.org/
+    WriteINIStr "$SMPROGRAMS\${VIM_PRODUCT_NAME}\Vim Online.URL" \
+        "InternetShortcut" "URL" "http://www.vim.org/"
+
     ${LogSectionEnd}
 SectionEnd
 
@@ -1059,9 +1304,7 @@ Section $(str_section_quick_launch) id_section_quicklaunch
     ${LogSectionStart}
 
     ${If} $QUICKLAUNCH != $TEMP
-        ${Logged1} SetOutPath ""
-        ${Logged5} CreateShortCut "$QUICKLAUNCH\${VIM_LNK_NAME}.lnk" \
-            "$vim_bin_path\gvim.exe" "" "$vim_bin_path\gvim.exe" 0
+        ${VimCreateShortcuts} "${VIM_LAUNCH_SHORTCUTS}" "$QUICKLAUNCH"
     ${EndIf}
 
     ${LogSectionEnd}
@@ -1276,23 +1519,29 @@ Section "un.$(str_unsection_register)" id_unsection_register
 
     !undef LIBRARY_SHELL_EXTENSION
 
-    # Delete desktop icons, if any:
-    # $R0 - Loop index, 1 based
-    # $R1 - Number of shortcuts
-    # $R2 - Setting for the current shortcut
-    # $R3 - Name of the shortcut
-    ${WordFindS} "${VIM_SHORTCUTS}" "$\n" "#" $R1
-    ${For} $R0 1 $R1
-        ${WordFindS} "${VIM_SHORTCUTS}" "$\n" "+$R0" $R2
-
-        # Note: Don't use +num here, it cannot handle empty field!
-        ${WordFindS} $R2 ":" "+1{" $R3
-
-        ${Logged1} Delete "$DESKTOP\gVim$R3 ${VER_SHORT}.lnk"
-    ${Next}
-
     # Delete quick launch:
-    ${Logged1} Delete "$QUICKLAUNCH\${VIM_LNK_NAME}.lnk"
+    ${VimRmShortcuts} "${VIM_LAUNCH_SHORTCUTS}" "$QUICKLAUNCH"
+
+    # Delete URL shortcut to vim online:
+    ${Logged1} Delete "$SMPROGRAMS\${VIM_PRODUCT_NAME}\Vim Online.URL"
+
+    # Delete startmenu shortcuts:
+    ${VimRmShortcuts} \
+        "${VIM_CONSOLE_STARTMENU}$\n\
+         ${VIM_GUI_STARTMENU}$\n\
+         ${VIM_MISC_STARTMENU}" \
+        "$SMPROGRAMS\${VIM_PRODUCT_NAME}"
+
+    # Delete startmenu folder (now should be empty):
+    ${Logged1} RMDir "$SMPROGRAMS\${VIM_PRODUCT_NAME}"
+    ${If} ${Errors}
+        ${Log} "WARNING: Fail to remove startmenu folder \
+                [$SMPROGRAMS\${VIM_PRODUCT_NAME}], \
+                directory not empty!"
+    ${EndIf}
+
+    # Delete desktop icons, if any:
+    ${VimRmShortcuts} "${VIM_DESKTOP_SHORTCUTS}" "$DESKTOP"
 
     # Delete log file:
     !ifdef VIM_LOG_FILE
@@ -1518,7 +1767,7 @@ Function un.VimRmPluginDir
     # $R3 - Current subdirectory
     # $R4 - Directory empty flag 1=not empty, 0/-1=empty/not exist
     StrCpy $R4 0
-    ${WordFindS} "${VIM_PLUGIN_SUBDIR}" "$\n" "#" $R2
+    ${VimCountFields} "${VIM_PLUGIN_SUBDIR}" "$\n" $R2
     ${For} $R1 1 $R2
         ${WordFindS} "${VIM_PLUGIN_SUBDIR}" "$\n" "+$R1" $R3
         ${DirState} "$R0\$R3" $R4
@@ -1542,6 +1791,53 @@ Function un.VimRmPluginDir
         ${Log} "WARNING: Cannot remove $R0, $R3 is not empty!"
     ${EndIf}
 
+    Pop $R4
+    Pop $R3
+    Pop $R2
+    Pop $R1
+    Pop $R0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function VimRmShortcutsFunc                                             {{{2
+#   Remove specified shortcuts.
+#
+#   Parameters:
+#     The following parameters should be pushed onto stack in order.
+#     - Shortcut specification.
+#     - Shortcut root.
+#   Returns:
+#     N/A
+# ----------------------------------------------------------------------------
+Function un.VimRmShortcutsFunc
+    # Incoming parameters has been put on the stack:
+    Exch $R1   # Shortcut root
+    Exch
+    Exch $R0   # Shortcut specification
+    Exch
+    Push $R2   # Loop index, 1 based
+    Push $R3   # Number of shortcuts
+    Push $R4   # Specification for the current shortcut
+    Push $R5   # Name of the shortcut
+
+    # Remove all shortcuts one by one:
+    ${VimCountFields} "$R0" "$\n" $R3
+    ${For} $R2 1 $R3
+        # Specification for the current shortcut (No. $R2):
+        ${WordFindS} "$R0" "$\n" "+$R2" $R4
+
+        # Name of the shortcut:
+        ${WordFindS} $R4 "|" "+1" $R5
+
+        # Trim white space from both ends:
+        ${VimTrimString} $R5 $R5
+
+        # Remove the shortcut:
+        ${Logged1} Delete "$R1\$R5.lnk"
+    ${Next}
+
+    # Restore the stack:
+    Pop $R5
     Pop $R4
     Pop $R3
     Pop $R2
