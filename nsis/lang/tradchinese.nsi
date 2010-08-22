@@ -114,9 +114,9 @@ LangString str_desc_rm_exe          ${LANG_TRADCHINESE} \
     "移除所有的 Vim 程式及腳本。"
 
 LangString str_unsection_plugin     ${LANG_TRADCHINESE} \
-    "移除 Vim 插件資料夾 $vim_plugin_path"
+    "移除 Vim 插件資料夾"
 LangString str_desc_rm_plugin       ${LANG_TRADCHINESE} \
-    "移除您的 Vim 插件資料夾 $vim_plugin_path。$\r$\n$\r$\n\
+    "移除您的 Vim 插件資料夾。$\r$\n$\r$\n\
      請注意該資料夾下所有檔案都會被移除。若閣下在該資料夾下有希望保留的檔案，\
      切勿勾選該項！"
 

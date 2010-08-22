@@ -121,9 +121,9 @@ LangString str_desc_rm_exe          ${LANG_ENGLISH} \
     "Remove all Vim excutables and runtime files."
 
 LangString str_unsection_plugin     ${LANG_ENGLISH} \
-    "Remove Vim Plugin Directory $vim_plugin_path"
+    "Remove Vim Plugin Directory"
 LangString str_desc_rm_plugin       ${LANG_ENGLISH} \
-    "Remove all files in your Vim plugin directory $vim_plugin_path.\
+    "Remove all files in your Vim plugin directory.\
      $\r$\n$\r$\n\
      CAREFUL: Do NOT remove the directory if you have created something \
      there that you want to keep."

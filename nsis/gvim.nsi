@@ -69,7 +69,6 @@
 # Global variables:
 Var vim_install_root
 Var vim_bin_path
-Var vim_plugin_path
 Var vim_old_ver_keys
 Var vim_old_ver_count
 Var vim_install_param
@@ -86,6 +85,18 @@ Var vim_batch_names
 # their command line arguments for gvim.exe.  Shortcuts are delimited with \n,
 # and name/argument are delimited with ":".
 !define VIM_SHORTCUTS     ":$\n Easy:-y$\n Read only:-R"
+
+# Subdirectories of VIMFILES, delimited by \n:
+!define VIM_PLUGIN_SUBDIR \
+    "colors$\n\
+     compiler$\n\
+     doc$\n\
+     ftdetect$\n\
+     ftplugin$\n\
+     indent$\n\
+     keymap$\n\
+     plugin$\n\
+     syntax"
 
 # Registry keys:
 !define REG_KEY_WINDOWS   "software\Microsoft\Windows\CurrentVersion"
@@ -276,6 +287,42 @@ SilentInstall             normal
     Pop  ${_KEY}
 !macroend
 
+# ----------------------------------------------------------------------------
+# macro VimGetPluginRoot                                                  {{{2
+#   Get root directory for plugins (vimfiles directory). $_ENV_STR is the name
+#   of the environment string to check for VIM root directory; $_PLUGIN_ROOT
+#   is the output plugin root directory.
+# ----------------------------------------------------------------------------
+!define VimGetPluginRoot "!insertmacro _VimGetPluginRootCall"
+!macro _VimGetPluginRootCall _ENV_STR _PLUGIN_ROOT
+    Push `${_ENV_STR}`
+    ${CallArtificialFunction} _VimGetPluginRoot
+    Pop ${_PLUGIN_ROOT}
+!macroend
+!macro _VimGetPluginRoot
+    Exch $R0  # Name of the environment string
+    Push $R1
+
+    # Determine root for plugin directory:
+    # $R0 - Input environment string name.
+    # $R1 - Plugin root.
+    # Output stored in $R0
+    ReadEnvStr $R1 $R0
+    ${If}    "$R1" != ""
+    ${AndIf} ${FileExists} "$R1\*.*"
+        ${Log} "Get plugin root [$R1] from environment string [$R0]."
+        StrCpy $R0 "$R1\vimfiles"
+    ${Else}
+        ${Log} "Environment [$R0] is invalid, \
+                fall back to [$vim_install_root] as plugin root."
+        StrCpy $R0 "$vim_install_root\vimfiles"
+    ${EndIf}
+
+    # Output:
+    Pop  $R1
+    Exch $R0
+!macroend
+
 ##############################################################################
 # Installer Functions                                                     {{{1
 ##############################################################################
@@ -287,7 +334,6 @@ Function .onInit
     # Initialize all globals:
     StrCpy $vim_install_root  ""
     StrCpy $vim_bin_path      ""
-    StrCpy $vim_plugin_path   ""
     StrCpy $vim_old_ver_keys  ""
     StrCpy $vim_old_ver_count 0
     StrCpy $vim_install_param ""
@@ -812,6 +858,44 @@ Function VimGetOldVerKeyFunc
     Exch $R0
 FunctionEnd
 
+# ----------------------------------------------------------------------------
+# Function VimCreatePluginDir                                             {{{2
+#   Create plugin directories.
+#
+#   Parameters:
+#     Environment string to check for plugin root on the top of stack.
+#   Returns:
+#     N/A
+# ----------------------------------------------------------------------------
+Function VimCreatePluginDir
+    Exch $R0  # Name of the environment string for plugin root.
+    Push $R1
+    Push $R2
+    Push $R3
+
+    # Determine plugin root directory.
+    # $R0 - Plugin root directory
+    ${VimGetPluginRoot} $R0 $R0
+
+    # Create vimfiles:
+    ${Logged1} CreateDirectory "$R0"
+
+    # Create all subdirectories:
+    # $R1 - Loop index, 1 based
+    # $R2 - Number of subdirectories
+    # $R3 - Current subdirectory
+    ${WordFindS} "${VIM_PLUGIN_SUBDIR}" "$\n" "#" $R2
+    ${For} $R1 1 $R2
+        ${WordFindS} "${VIM_PLUGIN_SUBDIR}" "$\n" "+$R1" $R3
+        ${Logged1} CreateDirectory "$R0\$R3"
+    ${Next}
+
+    Pop $R3
+    Pop $R2
+    Pop $R1
+    Pop $R0
+FunctionEnd
+
 
 ##############################################################################
 # Dynamic sections to support removal of old versions                     {{{1
@@ -1034,7 +1118,11 @@ Section $(str_section_plugin_home) id_section_pluginhome
     SectionIn 1 3
 
     ${LogSectionStart}
-    StrCpy $vim_install_param "$vim_install_param -create-directories home"
+
+    # Create vimfiles directory hierarchy under $HOME or install root:
+    Push "HOME"
+    Call VimCreatePluginDir
+
     ${LogSectionEnd}
 SectionEnd
 
@@ -1042,7 +1130,11 @@ Section $(str_section_plugin_vim) id_section_pluginvim
     SectionIn 3
 
     ${LogSectionStart}
-    StrCpy $vim_install_param "$vim_install_param -create-directories vim"
+
+    # Create vimfiles directory hierarchy under $VIM or install root:
+    Push "VIM"
+    Call VimCreatePluginDir
+
     ${LogSectionEnd}
 SectionEnd
 
@@ -1147,6 +1239,10 @@ Section "un.$(str_unsection_register)" id_unsection_register
     SectionIn RO
 
     ${LogSectionStart}
+
+    # TODO: Remove language preference.
+    #!ifdef HAVE_MULTI_LANG
+    #!endif
 
     # Please note $INSTDIR is set to the directory where the uninstaller is
     # created.  Thus the "vim61" directory is included in it.
@@ -1259,13 +1355,32 @@ SectionEnd
 
 Section /o "un.$(str_unsection_plugin)" id_unsection_plugin
     ${LogSectionStart}
-    ${Logged3} RMDir /r /REBOOTOK $vim_plugin_path
+
+    # Remove empty plugin directory hierarchy under $HOME:
+    Push "HOME"
+    Call un.VimRmPluginDir
+
+    # Remove empty plugin directory hierarchy under $VIM:
+    Push "VIM"
+    Call un.VimRmPluginDir
+
     ${LogSectionEnd}
 SectionEnd
 
 Section /o "un.$(str_unsection_root)" id_unsection_root
     ${LogSectionStart}
-    ${Logged3} RMDir /r /REBOOTOK $vim_install_root
+
+    # Remove all possible config file(s):
+    ${Logged1} Delete $vim_install_root\_vimrc
+    ${Logged1} Delete $vim_install_root\.vimrc
+    ${Logged1} Delete $vim_install_root\vimrc~1
+
+    # Remove install root if it is empty:
+    ${Logged1} RMDir $vim_install_root
+    ${If} ${Errors}
+        ${Log} "WARNING: Cannot remove $vim_install_root, it is not empty!"
+    ${EndIf}
+
     ${LogSectionEnd}
 SectionEnd
 
@@ -1320,30 +1435,6 @@ Function un.onInit
         Abort
     ${EndIf}
 
-    # Determines vim plugin path.  Try plugin path under vim install root
-    # first, and then plugin path under user's HOME directory.
-    StrCpy $vim_plugin_path "$vim_install_root\vimfiles"
-    ${IfNot} ${FileExists} "$vim_plugin_path"
-        ReadEnvStr $R0 "HOME"
-        ${If}    $R0 != ""
-        ${AndIf} ${FileExists} "$R0\vimfiles"
-            StrCpy $vim_plugin_path "$R0\vimfiles"
-        ${Else}
-            StrCpy $vim_plugin_path ""
-        ${EndIf}
-    ${EndIf}
-
-    # Update status of the vim plugin uninstall section:
-    ${If} $vim_plugin_path == ""
-        # We don't know how to remove vim plugin as no valid plugin path
-        # found:
-        !insertmacro UnSelectSection ${id_unsection_plugin}
-        !insertmacro SetSectionFlag  ${id_unsection_plugin} ${SF_RO}
-    ${Else}
-        # Valid plugin path found, allow the directory to be removed:
-        !insertmacro ClearSectionFlag ${id_unsection_plugin} ${SF_RO}
-    ${EndIf}
-
     Pop $R0
 
     # Get stored language preference:
@@ -1356,19 +1447,18 @@ FunctionEnd
 # Function un.onSelChange                                                 {{{2
 # ----------------------------------------------------------------------------
 Function un.onSelChange
+    Push $R0
+    Push $R1
+
     # Get selection status of the exe removal section:
     SectionGetFlags ${id_unsection_exe} $R0
 
-    # Status of the plugin removal section is considered only if valid plugin
-    # path has been found:
-    ${If} $vim_plugin_path != ""
-        SectionGetFlags ${id_unsection_plugin} $R1
-        IntOp $R0 $R0 & $R1
-    ${EndIf}
-
-    IntOp $R0 $R0 & ${SF_SELECTED}
+    # Status of the plugin removal section:
+    SectionGetFlags ${id_unsection_plugin} $R1
+    IntOp $R0 $R0 & $R1
 
     # Root directory can be removed only if all sub-directories will be removed:
+    IntOp $R0 $R0 & ${SF_SELECTED}
     ${If} $R0 = ${SF_SELECTED}
         # All sub-directories will be removed, so user is allowed to remove
         # the root directory:
@@ -1379,6 +1469,9 @@ Function un.onSelChange
         !insertmacro UnSelectSection ${id_unsection_root}
         !insertmacro SetSectionFlag  ${id_unsection_root} ${SF_RO}
     ${EndIf}
+
+    Pop $R1
+    Pop $R0
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -1396,5 +1489,62 @@ Function un.VimCheckRunning
         Abort
     ${EndIf}
 
+    Pop $R0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function un.VimRmPluginDir                                              {{{2
+#   Remove plugin directories.
+#
+#   Parameters:
+#     Environment string to check for plugin root on the top of stack.
+#   Returns:
+#     N/A
+# ----------------------------------------------------------------------------
+Function un.VimRmPluginDir
+    Exch $R0  # The name of the environment string for plugin root.
+    Push $R1
+    Push $R2
+    Push $R3
+    Push $R4
+
+    # Determine plugin root directory.
+    # $R0 - Plugin root directory
+    ${VimGetPluginRoot} $R0 $R0
+
+    # Make sure that all plugin subdirectories are empty:
+    # $R1 - Loop index, 1 based
+    # $R2 - Number of subdirectories
+    # $R3 - Current subdirectory
+    # $R4 - Directory empty flag 1=not empty, 0/-1=empty/not exist
+    StrCpy $R4 0
+    ${WordFindS} "${VIM_PLUGIN_SUBDIR}" "$\n" "#" $R2
+    ${For} $R1 1 $R2
+        ${WordFindS} "${VIM_PLUGIN_SUBDIR}" "$\n" "+$R1" $R3
+        ${DirState} "$R0\$R3" $R4
+        ${IfThen} $R4 > 0 ${|} ${ExitFor} ${|}
+    ${Next}
+
+    ${If} $R4 <= 0
+        # All plugin subdirectories are empty, now we're safe to remove them:
+        ${For} $R1 1 $R2
+            ${WordFindS} "${VIM_PLUGIN_SUBDIR}" "$\n" "+$R1" $R3
+            ${Logged1} RMDir "$R0\$R3"
+        ${Next}
+
+        # Remove vimfiles directory if it is empty:
+        ClearErrors
+        ${Logged1} RMDir "$R0"
+        ${If} ${Errors}
+            ${Log} "WARNING: Cannot remove $R0, it is not empty!"
+        ${EndIf}
+    ${Else}
+        ${Log} "WARNING: Cannot remove $R0, $R3 is not empty!"
+    ${EndIf}
+
+    Pop $R4
+    Pop $R3
+    Pop $R2
+    Pop $R1
     Pop $R0
 FunctionEnd
