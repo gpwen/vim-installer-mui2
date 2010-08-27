@@ -315,6 +315,8 @@ SRC_DOS =	\
 		nsis/gvim.nsi \
 		nsis/simple_log.nsh \
 		nsis/README.txt \
+		nsis/data/cli_template.bat \
+		nsis/data/gui_template.bat \
 		nsis/data/mswin_vimrc.vim \
 		nsis/lang/english.nsi \
 		nsis/lang/simpchinese.nsi \

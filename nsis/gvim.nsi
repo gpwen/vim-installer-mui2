@@ -61,6 +61,7 @@
 !include "LogicLib.nsh"
 !include "MUI2.nsh"
 !include "Sections.nsh"    # For section control
+!include "TextFunc.nsh"
 !include "Util.nsh"
 !include "WordFunc.nsh"
 !include "x64.nsh"
@@ -72,8 +73,9 @@ Var vim_bin_path
 Var vim_old_ver_keys
 Var vim_old_ver_count
 Var vim_install_param
-Var vim_batch_names
 Var vim_has_console
+Var vim_batch_exe
+Var vim_batch_arg
 
 # Version strings:
 !define VER_SHORT         "${VER_MAJOR}.${VER_MINOR}"
@@ -87,10 +89,11 @@ Var vim_has_console
 # fields can NOT be empty, you have to add some whitespaces there even if it's
 # empty, otherwise the field cannot be handled correctly.  It's the limitation
 # of the macro used to parse such specification.
+#    Title (no extension)        | Target   | Arg | Work-dir
 !define VIM_DESKTOP_SHORTCUTS \
-    "gVim ${VER_SHORT}           | gvim.exe |    | $\n\
-     gVim Easy ${VER_SHORT}      | gvim.exe | -y | $\n\
-     gVim Read only ${VER_SHORT} | gvim.exe | -R | "
+    "gVim ${VER_SHORT}           | gvim.exe |     | $\n\
+     gVim Easy ${VER_SHORT}      | gvim.exe | -y  | $\n\
+     gVim Read only ${VER_SHORT} | gvim.exe | -R  | "
 
 # Specification for quick launch shortcuts:
 !define VIM_LAUNCH_SHORTCUTS \
@@ -114,6 +117,21 @@ Var vim_has_console
     "Uninstall | uninstall-gui.exe |      | $vim_bin_path$\n\
      Vim tutor | vimtutor.bat      |      | $vim_bin_path$\n\
      Help      | gvim.exe          | -c h | "
+
+# Specification for batch wrapper of console verion:
+#    Title    | Target       | Arg
+!define VIM_CONSOLE_BATCH \
+    "vim      | vim.exe      |   $\n\
+     view     | vim.exe      | -R$\n\
+     vimdiff  | vim.exe      | -d$\n\
+     vimtutor | vimtutor.bat |   "
+
+# Specification for batch wrapper of GUI verion:
+!define VIM_GUI_BATCH \
+    "gvim     | gvim.exe     |   $\n\
+     evim     | gvim.exe     | -y$\n\
+     gview    | gvim.exe     | -R$\n\
+     gvimdiff | gvim.exe     | -d"
 
 # Subdirectories of VIMFILES, delimited by \n:
 !define VIM_PLUGIN_SUBDIR \
@@ -464,7 +482,7 @@ SilentInstall             normal
 
 # ----------------------------------------------------------------------------
 # macro VimRmShortcuts                                                    {{{2
-#   Wrapper to call VimRmShortcutsFunc.
+#   Wrapper to call un.VimRmFileSpecFunc to remove shortcuts.
 #
 #   Parameters:
 #     $_SHORTCUT_SPEC : Shortcut specification.
@@ -476,7 +494,27 @@ SilentInstall             normal
 !macro _VimRmShortcuts _SHORTCUT_SPEC _SHORTCUT_ROOT
     Push `${_SHORTCUT_SPEC}`
     Push `${_SHORTCUT_ROOT}`
-    Call un.VimRmShortcutsFunc
+    Push 1         # Field index of file title in shortcut specification.
+    Push ".lnk"    # File name extension of shortcuts.
+    Call un.VimRmFileSpecFunc
+!macroend
+
+# ----------------------------------------------------------------------------
+# macro VimRmBatches                                                      {{{2
+#   Wrapper to call un.VimRmFileSpecFunc to remove batch files.
+#
+#   Parameters:
+#     $_BATCH_SPEC : Batch file specification.
+#   Returns:
+#     N/A
+# ----------------------------------------------------------------------------
+!define VimRmBatches "!insertmacro _VimRmBatches"
+!macro _VimRmBatches _BATCH_SPEC
+    Push `${_BATCH_SPEC}`
+    Push "$WINDIR" # Root of batch files.
+    Push 1         # Field index of file title in batch file specification.
+    Push ".bat"    # File name extension of batch files.
+    Call un.VimRmFileSpecFunc
 !macroend
 
 ##############################################################################
@@ -493,8 +531,9 @@ Function .onInit
     StrCpy $vim_old_ver_keys  ""
     StrCpy $vim_old_ver_count 0
     StrCpy $vim_install_param ""
-    StrCpy $vim_batch_names   ""
     StrCpy $vim_has_console   0
+    StrCpy $vim_batch_exe     ""
+    StrCpy $vim_batch_arg     ""
 
     # Initialize log:
     !ifdef VIM_LOG_FILE
@@ -531,12 +570,9 @@ Function .onInit
     #   Holds the parameters to be passed to install.exe.  Starts with OLE
     #   registration (since a non-OLE gvim will not complain, and we want to
     #   always register an OLE gvim).
-    # $vim_batch_names
-    #   Holds the names to create batch files for.
     StrCpy $vim_install_root  "$INSTDIR"
     StrCpy $vim_bin_path      "$INSTDIR\${VIM_BIN_DIR}"
     StrCpy $vim_install_param ""
-    StrCpy $vim_batch_names   "gvim evim gview gvimdiff vimtutor"
 
     ${Log} "Default install path: $vim_install_root"
 
@@ -1112,13 +1148,6 @@ Function VimCreateShortcutsFunc
         # Prefix binary path to the target:
         StrCpy $R6 "$vim_bin_path\$R6"
 
-        # ??? Debug:
-        #${Log} "Create shortcut [$R4]"
-        #${Log} "   - Name     : [$R5]"
-        #${Log} "   - Target   : [$R6]"
-        #${Log} "   - Argument : [$R7]"
-        #${Log} "   - Work dir : [$R8]"
-
         # Create the shortcut:
         SetOutPath $R8
         ${Logged5} CreateShortCut "$R1\$R5.lnk" "$R6" "$R7" "$R6" 0
@@ -1136,6 +1165,121 @@ Function VimCreateShortcutsFunc
     Pop $R0
 FunctionEnd
 
+# ----------------------------------------------------------------------------
+# Function VimCreateBatches                                               {{{2
+#   Create specified batch files.
+#
+#   Parameters:
+#     The following parameters should be pushed onto stack in order.
+#     - Batch file specification.
+#     - Name of the batch file template (in target environment).
+#   Returns:
+#     N/A
+# ----------------------------------------------------------------------------
+!define VimCreateBatches "!insertmacro _VimCreateBatches"
+!macro _VimCreateBatches _BATCH_SPEC _BATCH_TMPL
+    Push `${_BATCH_SPEC}`
+    Push `${_BATCH_TMPL}`
+    Call VimCreateBatchFunc
+!macroend
+Function VimCreateBatchFunc
+    # Incoming parameters has been put on the stack:
+    Exch $R1   # Batch file template (in target environment).
+    Exch
+    Exch $R0   # Batch file specification
+    Exch
+    Push $R2   # Loop index, 1 based
+    Push $R3   # Number of batch files
+    Push $R4   # Specification for the batch file
+    Push $R5   # Name of the batch file (sans .bat)
+    Push $R6   # Target of the batch
+    Push $R7   # Argument of the target
+
+    # Create all batch files one by one:
+    ${VimCountFields} "$R0" "$\n" $R3
+    ${For} $R2 1 $R3
+        # Specification for the current shortcut (No. $R2):
+        ${WordFindS} "$R0" "$\n" "+$R2" $R4
+
+        # Fields of the shortcut:
+        ${WordFindS} $R4 "|" "+1" $R5
+        ${WordFindS} $R4 "|" "+2" $R6
+        ${WordFindS} $R4 "|" "+3" $R7
+
+        # Trim white space from both ends of fields.  WordFindS cannot support
+        # empty fields correctly, so we have to put white spaces in white
+        # fields and trim them afterward.
+        ${VimTrimString} $R5 $R5
+        ${VimTrimString} $R6 $R6
+        ${VimTrimString} $R7 $R7
+
+        # Create the batch file:
+        StrCpy $R5 "$WINDIR\$R5.bat"
+        StrCpy $vim_batch_exe "$R6"
+        StrCpy $vim_batch_arg "$R7"
+        ${Log} "Create batch file: [$R5], Target=[$R6], Arg=[$R7]"
+        ${LineFind} "$R1" "$R5" "" _VimCreateBatchCallback
+    ${Next}
+
+    # Restore the stack:
+    Pop $R7
+    Pop $R6
+    Pop $R5
+    Pop $R4
+    Pop $R3
+    Pop $R2
+    Pop $R1
+    Pop $R0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function _VimCreateBatchCallback                                        {{{2
+#   Callback function for LineFind to manipulate batch file template.
+#
+#   This callback function will replace <<BATCH-CONFIG>> space holder in the
+#   template file with real environment settings to create the final batch
+#   file.  The batch file is in fact a wrapper for Vim executables to makes it
+#   easier to launch Vim from DOS prompt.  Environment settings are passed in
+#   with the following global variables:
+#   $vim_batch_exe : Executable target for the batch file (without path).
+#   $vim_batch_arg : Argument for the executable target.
+#
+#   LineFind will set the following registers upon entrance:
+#     $R9 - current line
+#     $R8 - current line number
+#     $R7 - current line negative number
+#     $R6 - current range of lines
+#     $R5 - handle of a file opened to read
+#     $R4 - handle of a file opened to write ($R4="" if "/NUL")
+#
+#     you can use any string functions
+#     $R0-$R3  are not used (save data in them).
+#     ...
+#
+#   This function should returns one of the following strings on the top of
+#   the stack:
+#     "StopLineFind" : Exit from function
+#     "SkipWrite"    : Skip current line (ignored if "/NUL")
+#     Otherwise      : Write the content of $R9 to the output file.
+# ----------------------------------------------------------------------------
+Function _VimCreateBatchCallback
+    # Remove CR and/or LF.  This can also convert the input file to DOS format
+    # (the input file could be UNIX format if compiled from source directly):
+    ${TrimNewLines} "$R9" $R9
+
+    ${If} "$R9" S== "<<BATCH-CONFIG>>"
+        # Replace space holder with real config:
+        FileWrite $R4 "set VIM_EXE_NAME=$vim_batch_exe$\r$\n"
+        FileWrite $R4 "set VIM_EXE_ARG=$vim_batch_arg$\r$\n"
+        FileWrite $R4 "set VIM_VER_NODOT=${VIM_BIN_DIR}$\r$\n"
+        FileWrite $R4 "set VIM_EXE_DIR=$vim_install_root\%VIM_VER_NODOT%$\r$\n"
+        Push "SkipWrite"
+    ${Else}
+        # Write the original line, except EOL is changed to DOS format:
+        StrCpy $R9 "$R9$\r$\n"
+        Push ""
+    ${EndIf}
+FunctionEnd
 
 ##############################################################################
 # Dynamic sections to support removal of old versions                     {{{1
@@ -1244,7 +1388,6 @@ Section $(str_section_console) id_section_console
 
     ${Logged1} SetOutPath $vim_bin_path
     ${VimExtractConsoleExe}
-    StrCpy $vim_batch_names "$vim_batch_names vim view vimdiff"
 
     # Flags that console version has been installed:
     StrCpy $vim_has_console 1
@@ -1256,8 +1399,21 @@ Section $(str_section_batch) id_section_batch
     SectionIn 3
 
     ${LogSectionStart}
-    StrCpy $vim_install_param \
-          "$vim_install_param -create-batfiles $vim_batch_names"
+
+    # Create batch files for the console version if installed:
+    ${If} $vim_has_console <> 0
+        GetTempFileName $R0
+        ${Logged2} File "/oname=$R0" "data\cli_template.bat"
+        ${VimCreateBatches} "${VIM_CONSOLE_BATCH}" "$R0"
+        ${Logged1} Delete "$R0"
+    ${EndIf}
+
+    # Create batch files for the GUI version:
+    GetTempFileName $R0
+    ${Logged2} File "/oname=$R0" "data\gui_template.bat"
+    ${VimCreateBatches} "${VIM_GUI_BATCH}" "$R0"
+    ${Logged1} Delete "$R0"
+
     ${LogSectionEnd}
 SectionEnd
 
@@ -1274,13 +1430,13 @@ Section $(str_section_start_menu) id_section_startmenu
 
     ${LogSectionStart}
 
-    # Create shortcuts for console version:
+    # Create shortcuts for the console version if installed:
     ${If} $vim_has_console <> 0
         ${VimCreateShortcuts} "${VIM_CONSOLE_STARTMENU}" \
             "$SMPROGRAMS\${VIM_PRODUCT_NAME}"
     ${EndIf}
 
-    # Create shortcuts for GUI version:
+    # Create shortcuts for the GUI version:
     ${VimCreateShortcuts} "${VIM_GUI_STARTMENU}"  \
         "$SMPROGRAMS\${VIM_PRODUCT_NAME}"
 
@@ -1543,6 +1699,10 @@ Section "un.$(str_unsection_register)" id_unsection_register
     # Delete desktop icons, if any:
     ${VimRmShortcuts} "${VIM_DESKTOP_SHORTCUTS}" "$DESKTOP"
 
+    # Delete batch files:
+    # TODO: Add verification before deletion.
+    ${VimRmBatches} "${VIM_CONSOLE_BATCH}$\n${VIM_GUI_BATCH}"
+
     # Delete log file:
     !ifdef VIM_LOG_FILE
         ${Logged1} Delete "$INSTDIR\${VIM_LOG_FILE}"
@@ -1799,44 +1959,62 @@ Function un.VimRmPluginDir
 FunctionEnd
 
 # ----------------------------------------------------------------------------
-# Function VimRmShortcutsFunc                                             {{{2
-#   Remove specified shortcuts.
+# Function un.VimRmFileSpecFunc                                           {{{2
+#   Remove multiple files according to file specification.
+#
+#   The file specification contains multiple lines (delimited by \n), each
+#   line is the specification for one file.  Fields in the specification is
+#   delimited by vertical bar (|).  This is used to remove shortcuts/batch
+#   files according to their specification.
 #
 #   Parameters:
 #     The following parameters should be pushed onto stack in order.
-#     - Shortcut specification.
-#     - Shortcut root.
+#     - File specification.
+#     - File root.
+#     - Field index of the file title in the file specification (1 based).
+#     - File name extension (includes dot).
 #   Returns:
 #     N/A
 # ----------------------------------------------------------------------------
-Function un.VimRmShortcutsFunc
+Function un.VimRmFileSpecFunc
     # Incoming parameters has been put on the stack:
-    Exch $R1   # Shortcut root
+    Exch $R3   # File name extension (includes dot).
     Exch
-    Exch $R0   # Shortcut specification
+    Exch $R2   # Field index of the file title
     Exch
-    Push $R2   # Loop index, 1 based
-    Push $R3   # Number of shortcuts
-    Push $R4   # Specification for the current shortcut
-    Push $R5   # Name of the shortcut
+    Exch 2
+    Exch $R1   # File root
+    Exch 2
+    Exch 3
+    Exch $R0   # File specification
+    Exch 3
+    Push $R4   # Loop index, 1 based
+    Push $R5   # Number of files
+    Push $R6   # Specification for the current file
+    Push $R7   # Title of the file to be removed
 
     # Remove all shortcuts one by one:
-    ${VimCountFields} "$R0" "$\n" $R3
-    ${For} $R2 1 $R3
-        # Specification for the current shortcut (No. $R2):
-        ${WordFindS} "$R0" "$\n" "+$R2" $R4
+    ${VimCountFields} "$R0" "$\n" $R5
+    ${For} $R4 1 $R5
+        # Specification for the current shortcut (No. $R4):
+        ${WordFindS} "$R0" "$\n" "+$R4" $R6
 
         # Name of the shortcut:
-        ${WordFindS} $R4 "|" "+1" $R5
+        ${WordFindS} $R6 "|" "+$R2" $R7
 
         # Trim white space from both ends:
-        ${VimTrimString} $R5 $R5
+        ${VimTrimString} $R7 $R7
+
+        # Construct full file name:
+        StrCpy $R7 "$R1\$R7$R3"
 
         # Remove the shortcut:
-        ${Logged1} Delete "$R1\$R5.lnk"
+        ${Logged1} Delete "$R7"
     ${Next}
 
     # Restore the stack:
+    Pop $R7
+    Pop $R6
     Pop $R5
     Pop $R4
     Pop $R3
