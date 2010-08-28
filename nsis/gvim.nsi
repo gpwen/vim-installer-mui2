@@ -61,6 +61,7 @@
 !include "LogicLib.nsh"
 !include "MUI2.nsh"
 !include "Sections.nsh"    # For section control
+!include "StrFunc.nsh"
 !include "TextFunc.nsh"
 !include "Util.nsh"
 !include "WordFunc.nsh"
@@ -76,6 +77,7 @@ Var vim_install_param
 Var vim_has_console
 Var vim_batch_exe
 Var vim_batch_arg
+Var vim_batch_ver_found
 
 # Version strings:
 !define VER_SHORT         "${VER_MAJOR}.${VER_MINOR}"
@@ -144,6 +146,8 @@ Var vim_batch_arg
      keymap$\n\
      plugin$\n\
      syntax"
+
+!define ALPHA_NUMERIC "abcdefghijklmnopqrstuvwxyz0123456789"
 
 # Registry keys:
 !define REG_KEY_WINDOWS   "software\Microsoft\Windows\CurrentVersion"
@@ -496,6 +500,7 @@ SilentInstall             normal
     Push `${_SHORTCUT_ROOT}`
     Push 1         # Field index of file title in shortcut specification.
     Push ".lnk"    # File name extension of shortcuts.
+    Push ""        # Verification callback
     Call un.VimRmFileSpecFunc
 !macroend
 
@@ -514,6 +519,9 @@ SilentInstall             normal
     Push "$WINDIR" # Root of batch files.
     Push 1         # Field index of file title in batch file specification.
     Push ".bat"    # File name extension of batch files.
+    Push $R0
+    GetFunctionAddress $R0 "un._VimVerifyBatch"
+    Exch $R0       # Verification callback
     Call un.VimRmFileSpecFunc
 !macroend
 
@@ -526,14 +534,15 @@ SilentInstall             normal
 # ----------------------------------------------------------------------------
 Function .onInit
     # Initialize all globals:
-    StrCpy $vim_install_root  ""
-    StrCpy $vim_bin_path      ""
-    StrCpy $vim_old_ver_keys  ""
-    StrCpy $vim_old_ver_count 0
-    StrCpy $vim_install_param ""
-    StrCpy $vim_has_console   0
-    StrCpy $vim_batch_exe     ""
-    StrCpy $vim_batch_arg     ""
+    StrCpy $vim_install_root    ""
+    StrCpy $vim_bin_path        ""
+    StrCpy $vim_old_ver_keys    ""
+    StrCpy $vim_old_ver_count   0
+    StrCpy $vim_install_param   ""
+    StrCpy $vim_has_console     0
+    StrCpy $vim_batch_exe       ""
+    StrCpy $vim_batch_arg       ""
+    StrCpy $vim_batch_ver_found 0
 
     # Initialize log:
     !ifdef VIM_LOG_FILE
@@ -1218,7 +1227,7 @@ Function VimCreateBatchFunc
         StrCpy $vim_batch_exe "$R6"
         StrCpy $vim_batch_arg "$R7"
         ${Log} "Create batch file: [$R5], Target=[$R6], Arg=[$R7]"
-        ${LineFind} "$R1" "$R5" "" _VimCreateBatchCallback
+        ${LineFind} "$R1" "$R5" "" "_VimCreateBatchCallback"
     ${Next}
 
     # Restore the stack:
@@ -1700,7 +1709,6 @@ Section "un.$(str_unsection_register)" id_unsection_register
     ${VimRmShortcuts} "${VIM_DESKTOP_SHORTCUTS}" "$DESKTOP"
 
     # Delete batch files:
-    # TODO: Add verification before deletion.
     ${VimRmBatches} "${VIM_CONSOLE_BATCH}$\n${VIM_GUI_BATCH}"
 
     # Delete log file:
@@ -1816,11 +1824,29 @@ SectionEnd
 # Uninstaller Functions                                                   {{{1
 ##############################################################################
 
+
+# ----------------------------------------------------------------------------
+# Function UnStrLoc                                                       {{{2
+# ----------------------------------------------------------------------------
+# Pull in definition of the ${UnStrLoc}
+${UnStrLoc}
+
 # ----------------------------------------------------------------------------
 # Function un.onInit                                                      {{{2
 # ----------------------------------------------------------------------------
 Function un.onInit
     Push $R0
+
+    # Initialize all globals:
+    StrCpy $vim_install_root    ""
+    StrCpy $vim_bin_path        ""
+    StrCpy $vim_old_ver_keys    ""
+    StrCpy $vim_old_ver_count   0
+    StrCpy $vim_install_param   ""
+    StrCpy $vim_has_console     0
+    StrCpy $vim_batch_exe       ""
+    StrCpy $vim_batch_arg       ""
+    StrCpy $vim_batch_ver_found 0
 
     # Initialize log:
     !ifdef VIM_LOG_FILE
@@ -1973,46 +1999,69 @@ FunctionEnd
 #     - File root.
 #     - Field index of the file title in the file specification (1 based).
 #     - File name extension (includes dot).
+#     - Address for verification callback function.  Full path name of the
+#       file to be removed will be put on the top of stack when call the
+#       callback function, return code from the callback should be put on the
+#       top of the stack.  File won't be removed unless the callback function
+#       returns 1.  If no callback function provided, the file will be removed
+#       without verification.
 #   Returns:
 #     N/A
 # ----------------------------------------------------------------------------
 Function un.VimRmFileSpecFunc
     # Incoming parameters has been put on the stack:
+    Exch $R4   # Address of the verification callback
+    Exch
     Exch $R3   # File name extension (includes dot).
     Exch
+    Exch 2
     Exch $R2   # Field index of the file title
-    Exch
     Exch 2
+    Exch 3
     Exch $R1   # File root
-    Exch 2
     Exch 3
+    Exch 4
     Exch $R0   # File specification
-    Exch 3
-    Push $R4   # Loop index, 1 based
-    Push $R5   # Number of files
-    Push $R6   # Specification for the current file
-    Push $R7   # Title of the file to be removed
+    Exch 4
+    Push $R5   # Loop index, 1 based
+    Push $R6   # Number of files
+    Push $R7   # Specification for the current file
+    Push $R8   # Title of the file to be removed
+    Push $R9   # Return code from verfication callback
 
     # Remove all shortcuts one by one:
-    ${VimCountFields} "$R0" "$\n" $R5
-    ${For} $R4 1 $R5
-        # Specification for the current shortcut (No. $R4):
-        ${WordFindS} "$R0" "$\n" "+$R4" $R6
+    ${VimCountFields} "$R0" "$\n" $R6
+    ${For} $R5 1 $R6
+        # Specification for the current shortcut (No. $R5):
+        ${WordFindS} "$R0" "$\n" "+$R5" $R7
 
         # Name of the shortcut:
-        ${WordFindS} $R6 "|" "+$R2" $R7
+        ${WordFindS} $R7 "|" "+$R2" $R8
 
         # Trim white space from both ends:
-        ${VimTrimString} $R7 $R7
+        ${VimTrimString} $R8 $R8
 
         # Construct full file name:
-        StrCpy $R7 "$R1\$R7$R3"
+        StrCpy $R8 "$R1\$R8$R3"
 
-        # Remove the shortcut:
-        ${Logged1} Delete "$R7"
+        # Call verification callback if provided:
+        ${If} $R4 == ""
+            StrCpy $R9 1
+        ${Else}
+            Push $R8  # Call with full name of the file to be removed.
+            Call $R4  # Call verification callback.
+            Pop  $R9  # Return code. 0 - Skip, 1 - OK to remove.
+        ${EndIf}
+
+        # Remove the file if the verification function indicates it's OK:
+        ${If} $R9 = 1
+            ${Logged1} Delete "$R8"
+        ${EndIf}
     ${Next}
 
     # Restore the stack:
+    Pop $R9
+    Pop $R8
     Pop $R7
     Pop $R6
     Pop $R5
@@ -2021,4 +2070,83 @@ Function un.VimRmFileSpecFunc
     Pop $R2
     Pop $R1
     Pop $R0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function un._VimVerifyBatch                                             {{{2
+#   Verification callback for batch file removal.
+#
+#   This function will be called when removing batch files.  It will verify
+#   the batch to be removed is created for the version to be removed.
+#
+#   Parameters:
+#     - Full path name of the file to be removed on the top of the stack.
+#   Returns:
+#     Return code on the top of the stack.
+#     0 - Don't remove the file.
+#     1 - It's OK to remove the file.
+# ----------------------------------------------------------------------------
+Function un._VimVerifyBatch
+    Exch $R0  # Full path name of the file to be removed.
+
+    ${If} ${FileExists} "$R0"
+        # Search version string in the batch file:
+        StrCpy $vim_batch_ver_found 0
+        ${LineFind} "$R0" "/NUL" "1:-1" "un._VimVerifyBatchCallback"
+
+        ${If} $vim_batch_ver_found <> 1
+            ${Log} "WARNING: [$R0] cannot be removed since it is installed \
+                    by a different version of Vim."
+        ${EndIf}
+
+        StrCpy $R0 $vim_batch_ver_found
+    ${Else}
+        ${Log} "WARNING: [$R0] has already been removed."
+        StrCpy $R0 0
+    ${EndIf}
+
+    # Output:
+    Exch $R0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function un._VimVerifyBatchCallback                                     {{{2
+#   Callback function for LineFind when verify batch file.
+#
+#   This function will search the content of the batch file to locate version
+#   string.  If version string found, global variable $vim_batch_ver_found
+#   will be set to 1.
+#
+#   Parameters/Returns:
+#     Refer to _VimCreateBatchCallback for detail.
+# ----------------------------------------------------------------------------
+Function un._VimVerifyBatchCallback
+    Push $R0
+    Push $R1
+
+    # Search for version string on the current line, in reverse order.  The
+    # search is case-insensitive:
+    ${UnStrLoc} $R0 `$R9` "${VIM_BIN_DIR}" "<"
+
+    # If we found the version string, test the character after
+    ${If} $R0 != ""
+        IntOp $R0 0 - $R0
+
+        # Check the first character after the version string, make sure it is
+        # not alphanumeric:
+        StrCpy $R0 $R9 1 $R0
+        ${If} $R0 != ""
+            ${UnStrLoc} $R0 "${ALPHA_NUMERIC}" $R0 >
+            ${If} $R0 == ""
+                # We found the version string!  Set global flag:
+                StrCpy $vim_batch_ver_found 1
+            ${EndIf}
+        ${EndIf}
+
+        # Stop searching the file:
+        StrCpy $R0 "StopLineFind"
+    ${EndIf}
+
+    Pop  $R1
+    Exch $R0
 FunctionEnd
