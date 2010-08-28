@@ -73,11 +73,14 @@ Var vim_install_root
 Var vim_bin_path
 Var vim_old_ver_keys
 Var vim_old_ver_count
-Var vim_install_param
+Var vim_shell_ext_name
 Var vim_has_console
 Var vim_batch_exe
 Var vim_batch_arg
 Var vim_batch_ver_found
+
+# List of alphanumeric:
+!define ALPHA_NUMERIC "abcdefghijklmnopqrstuvwxyz0123456789"
 
 # Version strings:
 !define VER_SHORT         "${VER_MAJOR}.${VER_MINOR}"
@@ -147,11 +150,16 @@ Var vim_batch_ver_found
      plugin$\n\
      syntax"
 
-!define ALPHA_NUMERIC "abcdefghijklmnopqrstuvwxyz0123456789"
-
 # Registry keys:
 !define REG_KEY_WINDOWS   "software\Microsoft\Windows\CurrentVersion"
 !define REG_KEY_UNINSTALL "${REG_KEY_WINDOWS}\Uninstall"
+!define REG_KEY_SH_EXT    "${REG_KEY_WINDOWS}\Shell Extensions\Approved"
+!define REG_KEY_VIM       "Software\Vim"
+!define VIM_SH_EXT_NAME   "Vim Shell Extension"
+!define VIM_SH_EXT_CLSID  "{51EEE242-AD87-11d3-9C1E-0090278BBD99}"
+
+# List of file extensions to be registered:
+!define VIM_FILE_EXT_LIST ".htm|.html|.vim|*"
 
 Name                      "${VIM_PRODUCT_NAME}"
 OutFile                   gvim${VER_SHORT_NDOT}.exe
@@ -194,7 +202,7 @@ SilentInstall             normal
 # the uninstaller:
 !ifdef HAVE_MULTI_LANG
     !define MUI_LANGDLL_REGISTRY_ROOT      "SHCTX"
-    !define MUI_LANGDLL_REGISTRY_KEY       "SOFTWARE\Vim"
+    !define MUI_LANGDLL_REGISTRY_KEY       "${REG_KEY_VIM}"
     !define MUI_LANGDLL_REGISTRY_VALUENAME "Installer Language"
 !endif
 
@@ -538,7 +546,6 @@ Function .onInit
     StrCpy $vim_bin_path        ""
     StrCpy $vim_old_ver_keys    ""
     StrCpy $vim_old_ver_count   0
-    StrCpy $vim_install_param   ""
     StrCpy $vim_has_console     0
     StrCpy $vim_batch_exe       ""
     StrCpy $vim_batch_arg       ""
@@ -575,13 +582,8 @@ Function .onInit
     # Initialize user variables:
     # $vim_bin_path
     #   Holds the directory the executables are installed to.
-    # $vim_install_param
-    #   Holds the parameters to be passed to install.exe.  Starts with OLE
-    #   registration (since a non-OLE gvim will not complain, and we want to
-    #   always register an OLE gvim).
     StrCpy $vim_install_root  "$INSTDIR"
     StrCpy $vim_bin_path      "$INSTDIR\${VIM_BIN_DIR}"
-    StrCpy $vim_install_param ""
 
     ${Log} "Default install path: $vim_install_root"
 
@@ -1290,6 +1292,98 @@ Function _VimCreateBatchCallback
     ${EndIf}
 FunctionEnd
 
+# ----------------------------------------------------------------------------
+# Function VimRegShellExt                                                 {{{2
+#   Register vim shell extension.
+#
+#   Register view should be set before call this function.
+#
+#   Parameters:
+#     Full path of the shell extension should be put on the top of stack.
+#   Returns:
+#     N/A
+# ----------------------------------------------------------------------------
+Function VimRegShellExt
+    Exch $R0  # Full path of the vim shell extension
+    Push $R1
+    Push $R2
+
+    # Register inproc server:
+    # $R1 - CLSID registry key.
+    StrCpy $R1 "CLSID\${VIM_SH_EXT_CLSID}"
+    ${Logged4} WriteRegStr HKCR "$R1" "" "${VIM_SH_EXT_NAME}"
+    ${Logged4} WriteRegStr HKCR "$R1\InProcServer32" "" "$R0"
+    ${Logged4} WriteRegStr HKCR "$R1\InProcServer32" \
+        "ThreadingModel" "Apartment"
+
+    # Register shell extension:
+    ${Logged4} WriteRegStr HKCR \
+        "*\shellex\ContextMenuHandlers\gvim" "" "${VIM_SH_EXT_CLSID}"
+    ${Logged4} WriteRegStr SHCTX "${REG_KEY_SH_EXT}" \
+        "${VIM_SH_EXT_CLSID}" "${VIM_SH_EXT_NAME}"
+    ${Logged4} WriteRegStr SHCTX "${REG_KEY_VIM}\Gvim" \
+        "path" "$vim_bin_path\gvim.exe"
+
+    # Register "Open With ..." list entry:
+    ${Logged4} WriteRegStr HKCR \
+        "Applications\gvim.exe\shell\edit\command" "" \
+        '"$vim_bin_path\gvim.exe" "%1"'
+
+    # Register all supported extensions:
+    # $R0 - Loop index, 1 based
+    # $R1 - Number of file extensions to register
+    # $R2 - File extension to register
+    ${VimCountFields} "${VIM_FILE_EXT_LIST}" "|" $R1
+    ${For} $R0 1 $R1
+        ${WordFindS} "${VIM_FILE_EXT_LIST}" "|" "+$R0" $R2
+        ${Logged4} WriteRegStr HKCR "$R2\OpenWithList\gvim.exe" "" ""
+    ${Next}
+
+    Pop $R2
+    Pop $R1
+    Pop $R0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function VimRegUninstallInfo                                            {{{2
+#   Register uninstall information.
+#
+#   Register view should be set before call this function.
+#
+#   Parameters: N/A
+#   Returns:    N/A
+# ----------------------------------------------------------------------------
+Function VimRegUninstallInfo
+    Push $R0
+
+    # $R0 - Uninstall registry key.
+    StrCpy $R0 "${REG_KEY_UNINSTALL}\${VIM_PRODUCT_NAME}"
+
+    # Required values:
+    ${Logged4} WriteRegStr SHCTX "$R0" "DisplayName" \
+        "${VIM_PRODUCT_NAME} (self-installing)"
+    ${Logged4} WriteRegStr SHCTX "$R0" "UninstallString" \
+        "$vim_bin_path\uninstall-gui.exe"
+
+    # Optional values:
+    ${Logged4} WriteRegStr SHCTX "$R0" "InstallLocation" "$vim_bin_path"
+    ${Logged4} WriteRegStr SHCTX "$R0" "DisplayIcon" \
+        "$vim_bin_path\gvim.exe,0"
+
+    ${Logged4} WriteRegStr SHCTX "$R0" "HelpLink" \
+        "http://www.vim.org/"
+    ${Logged4} WriteRegStr SHCTX "$R0" "URLUpdateInfo" \
+        "http://www.vim.org/download.php#pc"
+
+    ${Logged4} WriteRegStr SHCTX "$R0" "DisplayVersion" "${VER_SHORT}"
+
+    ${Logged4} WriteRegDWORD SHCTX "$R0" "NoModify" 1
+    ${Logged4} WriteRegDWORD SHCTX "$R0" "NoRepair" 1
+
+    Pop $R0
+FunctionEnd
+
+
 ##############################################################################
 # Dynamic sections to support removal of old versions                     {{{1
 ##############################################################################
@@ -1333,7 +1427,6 @@ Section $(str_section_exe) id_section_exe
 
     ${Logged1} SetOutPath $vim_bin_path
     ${Logged2} File /oname=gvim.exe     ${VIMSRC}\gvim_ole.exe
-    ${Logged2} File /oname=install.exe  ${VIMSRC}\installw32.exe
     ${Logged2} File /oname=uninstal.exe ${VIMSRC}\uninstalw32.exe
     ${Logged1} File ${VIMSRC}\vimrun.exe
     ${Logged2} File /oname=xxd.exe      ${VIMSRC}\xxdw32.exe
@@ -1487,20 +1580,25 @@ Section $(str_section_edit_with) id_section_editwith
         !define LIBRARY_X64
         !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
             "${VIMSRC}\GvimExt\gvimext64.dll" \
-            "$vim_bin_path\gvimext.dll" "$vim_bin_path"
+            "$vim_bin_path\gvimext64.dll" "$vim_bin_path"
         !undef LIBRARY_X64
+
+        StrCpy $vim_shell_ext_name "$vim_bin_path\gvimext64.dll"
     ${Else}
         !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
             "${VIMSRC}\GvimExt\gvimext.dll" \
-            "$vim_bin_path\gvimext.dll" "$vim_bin_path"
+            "$vim_bin_path\gvimext32.dll" "$vim_bin_path"
+
+        StrCpy $vim_shell_ext_name "$vim_bin_path\gvimext32.dll"
     ${EndIf}
 
     !undef LIBRARY_SHELL_EXTENSION
 
-    # We don't have a separate entry for the "Open With..." menu, assume
-    # the user wants either both or none.
-    StrCpy $vim_install_param \
-          "$vim_install_param -install-popup -install-openwith"
+    # Register the shell extension:
+    ${If} $vim_shell_ext_name != ""
+        Push $vim_shell_ext_name
+        Call VimRegShellExt
+    ${EndIf}
 
     ${LogSectionEnd}
 SectionEnd
@@ -1592,15 +1690,15 @@ SectionEnd
     SectionEnd
 !endif
 
-Section -call_install_exe
-    ${Logged1} SetOutPath $vim_bin_path
-    ${Logged1} nsExec::ExecToLog \
-        '"$vim_bin_path\install.exe" $vim_install_param'
+Section -registry_update
+    # Register uninstall information:
+    Call VimRegUninstallInfo
 
-    # TODO: Check return value:
-    Exch $R0
-    ${Log} "install.exe exit code - $R0"
-    Pop $R0
+    # Register Vim with OLE:
+    # TODO: Translate
+    DetailPrint "Attempting to register Vim with OLE$\r$\n\
+                 There is no message whether this works or not."
+    ${Logged1} ExecWait '"$vim_bin_path\gvim.exe" -silent -register'
 SectionEnd
 
 Section -post
@@ -1672,14 +1770,16 @@ Section "un.$(str_unsection_register)" id_unsection_register
     # Remove gvimext.dll:
     !define LIBRARY_SHELL_EXTENSION
 
-    ${If} ${RunningX64}
+    ${If} ${FileExists} "$INSTDIR\gvimext64.dll"
         !define LIBRARY_X64
         !insertmacro UninstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
-            "$INSTDIR\gvimext.dll"
+            "$INSTDIR\gvimext64.dll"
         !undef LIBRARY_X64
-    ${Else}
+    ${EndIf}
+
+    ${If} ${FileExists} "$INSTDIR\gvimext32.dll"
         !insertmacro UninstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
-            "$INSTDIR\gvimext.dll"
+            "$INSTDIR\gvimext32.dll"
     ${EndIf}
 
     !undef LIBRARY_SHELL_EXTENSION
@@ -1842,7 +1942,6 @@ Function un.onInit
     StrCpy $vim_bin_path        ""
     StrCpy $vim_old_ver_keys    ""
     StrCpy $vim_old_ver_count   0
-    StrCpy $vim_install_param   ""
     StrCpy $vim_has_console     0
     StrCpy $vim_batch_exe       ""
     StrCpy $vim_batch_arg       ""

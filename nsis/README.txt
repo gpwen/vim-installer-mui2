@@ -13,7 +13,6 @@ To build the installable .exe:
 2.  Go to the src directory and build:
 	gvim.exe (the OLE version),
 	vimrun.exe,
-	install.exe,
 	uninstal.exe,
 	xxd/xxd.exe,
 
