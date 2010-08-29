@@ -471,7 +471,9 @@ Function .onInit
     ${Logged1} SetShellVarContext all
 
     # 64-bit view should be used on Windows x64:
-    ${Logged1} SetRegView 64
+    ${If} ${RunningX64}
+        ${Logged1} SetRegView 64
+    ${EndIf}
 
     # Read all Vim uninstall keys from registry.  Please note we only support
     # limited number of old version.  Extra version will be ignored!
@@ -1808,7 +1810,9 @@ Function un.onInit
     ${Logged1} SetShellVarContext all
 
     # 64-bit view should be used on Windows x64:
-    ${Logged1} SetRegView 64
+    ${If} ${RunningX64}
+        ${Logged1} SetRegView 64
+    ${EndIf}
 
     # Get root path of the installation:
     ${GetParent} $INSTDIR $vim_install_root
