@@ -313,6 +313,7 @@ SRC_DOS =	\
 		src/xxd/Make_djg.mak \
 		src/xxd/Make_mvc.mak \
 		nsis/gvim.nsi \
+		nsis/helper_util.nsh \
 		nsis/simple_log.nsh \
 		nsis/README.txt \
 		nsis/data/cli_template.bat \

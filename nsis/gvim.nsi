@@ -66,6 +66,8 @@
 !include "Util.nsh"
 !include "WordFunc.nsh"
 !include "x64.nsh"
+
+!include "helper_util.nsh"
 !include "simple_log.nsh"
 
 # Global variables:
@@ -80,7 +82,7 @@ Var vim_batch_arg
 Var vim_batch_ver_found
 
 # List of alphanumeric:
-!define ALPHA_NUMERIC "abcdefghijklmnopqrstuvwxyz0123456789"
+!define ALPHA_NUMERIC     "abcdefghijklmnopqrstuvwxyz0123456789"
 
 # Version strings:
 !define VER_SHORT         "${VER_MAJOR}.${VER_MINOR}"
@@ -123,7 +125,7 @@ Var vim_batch_ver_found
      Vim tutor | vimtutor.bat      |      | $vim_bin_path$\n\
      Help      | gvim.exe          | -c h | "
 
-# Specification for batch wrapper of console verion:
+# Specification for batch wrapper of console version:
 #    Title    | Target       | Arg
 !define VIM_CONSOLE_BATCH \
     "vim      | vim.exe      |   $\n\
@@ -131,7 +133,7 @@ Var vim_batch_ver_found
      vimdiff  | vim.exe      | -d$\n\
      vimtutor | vimtutor.bat |   "
 
-# Specification for batch wrapper of GUI verion:
+# Specification for batch wrapper of GUI version:
 !define VIM_GUI_BATCH \
     "gvim     | gvim.exe     |   $\n\
      evim     | gvim.exe     | -y$\n\
@@ -384,115 +386,6 @@ SilentInstall             normal
 !macroend
 
 # ----------------------------------------------------------------------------
-# macro VimTrimString                                                     {{{2
-#   Trim white spaces from both ends of the input string.
-#
-#   $_INPUT is the input string; $_OUTPUT is the output string.  " \r\n\t"
-#   will be considered as white space.
-# ----------------------------------------------------------------------------
-!define VimTrimString "!insertmacro _VimTrimStringCall"
-!macro _VimTrimStringCall _INPUT _OUTPUT
-    Push `${_INPUT}`
-    ${CallArtificialFunction} _VimTrimString
-    Pop ${_OUTPUT}
-!macroend
-!macro _VimTrimString
-    Exch $R0  # Input string
-
-    # Degenerated case: empty input string:
-    ${If} "$R0" == ""
-        Exch $R0
-        Return
-    ${EndIf}
-
-    Push $R1  # Character from the input string
-    Push $R2  # Start offset/length to copy
-
-    # Count number of white spaces at the beginning of the string:
-    StrCpy $R2 0
-    ${Do}
-        StrCpy $R1 $R0 1 $R2
-        ${If}   $R1 S== " "
-        ${OrIf} $R1 S== "$\t"
-        ${OrIf} $R1 S== "$\r"
-        ${OrIf} $R1 S== "$\n"
-            IntOp $R2 $R2 + 1
-        ${Else}
-            ${ExitDo}
-        ${EndIf}
-    ${Loop}
-
-    # Trim left:
-    ${If} $R2 > 0
-        StrCpy $R0 $R0 "" $R2
-    ${EndIf}
-
-    # Count number of white spaces at the end of the string:
-    ${If} $R0 != ""
-        StrCpy $R2 -1
-        ${Do}
-            StrCpy $R1 $R0 1 $R2
-            ${If}   $R1 S== " "
-            ${OrIf} $R1 S== "$\t"
-            ${OrIf} $R1 S== "$\r"
-            ${OrIf} $R1 S== "$\n"
-                IntOp $R2 $R2 - 1
-            ${Else}
-                ${ExitDo}
-            ${EndIf}
-        ${Loop}
-
-        # Trim right:
-        IntOp $R2 $R2 + 1
-        ${If} $R2 < 0
-            StrCpy $R0 $R0 $R2
-        ${EndIf}
-    ${EndIf}
-
-    # Output:
-    Pop  $R2
-    Pop  $R1
-    Exch $R0
-!macroend
-
-# ----------------------------------------------------------------------------
-# macro VimCountFields                                                    {{{2
-#   Count fields in the input string.
-#
-#   This macro works around a problem in the WordFindS macros.  That macro
-#   won't return correct field count if no delimiter found in the input
-#   string.
-#
-#   Parameters:
-#     $_STRING      : Input string.
-#     $_DELIMITER   : Input delimiter.
-#   Returns:
-#     $_FIELD_COUNT : Number of fields in the string.
-# ----------------------------------------------------------------------------
-!define VimCountFields "!insertmacro _VimCountFields"
-!macro _VimCountFields _STRING _DELIMITER _FIELD_COUNT
-    Push `${_DELIMITER}`
-    Push `${_STRING}`
-    Exch $R1  # String
-    Exch
-    Exch $R0  # Delimiter
-    Exch
-
-    # Count number of fields.  $R0 is number of fields on output if delimiter
-    # found in the input string.  Unfortunately, WordFindS cannot handle the
-    # case where delimiter is not present in the input string.  We have to
-    # work around the problem by appending an extra delimiter, and remove it
-    # from field count later.
-    ${WordFindS} `$R1$R0 ` `$R0` "#" $R0
-    IntOp $R0 $R0 - 1
-
-    # Output:
-    Pop  $R1
-    Exch $R0
-    Pop  ${_FIELD_COUNT}
-!macroend
-
-# ----------------------------------------------------------------------------
 # macro VimRmShortcuts                                                    {{{2
 #   Wrapper to call un.VimRmFileSpecFunc to remove shortcuts.
 #
@@ -536,6 +429,11 @@ SilentInstall             normal
 ##############################################################################
 # Installer Functions                                                     {{{1
 ##############################################################################
+
+# ----------------------------------------------------------------------------
+# Declaration of external functions                                       {{{2
+# ----------------------------------------------------------------------------
+${DECLARE_LoopMatrix}
 
 # ----------------------------------------------------------------------------
 # Function .onInit                                                        {{{2
@@ -1088,7 +986,7 @@ Function VimCreatePluginDir
     # $R1 - Loop index, 1 based
     # $R2 - Number of subdirectories
     # $R3 - Current subdirectory
-    ${VimCountFields} "${VIM_PLUGIN_SUBDIR}" "$\n" $R2
+    ${CountFields} "${VIM_PLUGIN_SUBDIR}" "$\n" $R2
     ${For} $R1 1 $R2
         ${WordFindS} "${VIM_PLUGIN_SUBDIR}" "$\n" "+$R1" $R3
         ${Logged1} CreateDirectory "$R0\$R3"
@@ -1113,61 +1011,32 @@ FunctionEnd
 # ----------------------------------------------------------------------------
 !define VimCreateShortcuts "!insertmacro _VimCreateShortcuts"
 !macro _VimCreateShortcuts _SHORTCUT_SPEC _SHORTCUT_ROOT
-    Push `${_SHORTCUT_SPEC}`
-    Push `${_SHORTCUT_ROOT}`
-    Call VimCreateShortcutsFunc
-!macroend
-Function VimCreateShortcutsFunc
-    # Incoming parameters has been put on the stack:
-    Exch $R1   # Shortcut root
-    Exch
-    Exch $R0   # Shortcut specification
-    Exch
-    Push $R2   # Loop index, 1 based
-    Push $R3   # Number of shortcuts
-    Push $R4   # Specification for the current shortcut
-    Push $R5   # Name of the shortcut
-    Push $R6   # Target of the shortcut
-    Push $R7   # Argument of the shortcut
-    Push $R8   # Work directory of the shortcut
-
     # Create shortcut root if necessary:
-    ${IfNot} ${FileExists} "$R1\*.*"
-        ${Logged1} CreateDirectory $R1
+    ${IfNot} ${FileExists} "${_SHORTCUT_ROOT}\*.*"
+        ${Logged1} CreateDirectory "${_SHORTCUT_ROOT}"
     ${EndIf}
 
-    # Create all shortcuts one by one:
-    ${VimCountFields} "$R0" "$\n" $R3
-    ${For} $R2 1 $R3
-        # Specification for the current shortcut (No. $R2):
-        ${WordFindS} "$R0" "$\n" "+$R2" $R4
+    # Create all specified shortcuts:
+    ${LoopMatrix} "${_SHORTCUT_SPEC}" "_VimCreateShortcutsFunc" \
+        "${_SHORTCUT_ROOT}" ""
+!macroend
 
-        # Fields of the shortcut:
-        ${WordFindS} $R4 "|" "+1" $R5
-        ${WordFindS} $R4 "|" "+2" $R6
-        ${WordFindS} $R4 "|" "+3" $R7
-        ${WordFindS} $R4 "|" "+4" $R8
+Function _VimCreateShortcutsFunc
+    Exch      $R5     # Arg 2: Ignored
+    ${ExchAt} 1 $R4   # Arg 1: Shortcut root path
+    ${ExchAt} 2 $R3   # Col 4: Working directory of the shortcut
+    ${ExchAt} 3 $R2   # Col 3: Target arguments
+    ${ExchAt} 4 $R1   # Col 2: Shortcut target
+    ${ExchAt} 5 $R0   # Col 1: Shortcut filename
 
-        # Trim white space from both ends of fields.  WordFindS cannot support
-        # empty fields correctly, so we have to put white spaces in white
-        # fields and trim them afterward.
-        ${VimTrimString} $R5 $R5
-        ${VimTrimString} $R6 $R6
-        ${VimTrimString} $R7 $R7
-        ${VimTrimString} $R8 $R8
+    # Prefix binary path to the target:
+    StrCpy $R1 "$vim_bin_path\$R1"
 
-        # Prefix binary path to the target:
-        StrCpy $R6 "$vim_bin_path\$R6"
-
-        # Create the shortcut:
-        SetOutPath $R8
-        ${Logged5} CreateShortCut "$R1\$R5.lnk" "$R6" "$R7" "$R6" 0
-    ${Next}
+    # Create the shortcut:
+    SetOutPath $R3
+    ${Logged5} CreateShortCut "$R4\$R0.lnk" "$R1" "$R2" "$R1" 0
 
     # Restore the stack:
-    Pop $R8
-    Pop $R7
-    Pop $R6
     Pop $R5
     Pop $R4
     Pop $R3
@@ -1189,53 +1058,25 @@ FunctionEnd
 # ----------------------------------------------------------------------------
 !define VimCreateBatches "!insertmacro _VimCreateBatches"
 !macro _VimCreateBatches _BATCH_SPEC _BATCH_TMPL
-    Push `${_BATCH_SPEC}`
-    Push `${_BATCH_TMPL}`
-    Call VimCreateBatchFunc
+    ${LoopMatrix} "${_BATCH_SPEC}" "_VimCreateBatchFunc" \
+        "${_BATCH_TMPL}" ""
 !macroend
-Function VimCreateBatchFunc
-    # Incoming parameters has been put on the stack:
-    Exch $R1   # Batch file template (in target environment).
-    Exch
-    Exch $R0   # Batch file specification
-    Exch
-    Push $R2   # Loop index, 1 based
-    Push $R3   # Number of batch files
-    Push $R4   # Specification for the batch file
-    Push $R5   # Name of the batch file (sans .bat)
-    Push $R6   # Target of the batch
-    Push $R7   # Argument of the target
 
-    # Create all batch files one by one:
-    ${VimCountFields} "$R0" "$\n" $R3
-    ${For} $R2 1 $R3
-        # Specification for the current shortcut (No. $R2):
-        ${WordFindS} "$R0" "$\n" "+$R2" $R4
+Function _VimCreateBatchFunc
+    Exch      $R4     # Arg 2: Ignored
+    ${ExchAt} 1 $R3   # Arg 1: Batch file template (in target environment).
+    ${ExchAt} 2 $R2   # Col 3: Argument of the target.
+    ${ExchAt} 3 $R1   # Col 2: Target of the batch.
+    ${ExchAt} 4 $R0   # Col 1: Name of the batch file (sans .bat)
 
-        # Fields of the shortcut:
-        ${WordFindS} $R4 "|" "+1" $R5
-        ${WordFindS} $R4 "|" "+2" $R6
-        ${WordFindS} $R4 "|" "+3" $R7
-
-        # Trim white space from both ends of fields.  WordFindS cannot support
-        # empty fields correctly, so we have to put white spaces in white
-        # fields and trim them afterward.
-        ${VimTrimString} $R5 $R5
-        ${VimTrimString} $R6 $R6
-        ${VimTrimString} $R7 $R7
-
-        # Create the batch file:
-        StrCpy $R5 "$WINDIR\$R5.bat"
-        StrCpy $vim_batch_exe "$R6"
-        StrCpy $vim_batch_arg "$R7"
-        ${Log} "Create batch file: [$R5], Target=[$R6], Arg=[$R7]"
-        ${LineFind} "$R1" "$R5" "" "_VimCreateBatchCallback"
-    ${Next}
+    # Create the batch file:
+    StrCpy $R0 "$WINDIR\$R0.bat"
+    StrCpy $vim_batch_exe "$R1"
+    StrCpy $vim_batch_arg "$R2"
+    ${Log} "Create batch file: [$R0], Target=[$R1], Arg=[$R2]"
+    ${LineFind} "$R3" "$R0" "" "_VimCreateBatchCallback"
 
     # Restore the stack:
-    Pop $R7
-    Pop $R6
-    Pop $R5
     Pop $R4
     Pop $R3
     Pop $R2
@@ -1333,7 +1174,7 @@ Function VimRegShellExt
     # $R0 - Loop index, 1 based
     # $R1 - Number of file extensions to register
     # $R2 - File extension to register
-    ${VimCountFields} "${VIM_FILE_EXT_LIST}" "|" $R1
+    ${CountFields} "${VIM_FILE_EXT_LIST}" "|" $R1
     ${For} $R0 1 $R1
         ${WordFindS} "${VIM_FILE_EXT_LIST}" "|" "+$R0" $R2
         ${Logged4} WriteRegStr HKCR "$R2\OpenWithList\gvim.exe" "" ""
@@ -1924,12 +1765,11 @@ SectionEnd
 # Uninstaller Functions                                                   {{{1
 ##############################################################################
 
-
 # ----------------------------------------------------------------------------
-# Function UnStrLoc                                                       {{{2
+# Declaration of external functions                                       {{{2
 # ----------------------------------------------------------------------------
-# Pull in definition of the ${UnStrLoc}
-${UnStrLoc}
+${UnStrLoc}              # ${UnStrLoc}
+${DECLARE_UnLoopMatrix}  # ${LoopMatrix}
 
 # ----------------------------------------------------------------------------
 # Function un.onInit                                                      {{{2
@@ -2052,7 +1892,7 @@ Function un.VimRmPluginDir
     # $R3 - Current subdirectory
     # $R4 - Directory empty flag 1=not empty, 0/-1=empty/not exist
     StrCpy $R4 0
-    ${VimCountFields} "${VIM_PLUGIN_SUBDIR}" "$\n" $R2
+    ${CountFields} "${VIM_PLUGIN_SUBDIR}" "$\n" $R2
     ${For} $R1 1 $R2
         ${WordFindS} "${VIM_PLUGIN_SUBDIR}" "$\n" "+$R1" $R3
         ${DirState} "$R0\$R3" $R4
@@ -2109,27 +1949,19 @@ FunctionEnd
 # ----------------------------------------------------------------------------
 Function un.VimRmFileSpecFunc
     # Incoming parameters has been put on the stack:
-    Exch $R4   # Address of the verification callback
-    Exch
-    Exch $R3   # File name extension (includes dot).
-    Exch
-    Exch 2
-    Exch $R2   # Field index of the file title
-    Exch 2
-    Exch 3
-    Exch $R1   # File root
-    Exch 3
-    Exch 4
-    Exch $R0   # File specification
-    Exch 4
-    Push $R5   # Loop index, 1 based
-    Push $R6   # Number of files
-    Push $R7   # Specification for the current file
-    Push $R8   # Title of the file to be removed
-    Push $R9   # Return code from verfication callback
+    Exch      $R4    # Address of the verification callback
+    ${ExchAt} 1 $R3  # File name extension (includes dot).
+    ${ExchAt} 2 $R2  # Field index of the file title
+    ${ExchAt} 3 $R1  # File root
+    ${ExchAt} 4 $R0  # File specification
+    Push $R5         # Loop index, 1 based
+    Push $R6         # Number of files
+    Push $R7         # Specification for the current file
+    Push $R8         # Title of the file to be removed
+    Push $R9         # Return code from verfication callback
 
     # Remove all shortcuts one by one:
-    ${VimCountFields} "$R0" "$\n" $R6
+    ${CountFields} "$R0" "$\n" $R6
     ${For} $R5 1 $R6
         # Specification for the current shortcut (No. $R5):
         ${WordFindS} "$R0" "$\n" "+$R5" $R7
@@ -2138,7 +1970,7 @@ Function un.VimRmFileSpecFunc
         ${WordFindS} $R7 "|" "+$R2" $R8
 
         # Trim white space from both ends:
-        ${VimTrimString} $R8 $R8
+        ${TrimString} $R8 $R8
 
         # Construct full file name:
         StrCpy $R8 "$R1\$R8$R3"

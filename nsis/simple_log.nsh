@@ -1,27 +1,32 @@
 # vi:set ts=8 sts=4 sw=4 fdm=marker:
 #
-# simple-log.nsi
+# simple_log.nsh
 # Macros for simple debug log.
 # Author: Guopeng Wen
 #
 # Note:
-# Don't use backquote (``) in the string to be logged.  Backquote has been
-# used in the library to quote incoming parameters, use backquote in your log
-# message will break some macros, notably Logged* series.
+#   Don't use back-quotes (``) in the string to be logged.  Back-quotes have
+#   been used in the library to quote incoming parameters, use back-quotes in
+#   your log message will break some macros, notably Logged* series.
 
 !ifndef __SIMPLE_LOG__NSH__
 !define __SIMPLE_LOG__NSH__
 
-!include "FileFunc.nsh"
+!include "LogicLib.nsh"
 !include "Util.nsh"
 
-# Global variables:
+##############################################################################
+# Global variables:                                                       {{{1
+##############################################################################
 Var _simple_log_fname   # Log file name
 Var _simple_log_title   # Log title
 Var _simple_log_fh      # Log file handle
 
-# Helper macro to get local time as ISO date/time string.  Please note this
-# macro will store output string in $R0 directly.
+##############################################################################
+# _LogGetLocalTime                                                        {{{1
+#   Helper macro to get local time as ISO date/time string.  Please note this
+#   macro will store output string in $R0 directly.
+##############################################################################
 !macro _LogGetLocalTime
     Push $R1
     Push $R2
@@ -55,15 +60,19 @@ Var _simple_log_fh      # Log file handle
     Pop  $R1
 !macroend
 
-# Log initialization.
+##############################################################################
+# LogInit                                                                 {{{1
+#   Log initialization.
 #
-# New file will be created if the specified log file does not exist;
-# Otherwise, existing log file will be opened for append.
-# Parameters:
-#   $_LOG_FILE  : Name of the log file.
-#   $_LOG_TITLE : Title of the log.
-# Returns:
-#   None.
+#   New file will be created if the specified log file does not exist;
+#   Otherwise, existing log file will be opened for append.
+#
+#   Parameters:
+#     $_LOG_FILE  : Name of the log file.
+#     $_LOG_TITLE : Title of the log.
+#   Returns:
+#     None.
+##############################################################################
 !define LogInit `!insertmacro _LogInitCall`
 !macro _LogInitCall _LOG_FILE _LOG_TITLE
     Push `${_LOG_FILE}`
@@ -105,9 +114,12 @@ Var _simple_log_fh      # Log file handle
     Pop $R0
 !macroend
 
-# Reinitialize log.
+##############################################################################
+# LogReinit                                                               {{{1
+#   Reinitialize log.
 #
-# This macro will re-use the last open log file/title to re-initialize log.
+#   This macro will re-use the last open log file/title to re-initialize log.
+##############################################################################
 !define LogReinit `!insertmacro _LogReinit`
 !macro _LogReinit
     # Make log has been closed:
@@ -142,11 +154,15 @@ Var _simple_log_fh      # Log file handle
     ${EndIf}
 !macroend
 
-# Log the specified message.
-# Parameters:
-#   $_LOG_MSG : String to be logged.  CR/LF will be appended.
-# Returns:
-#   None.
+##############################################################################
+# Log                                                                     {{{1
+#   Log the specified message.
+#
+#   Parameters:
+#     $_LOG_MSG : String to be logged.  CR/LF will be appended.
+#   Returns:
+#     None.
+##############################################################################
 !define Log `!insertmacro _Log`
 !macro _Log _LOG_MSG
     ${If} $_simple_log_fh != ``
@@ -154,28 +170,35 @@ Var _simple_log_fh      # Log file handle
     ${EndIf}
 !macroend
 
-# Write the specified message to log file as well as NSIS detailed log window.
-# Please note message written to the detailed log window before the creation
-# of that window will be lost.
-# Parameters:
-#   $_LOG_MSG : String to be logged.  CR/LF will be appended.
-# Returns:
-#   None.
+##############################################################################
+# LogPrint                                                                {{{1
+#   Write the specified message to log file as well as NSIS detailed log
+#   window.  Please note message written to the detailed log window before the
+#   creation of that window will be lost.
+#
+#   Parameters:
+#     $_LOG_MSG : String to be logged.
+#   Returns:
+#     None.
+##############################################################################
 !define LogPrint `!insertmacro _LogPrint`
 !macro _LogPrint _LOG_MSG
     ${Log} `${_LOG_MSG}`
     DetailPrint `${_LOG_MSG}`
 !macroend
 
-# Helper macro to log error status.
+##############################################################################
+# LogErrors                                                               {{{1
+#   Helper macro to log error status.
 #
-# Write error message to log if the error flag is set.  Otherwise, nothing
-# will be written.  Error flag will not be cleared.
+#   Write error message to log if the error flag is set.  Otherwise, nothing
+#   will be written.  Error flag will not be cleared.
 #
-# Parameters:
-#   $_CMD : Name of the command to be used in error log.
-# Returns:
-#   None.
+#   Parameters:
+#     $_CMD : Name of the command to be used in error log.
+#   Returns:
+#     None.
+##############################################################################
 !define LogErrors `!insertmacro _LogErrors`
 !macro _LogErrors _CMD
     ${If} ${Errors}
@@ -187,17 +210,22 @@ Var _simple_log_fh      # Log file handle
     ${EndIf}
 !macroend
 
-# The following macros are used to log commands of 0/1/2/3/4 parameter(s).
-# You can simply prefix these macros to NSIS commands, the command as well as
-# it's parameters will be logged before execution.
-# Parameters:
-#   $_CMD    : Command to run.
-#   $_PARAM1 : Parameter 1.
-#   $_PARAM2 : Parameter 2.
-#   $_PARAM3 : Parameter 3.
-#   $_PARAM4 : Parameter 4.
-# Returns:
-#   None.
+##############################################################################
+# Logged*                                                                 {{{1
+#   The following macros are used to log commands of 0/1/2/3/4 parameter(s).
+#   You can simply prefix these macros to NSIS commands, the command as well
+#   as it's parameters will be logged before execution.
+#
+#   Parameters:
+#     $_CMD    : Command to run.
+#     $_PARAM1 : Parameter 1.
+#     $_PARAM2 : Parameter 2.
+#     $_PARAM3 : Parameter 3.
+#     $_PARAM4 : Parameter 4.
+#     $_PARAM5 : Parameter 5.
+#   Returns:
+#     None.
+##############################################################################
 !define Logged0 `!insertmacro _Logged0`
 !macro _Logged0 _CMD
     ${Log} `${_CMD}`
@@ -240,19 +268,23 @@ Var _simple_log_fh      # Log file handle
     ${LogErrors} `${_CMD}`
 !macroend
 
-# The following are special variant of the above $Logged* macros, which will
-# close the log file before execution the command, and reopen the log file
-# after that.  It's used to log execution of external commands that will write
-# to the same log file.
+##############################################################################
+# Logged*Reopen                                                           {{{1
+#   The following are special variant of the above $Logged* macros, which will
+#   close the log file before execution the command, and reopen the log file
+#   after that.  It's used to log execution of external commands that will
+#   write to the same log file.
 #
-# Parameters:
-#   $_CMD    : Command to run.
-#   $_PARAM1 : Parameter 1.
-#   $_PARAM2 : Parameter 2.
-#   $_PARAM3 : Parameter 3.
-#   $_PARAM4 : Parameter 4.
-# Returns:
-#   None.
+#   Parameters:
+#     $_CMD    : Command to run.
+#     $_PARAM1 : Parameter 1.
+#     $_PARAM2 : Parameter 2.
+#     $_PARAM3 : Parameter 3.
+#     $_PARAM4 : Parameter 4.
+#     $_PARAM5 : Parameter 5.
+#   Returns:
+#     None.
+##############################################################################
 !define Logged2Reopen `!insertmacro _Logged2Reopen`
 !macro _Logged2Reopen _CMD _PARAM1 _PARAM2
     Push $R0
@@ -280,8 +312,11 @@ Var _simple_log_fh      # Log file handle
     Pop $R0
 !macroend
 
-# Log start of a section.
-# This macro should be inserted at the beginning of a section.
+##############################################################################
+# LogSectionStart                                                         {{{1
+#   Log start of a section.
+#   This macro should be inserted at the beginning of a section.
+##############################################################################
 !define LogSectionStart `!insertmacro _LogSectionStart`
 !macro _LogSectionStart
     !ifdef __SECTION__
@@ -289,8 +324,11 @@ Var _simple_log_fh      # Log file handle
     !endif
 !macroend
 
-# Log end of a section.
-# This macro should be inserted at the end of a section.
+##############################################################################
+# LogSectionEnd                                                           {{{1
+#   Log end of a section.
+#   This macro should be inserted at the end of a section.
+##############################################################################
 !define LogSectionEnd `!insertmacro _LogSectionEnd`
 !macro _LogSectionEnd
     !ifdef __SECTION__
@@ -298,12 +336,17 @@ Var _simple_log_fh      # Log file handle
     !endif
 !macroend
 
-# Show error message.
-# The specified error message will be written to log file, show in NSIS
-# detailed log window, and show in a popup dialog box unless the silent mode
-# has been enalbed.
-# Parameters:
-#   $_ERR_MSG : Error message.
+##############################################################################
+# ShowErr                                                                 {{{1
+#   Show error message.
+#
+#   The specified error message will be written to log file, show in NSIS
+#   detailed log window, and show in a popup dialog box unless the silent mode
+#   has been enabled.
+#
+#   Parameters:
+#     $_ERR_MSG : Error message.
+##############################################################################
 !define ShowErr `!insertmacro _ShowErrCall`
 !macro _ShowErrCall _ERR_MSG
     Push `${_ERR_MSG}`
