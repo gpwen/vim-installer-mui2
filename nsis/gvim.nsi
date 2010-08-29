@@ -152,6 +152,19 @@ Var vim_batch_ver_found
      plugin$\n\
      syntax"
 
+# Uninstall info:
+#   Type | Registry Subkey  | Registry Value
+!define VIM_UNINSTALL_REG_INFO \
+    "STR | DisplayName      | ${VIM_PRODUCT_NAME} (self-installing) $\n\
+     STR | UninstallString  | $vim_bin_path\uninstall-gui.exe       $\n\
+     STR | InstallLocation  | $vim_bin_path                         $\n\
+     STR | DisplayIcon      | $vim_bin_path\gvim.exe,0              $\n\
+     STR | HelpLink         | http://www.vim.org/                   $\n\
+     STR | URLUpdateInfo    | http://www.vim.org/download.php#pc    $\n\
+     STR | DisplayVersion   | ${VER_SHORT}                          $\n\
+     DW  | NoModify         | 1                                     $\n\
+     DW  | NoRepair         | 1 "
+
 # Registry keys:
 !define REG_KEY_WINDOWS   "software\Microsoft\Windows\CurrentVersion"
 !define REG_KEY_UNINSTALL "${REG_KEY_WINDOWS}\Uninstall"
@@ -1186,41 +1199,32 @@ Function VimRegShellExt
 FunctionEnd
 
 # ----------------------------------------------------------------------------
-# Function VimRegUninstallInfo                                            {{{2
-#   Register uninstall information.
-#
-#   Register view should be set before call this function.
-#
-#   Parameters: N/A
-#   Returns:    N/A
+# Function VimRegUninstallInfoCallback                                    {{{2
+#   Callback function for LoopMatrix.  It's used to write uninstall
+#   information into windows registry.
 # ----------------------------------------------------------------------------
-Function VimRegUninstallInfo
-    Push $R0
+Function VimRegUninstallInfoCallback
+    Exch      $R4     # Arg 2: Ignored
+    ${ExchAt} 1 $R3   # Arg 1: Ignored
+    ${ExchAt} 2 $R2   # Col 3: Registry value
+    ${ExchAt} 3 $R1   # Col 2: Registry subkey
+    ${ExchAt} 4 $R0   # Col 1: Registry type STR|DW
 
-    # $R0 - Uninstall registry key.
-    StrCpy $R0 "${REG_KEY_UNINSTALL}\${VIM_PRODUCT_NAME}"
+    # $R3 - Uninstall registry key.
+    StrCpy $R3 "${REG_KEY_UNINSTALL}\${VIM_PRODUCT_NAME}"
 
-    # Required values:
-    ${Logged4} WriteRegStr SHCTX "$R0" "DisplayName" \
-        "${VIM_PRODUCT_NAME} (self-installing)"
-    ${Logged4} WriteRegStr SHCTX "$R0" "UninstallString" \
-        "$vim_bin_path\uninstall-gui.exe"
+    ${If}     $R0 S== "STR"
+        ${Logged4} WriteRegStr   SHCTX "$R3" "$R1" "$R2"
+    ${ElseIf} $R0 S== "DW"
+        ${Logged4} WriteRegDWORD SHCTX "$R3" "$R1" "$R2"
+    ${Else}
+        ${Log} "ERROR: Unknow subkey type : [$R0]!"
+    ${EndIf}
 
-    # Optional values:
-    ${Logged4} WriteRegStr SHCTX "$R0" "InstallLocation" "$vim_bin_path"
-    ${Logged4} WriteRegStr SHCTX "$R0" "DisplayIcon" \
-        "$vim_bin_path\gvim.exe,0"
-
-    ${Logged4} WriteRegStr SHCTX "$R0" "HelpLink" \
-        "http://www.vim.org/"
-    ${Logged4} WriteRegStr SHCTX "$R0" "URLUpdateInfo" \
-        "http://www.vim.org/download.php#pc"
-
-    ${Logged4} WriteRegStr SHCTX "$R0" "DisplayVersion" "${VER_SHORT}"
-
-    ${Logged4} WriteRegDWORD SHCTX "$R0" "NoModify" 1
-    ${Logged4} WriteRegDWORD SHCTX "$R0" "NoRepair" 1
-
+    Pop $R4
+    Pop $R3
+    Pop $R2
+    Pop $R1
     Pop $R0
 FunctionEnd
 
@@ -1533,7 +1537,8 @@ SectionEnd
 
 Section -registry_update
     # Register uninstall information:
-    Call VimRegUninstallInfo
+    ${LoopMatrix} "${VIM_UNINSTALL_REG_INFO}" \
+        "VimRegUninstallInfoCallback" "" ""
 
     # Register Vim with OLE:
     # TODO: Translate
@@ -1743,6 +1748,13 @@ Section /o "un.$(str_unsection_root)" id_unsection_root
 SectionEnd
 
 Section -un.post
+    # Remove uninstall information:
+    ${LoopMatrix} "${VIM_UNINSTALL_REG_INFO}" \
+        "un.VimRmUninstallInfoCallback" "" ""
+
+    ${Logged3} DeleteRegKey /ifempty SHCTX \
+        "${REG_KEY_UNINSTALL}\${VIM_PRODUCT_NAME}"
+
     # Close log:
     !ifdef VIM_LOG_FILE
         ${LogClose}
@@ -2080,4 +2092,26 @@ Function un._VimVerifyBatchCallback
 
     Pop  $R1
     Exch $R0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function un.VimRmUninstallInfoCallback                                  {{{2
+#   Callback function for LoopMatrix.  It's used to remove uninstall
+#   information from windows registry.
+# ----------------------------------------------------------------------------
+Function un.VimRmUninstallInfoCallback
+    Exch      $R4     # Arg 2: Ignored.
+    ${ExchAt} 1 $R3   # Arg 1: Ignored.
+    ${ExchAt} 2 $R2   # Col 3: Registry value, ignored.
+    ${ExchAt} 3 $R1   # Col 2: Registry subkey.
+    ${ExchAt} 4 $R0   # Col 1: Registry type STR|DW, ignored.
+
+    ${Logged3} DeleteRegValue SHCTX \
+        "${REG_KEY_UNINSTALL}\${VIM_PRODUCT_NAME}" "$R1"
+
+    Pop $R4
+    Pop $R3
+    Pop $R2
+    Pop $R1
+    Pop $R0
 FunctionEnd
