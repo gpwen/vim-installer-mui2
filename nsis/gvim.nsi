@@ -447,6 +447,7 @@ SilentInstall             normal
 # Declaration of external functions                                       {{{2
 # ----------------------------------------------------------------------------
 ${DECLARE_LoopMatrix}
+${DECLARE_SimpleLogFunctions}
 
 # ----------------------------------------------------------------------------
 # Function .onInit                                                        {{{2

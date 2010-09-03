@@ -185,9 +185,9 @@
 
 !macro _LoopArrayCall _SPEC _ITEM_CALLBACK _ARG1 _ARG2
     !ifndef __UNINSTALL__
-        !define _FUNC_PREFIX ''
+        !define _FUNC_PREFIX ""
     !else
-        !define _FUNC_PREFIX 'un.'
+        !define _FUNC_PREFIX "un."
     !endif
 
     Push `${_SPEC}`  # Array specification
@@ -196,14 +196,14 @@
     Exch $R0         # Address of item callback
     Push `${_ARG1}`  # Argument 1
     Push `${_ARG2}`  # Argument 2
-    Call ${_FUNC_PREFIX}LoopArrayFunc
+    Call ${_FUNC_PREFIX}_LoopArrayFunc
 
     !undef _FUNC_PREFIX
 !macroend
 
 # Definition of the function body:
 !macro _DECLARE_LoopArray _PREFIX
-    Function ${_PREFIX}LoopArrayFunc
+    Function ${_PREFIX}_LoopArrayFunc
         # Incoming parameters has been put on the stack:
         Exch      $R3    # Item callback arg 2
         ${ExchAt} 1 $R2  # Item callback arg 1
@@ -304,9 +304,9 @@
 
 !macro _LoopMatrixCall _SPEC _ROW_CALLBACK _ARG1 _ARG2
     !ifndef __UNINSTALL__
-        !define _FUNC_PREFIX ''
+        !define _FUNC_PREFIX ""
     !else
-        !define _FUNC_PREFIX 'un.'
+        !define _FUNC_PREFIX "un."
     !endif
 
     Push `${_SPEC}`  # Matrix specification
@@ -315,14 +315,14 @@
     Exch $R0         # Address of row callback
     Push `${_ARG1}`  # Argument 1
     Push `${_ARG2}`  # Argument 2
-    Call ${_FUNC_PREFIX}LoopMatrixFunc
+    Call ${_FUNC_PREFIX}_LoopMatrixFunc
 
     !undef _FUNC_PREFIX
 !macroend
 
 # Definition of the function body:
 !macro _DECLARE_LoopMatrix _PREFIX
-    Function ${_PREFIX}LoopMatrixFunc
+    Function ${_PREFIX}_LoopMatrixFunc
         # Incoming parameters has been put on the stack:
         Exch      $R3    # Row callback arg 2
         ${ExchAt} 1 $R2  # Row callback arg 1

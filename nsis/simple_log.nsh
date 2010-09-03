@@ -23,45 +23,75 @@ Var _simple_log_title   # Log title
 Var _simple_log_fh      # Log file handle
 
 ##############################################################################
-# _LogGetLocalTime                                                        {{{1
-#   Helper macro to get local time as ISO date/time string.  Please note this
-#   macro will store output string in $R0 directly.
+# DECLARE_SimpleLogFunctions                                              {{{1
+#   Macro to declare all functions used by simple log.
 ##############################################################################
-!macro _LogGetLocalTime
-    Push $R1
-    Push $R2
-    Push $R3
-    Push $R4
-    Push $R5
-    Push $R6
 
-    # Get local time.  Please note this macro will be inserted into artificial
-    # function, so the simple GetTime macro cannot be used.
-    Push ""
-    Push "L"
-    ${CallArtificialFunction2} GetTime_
-    Pop $R0
-    Pop $R1
-    Pop $R2
-    Pop $R3
-    Pop $R4
-    Pop $R5
-    Pop $R6
+!define DECLARE_SimpleLogFunctions "!insertmacro _DECLARE_SimpleLogFunctions"
+!macro _DECLARE_SimpleLogFunctions
+    # Declare all functions for both installer & uninstaller:
+    !insertmacro _DECLARE_LogGetLocalTimeFunc ""
+    !insertmacro _DECLARE_LogGetLocalTimeFunc "un."
 
-    # Construct ISO date/time string and stored in $R0 directly.
-    StrCpy $R0 "$R2-$R1-$R0 $R4:$R5:$R6"
-
-    # Restore the stack:
-    Pop  $R6
-    Pop  $R5
-    Pop  $R4
-    Pop  $R3
-    Pop  $R2
-    Pop  $R1
+    !insertmacro _DECLARE_LogErrorsFunc ""
+    !insertmacro _DECLARE_LogErrorsFunc "un."
 !macroend
 
 ##############################################################################
-# LogInit                                                                 {{{1
+# _LogGetLocalTime $_LOCAL_TIME                                           {{{1
+#   Helper macro to get local time as ISO date/time string.
+#
+#   Parameters:
+#     N/A
+#   Returns:
+#     $_LOCAL_TIME : Local time in ISO format.
+##############################################################################
+# Shortcut to call the function:
+!define _LogGetLocalTime '!insertmacro _LogGetLocalTimeCall'
+
+!macro _LogGetLocalTimeCall _LOCAL_TIME
+    !ifndef __UNINSTALL__
+        !define _FUNC_PREFIX ""
+    !else
+        !define _FUNC_PREFIX "un."
+    !endif
+
+    Call ${_FUNC_PREFIX}_LogGetLocalTimeFunc
+    Pop ${_LOCAL_TIME}
+
+    !undef _FUNC_PREFIX
+!macroend
+
+# Definition of the function body:
+!macro _DECLARE_LogGetLocalTimeFunc _PREFIX
+    Function ${_PREFIX}_LogGetLocalTimeFunc
+        Push $R0
+        Push $R1
+        Push $R2
+        Push $R3
+        Push $R4
+        Push $R5
+        Push $R6
+
+        # Get local time:
+        ${GetTime} "" "L" $R0 $R1 $R2 $R3 $R4 $R5 $R6
+
+        # Construct ISO date/time string:
+        StrCpy $R0 "$R2-$R1-$R0 $R4:$R5:$R6"
+
+        # Restore the stack & return result on stack:
+        Pop  $R6
+        Pop  $R5
+        Pop  $R4
+        Pop  $R3
+        Pop  $R2
+        Pop  $R1
+        Exch $R0  # Return result
+    FunctionEnd
+!macroend
+
+##############################################################################
+# LogInit $_LOG_FILE $_LOG_TITLE                                          {{{1
 #   Log initialization.
 #
 #   New file will be created if the specified log file does not exist;
@@ -103,8 +133,8 @@ Var _simple_log_fh      # Log file handle
         StrCpy $_simple_log_title `$R1`
     ${EndIf}
 
-    # Get local time (stores in $R0):
-    !insertmacro _LogGetLocalTime
+    # Get local time:
+    ${_LogGetLocalTime} $R0
 
     # Write log header:
     ${Log} "$R0 - Start $_simple_log_title"
@@ -138,8 +168,8 @@ Var _simple_log_fh      # Log file handle
     ${If} $_simple_log_fh != ``
         Push $R0
 
-        # Get local time (stores in $R0):
-        !insertmacro _LogGetLocalTime
+        # Get local time:
+        ${_LogGetLocalTime} $R0
 
         # Write close message:
         ${Log} "$R0 - Close $_simple_log_title"
@@ -155,7 +185,7 @@ Var _simple_log_fh      # Log file handle
 !macroend
 
 ##############################################################################
-# Log                                                                     {{{1
+# Log $_LOG_MSG                                                           {{{1
 #   Log the specified message.
 #
 #   Parameters:
@@ -171,7 +201,7 @@ Var _simple_log_fh      # Log file handle
 !macroend
 
 ##############################################################################
-# LogPrint                                                                {{{1
+# LogPrint $_LOG_MSG                                                      {{{1
 #   Write the specified message to log file as well as NSIS detailed log
 #   window.  Please note message written to the detailed log window before the
 #   creation of that window will be lost.
@@ -188,7 +218,7 @@ Var _simple_log_fh      # Log file handle
 !macroend
 
 ##############################################################################
-# LogErrors                                                               {{{1
+# LogErrors $_CMD                                                         {{{1
 #   Helper macro to log error status.
 #
 #   Write error message to log if the error flag is set.  Otherwise, nothing
@@ -199,19 +229,40 @@ Var _simple_log_fh      # Log file handle
 #   Returns:
 #     None.
 ##############################################################################
-!define LogErrors `!insertmacro _LogErrors`
-!macro _LogErrors _CMD
-    ${If} ${Errors}
-        # Log error flag:
-        ${Log} `ERROR: The last ${_CMD} instruction has recoverable error!`
 
-        # Make sure error flag is not cleared:
-        SetErrors
-    ${EndIf}
+# Shortcut to call the function:
+!define LogErrors '!insertmacro _LogErrorsCall'
+
+!macro _LogErrorsCall _CMD
+    !ifndef __UNINSTALL__
+        !define _FUNC_PREFIX ""
+    !else
+        !define _FUNC_PREFIX "un."
+    !endif
+
+    Push ${_CMD}
+    Call ${_FUNC_PREFIX}_LogErrorsFunc
+
+    !undef _FUNC_PREFIX
+!macroend
+
+# Definition of the function body:
+!macro _DECLARE_LogErrorsFunc _PREFIX
+    Function ${_PREFIX}_LogErrorsFunc
+        Exch $R0   # $_CMD
+        ${If} ${Errors}
+            # Log error flag:
+            ${Log} `ERROR: The last $R0 instruction has recoverable error!`
+
+            # Make sure error flag is not cleared:
+            SetErrors
+        ${EndIf}
+        Pop $R0
+    FunctionEnd
 !macroend
 
 ##############################################################################
-# Logged*                                                                 {{{1
+# Logged* $_CMD $_PARAM*                                                  {{{1
 #   The following macros are used to log commands of 0/1/2/3/4 parameter(s).
 #   You can simply prefix these macros to NSIS commands, the command as well
 #   as it's parameters will be logged before execution.
@@ -269,7 +320,7 @@ Var _simple_log_fh      # Log file handle
 !macroend
 
 ##############################################################################
-# Logged*Reopen                                                           {{{1
+# Logged*Reopen $_CMD $_PARAM*                                            {{{1
 #   The following are special variant of the above $Logged* macros, which will
 #   close the log file before execution the command, and reopen the log file
 #   after that.  It's used to log execution of external commands that will
@@ -337,7 +388,7 @@ Var _simple_log_fh      # Log file handle
 !macroend
 
 ##############################################################################
-# ShowErr                                                                 {{{1
+# ShowErr $_ERR_MSG                                                       {{{1
 #   Show error message.
 #
 #   The specified error message will be written to log file, show in NSIS
