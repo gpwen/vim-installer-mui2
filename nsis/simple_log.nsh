@@ -111,37 +111,37 @@ Var _simple_log_fh      # Log file handle
 !macroend
 !macro _LogInit
     # Incoming parameters has been put on the stack:
-    Exch $R1   # Log title
+    Exch $1   # Log title
     Exch
-    Exch $R0   # Log file name
+    Exch $0   # Log file name
     Exch
 
     # Create/open the specified log file:
-    ${If} ${FileExists} `$R0`
-        SetFileAttributes `$R0` NORMAL
-        FileOpen $_simple_log_fh `$R0` a
+    ${If} ${FileExists} `$0`
+        SetFileAttributes `$0` NORMAL
+        FileOpen $_simple_log_fh `$0` a
         FileSeek $_simple_log_fh 0 END
     ${Else}
-        FileOpen $_simple_log_fh `$R0` w
+        FileOpen $_simple_log_fh `$0` w
     ${EndIf}
 
     # Save log file name & log title:
     StrCpy $_simple_log_fname ``
     StrCpy $_simple_log_title ``
     ${If} $_simple_log_fh != ``
-        StrCpy $_simple_log_fname `$R0`
-        StrCpy $_simple_log_title `$R1`
+        StrCpy $_simple_log_fname `$0`
+        StrCpy $_simple_log_title `$1`
     ${EndIf}
 
     # Get local time:
-    ${_LogGetLocalTime} $R0
+    ${_LogGetLocalTime} $0
 
     # Write log header:
-    ${Log} "$R0 - Start $_simple_log_title"
+    ${Log} "$0 - Start $_simple_log_title"
 
     # Restore the stack:
-    Pop $R1
-    Pop $R0
+    Pop $1
+    Pop $0
 !macroend
 
 ##############################################################################
@@ -249,15 +249,15 @@ Var _simple_log_fh      # Log file handle
 # Definition of the function body:
 !macro _DECLARE_LogErrorsFunc _PREFIX
     Function ${_PREFIX}_LogErrorsFunc
-        Exch $R0   # $_CMD
+        Exch $0   # $_CMD
         ${If} ${Errors}
             # Log error flag:
-            ${Log} `ERROR: The last $R0 instruction has recoverable error!`
+            ${Log} `ERROR: The last $0 instruction has recoverable error!`
 
             # Make sure error flag is not cleared:
             SetErrors
         ${EndIf}
-        Pop $R0
+        Pop $0
     FunctionEnd
 !macroend
 
@@ -405,22 +405,22 @@ Var _simple_log_fh      # Log file handle
 !macroend
 !macro _ShowErr
     # Incoming parameters has been put on the stack:
-    Exch $R0
+    Exch $0
 
     # Write error message to debug log:
-    ${Log} `ERROR: $R0`
+    ${Log} `ERROR: $0`
 
     # Also show error message in NSIS detailed log window.  This might not
     # work if the detailed log window has not been created yet.
-    DetailPrint `$R0`
+    DetailPrint `$0`
 
     # Show message box only if we're not in silent install mode:
     ${IfNot} ${Silent}
-        MessageBox MB_OK|MB_ICONEXCLAMATION `$R0` /SD IDOK
+        MessageBox MB_OK|MB_ICONEXCLAMATION `$0` /SD IDOK
     ${EndIf}
 
     # Restore the stack:
-    Pop $R0
+    Pop $0
 !macroend
 
 !endif # __SIMPLE_LOG__NSH__

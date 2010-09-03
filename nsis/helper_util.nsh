@@ -48,62 +48,62 @@
 !macroend
 
 !macro _TrimString
-    Exch $R0  # Input string
+    Exch $0  # Input string
 
     # Degenerated case: empty input string:
-    ${If} "$R0" == ""
-        Exch $R0
+    ${If} "$0" == ""
+        Exch $0
         Return
     ${EndIf}
 
-    Push $R1  # Character from the input string
-    Push $R2  # Start offset/length to copy
+    Push $R0  # Character from the input string
+    Push $R1  # Start offset/length to copy
 
     # Count number of white spaces at the beginning of the string:
-    StrCpy $R2 0
+    StrCpy $R1 0
     ${Do}
-        StrCpy $R1 $R0 1 $R2
-        ${If}   $R1 S== " "
-        ${OrIf} $R1 S== "$\t"
-        ${OrIf} $R1 S== "$\r"
-        ${OrIf} $R1 S== "$\n"
-            IntOp $R2 $R2 + 1
+        StrCpy  $R0 $0 1 $R1
+        ${If}   $R0 S== " "
+        ${OrIf} $R0 S== "$\t"
+        ${OrIf} $R0 S== "$\r"
+        ${OrIf} $R0 S== "$\n"
+            IntOp $R1 $R1 + 1
         ${Else}
             ${ExitDo}
         ${EndIf}
     ${Loop}
 
     # Trim left:
-    ${If} $R2 > 0
-        StrCpy $R0 $R0 "" $R2
+    ${If} $R1 > 0
+        StrCpy $0 $0 "" $R1
     ${EndIf}
 
     # Count number of white spaces at the end of the string:
-    ${If} $R0 != ""
-        StrCpy $R2 -1
+    ${If} $0 != ""
+        StrCpy $R1 -1
         ${Do}
-            StrCpy $R1 $R0 1 $R2
-            ${If}   $R1 S== " "
-            ${OrIf} $R1 S== "$\t"
-            ${OrIf} $R1 S== "$\r"
-            ${OrIf} $R1 S== "$\n"
-                IntOp $R2 $R2 - 1
+            StrCpy  $R0 $0 1 $R1
+            ${If}   $R0 S== " "
+            ${OrIf} $R0 S== "$\t"
+            ${OrIf} $R0 S== "$\r"
+            ${OrIf} $R0 S== "$\n"
+                IntOp $R1 $R1 - 1
             ${Else}
                 ${ExitDo}
             ${EndIf}
         ${Loop}
 
         # Trim right:
-        IntOp $R2 $R2 + 1
-        ${If} $R2 < 0
-            StrCpy $R0 $R0 $R2
+        IntOp $R1 $R1 + 1
+        ${If} $R1 < 0
+            StrCpy $0 $0 $R1
         ${EndIf}
     ${EndIf}
 
     # Output:
-    Pop  $R2
     Pop  $R1
-    Exch $R0
+    Pop  $R0
+    Exch $0
 !macroend
 
 ##############################################################################
@@ -125,22 +125,20 @@
 !macro _CountFields _STRING _DELIMITER _FIELD_COUNT
     Push `${_DELIMITER}`
     Push `${_STRING}`
-    Exch $R1  # String
-    Exch
-    Exch $R0  # Delimiter
-    Exch
+    Exch      $1    # String
+    ${ExchAt} 1 $0  # Delimiter
 
-    # Count number of fields.  $R0 is number of fields on output if delimiter
+    # Count number of fields.  $0 is number of fields on output if delimiter
     # found in the input string.  Unfortunately, WordFindS cannot handle the
     # case where delimiter is not present in the input string.  We have to
     # work around the problem by appending an extra delimiter, and remove it
     # from field count later.
-    ${WordFindS} `$R1$R0 ` `$R0` "#" $R0
-    IntOp $R0 $R0 - 1
+    ${WordFindS} `$1$0 ` `$0` "#" $0
+    IntOp $0 $0 - 1
 
     # Output:
-    Pop  $R1
-    Exch $R0
+    Pop  $1
+    Exch $0
     Pop  ${_FIELD_COUNT}
 !macroend
 
@@ -204,52 +202,53 @@
 # Definition of the function body:
 !macro _DECLARE_LoopArray _PREFIX
     Function ${_PREFIX}_LoopArrayFunc
-        # Incoming parameters has been put on the stack:
-        Exch      $R3    # Item callback arg 2
-        ${ExchAt} 1 $R2  # Item callback arg 1
-        ${ExchAt} 2 $R1  # Item callback address
-        ${ExchAt} 3 $R0  # Array specification
+        # Incoming parameters:
+        Exch      $3    # Item callback arg 2
+        ${ExchAt} 1 $2  # Item callback arg 1
+        ${ExchAt} 2 $1  # Item callback address
+        ${ExchAt} 3 $0  # Array specification
 
-        Push $R4         # Item index, 1 based
-        Push $R5         # Item count
-        Push $R6         # Current item
+        # Local working variables:
+        Push $R0        # Item index, 1 based
+        Push $R1        # Item count
+        Push $R2        # Current item
 
         # Count items: items are delimited by newline (\n):
-        ${CountFields} "$R0" "$\n" $R5
+        ${CountFields} "$0" "$\n" $R1
 
         # ??? Debug:
-        ${Log} "### Array items: $R5"
+        ${Log} "### Array items: $R1"
 
         # Loop all items:
-        ${For} $R4 1 $R5
-            # Get current item (item no. $R4):
-            ${WordFindS} "$R0" "$\n" "+$R4" $R6
+        ${For} $R0 1 $R1
+            # Get current item (item no. $R0):
+            ${WordFindS} "$0" "$\n" "+$R0" $R2
 
             # Trim white space from both ends of the item.  WordFindS cannot
             # support empty fields correctly, so we have to put white spaces
             # in empty fields and trim them afterward.
-            ${TrimString} $R6 $R6
+            ${TrimString} $R2 $R2
 
             # ??? Debug:
-            ${Log} "### Array item $R4: [$R6]"
+            ${Log} "### Array item $R0: [$R2]"
 
             # Put item on the stack:
-            Push $R6
+            Push $R2
 
             # Call the row callback function:
-            Push $R2  # Row callback arg 1
-            Push $R3  # Row callback arg 2
-            Call $R1
+            Push $2  # Row callback arg 1
+            Push $3  # Row callback arg 2
+            Call $1
         ${Next}
 
         # Restore the stack:
-        Pop $R6
-        Pop $R5
-        Pop $R4
-        Pop $R3
         Pop $R2
         Pop $R1
         Pop $R0
+        Pop $3
+        Pop $2
+        Pop $1
+        Pop $0
     FunctionEnd
 !macroend
 
@@ -323,68 +322,69 @@
 # Definition of the function body:
 !macro _DECLARE_LoopMatrix _PREFIX
     Function ${_PREFIX}_LoopMatrixFunc
-        # Incoming parameters has been put on the stack:
-        Exch      $R3    # Row callback arg 2
-        ${ExchAt} 1 $R2  # Row callback arg 1
-        ${ExchAt} 2 $R1  # Row callback address
-        ${ExchAt} 3 $R0  # Matrix specification
+        # Incoming parameters:
+        Exch      $3    # Row callback arg 2
+        ${ExchAt} 1 $2  # Row callback arg 1
+        ${ExchAt} 2 $1  # Row callback address
+        ${ExchAt} 3 $0  # Matrix specification
 
-        Push $R4         # Row index, 1 based
-        Push $R5         # Column index, 1 based
-        Push $R6         # Row count
-        Push $R7         # Column count
-        Push $R8         # Current row
-        Push $R9         # Current column
+        # Local working variables:
+        Push $R0        # Row index, 1 based
+        Push $R1        # Column index, 1 based
+        Push $R2        # Row count
+        Push $R3        # Column count
+        Push $R4        # Current row
+        Push $R5        # Current column
 
         # Count rows: rows are delimited by newline (\n):
-        ${CountFields} "$R0" "$\n" $R6
+        ${CountFields} "$0" "$\n" $R2
 
         # Count columns: columns are delimited by vertical bar (|):
-        ${WordFindS} "$R0" "$\n" "+1" $R8
-        ${CountFields} "$R8" "|" $R7
+        ${WordFindS} "$0" "$\n" "+1" $R4
+        ${CountFields} "$R4" "|" $R3
 
         # ??? Debug:
-        ${Log} "### Rows: $R6, Columns: $R7"
+        ${Log} "### Rows: $R2, Columns: $R3"
 
         # Loop all rows:
-        ${For} $R4 1 $R6
-            # Get current row (row no. $R4):
-            ${WordFindS} "$R0" "$\n" "+$R4" $R8
+        ${For} $R0 1 $R2
+            # Get current row (row no. $R0):
+            ${WordFindS} "$0" "$\n" "+$R0" $R4
 
             # Loop all columns on the current row:
-            ${For} $R5 1 $R7
-                # Get column no. $R5:
-                ${WordFindS} "$R8" "|" "+$R5" $R9
+            ${For} $R1 1 $R3
+                # Get column no. $R1:
+                ${WordFindS} "$R4" "|" "+$R1" $R5
 
                 # Trim white space from both ends of the column.  WordFindS
                 # cannot support empty fields correctly, so we have to put
                 # white spaces in empty fields and trim them afterward.
-                ${TrimString} $R9 $R9
+                ${TrimString} $R5 $R5
 
                 # ??? Debug:
-                ${Log} "### Row $R4, Col $R5: [$R9]"
+                ${Log} "### Row $R0, Col $R1: [$R5]"
 
                 # Put column on the stack:
-                Push $R9
+                Push $R5
             ${Next}
 
             # Call the row callback function:
-            Push $R2  # Row callback arg 1
-            Push $R3  # Row callback arg 2
-            Call $R1
+            Push $2  # Row callback arg 1
+            Push $3  # Row callback arg 2
+            Call $1
         ${Next}
 
         # Restore the stack:
-        Pop $R9
-        Pop $R8
-        Pop $R7
-        Pop $R6
         Pop $R5
         Pop $R4
         Pop $R3
         Pop $R2
         Pop $R1
         Pop $R0
+        Pop $3
+        Pop $2
+        Pop $1
+        Pop $0
     FunctionEnd
 !macroend
 
