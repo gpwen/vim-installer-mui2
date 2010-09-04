@@ -143,7 +143,7 @@
 !macroend
 
 ##############################################################################
-# Function LoopArray $_SPEC $_ITEM_CALLBACK $_ARG1 $_ARG2                 {{{1
+# Function LoopArray $_SPEC $_ITEM_CALLBACK $_ARG1 $_ARG2 $_EXIT_CODE     {{{1
 #   Loop through items of the input text array.
 #
 #   This function will loop through all items in the input text array and call
@@ -155,11 +155,15 @@
 #   used some white spaces for that kind of item, otherwise the word
 #   manipulation function used here (WordFindS) will fail.
 #
-#   The following
-#   content will be pushed onto stack when calling item callback function:
+#   The following content will be pushed onto stack when calling item callback
+#   function:
 #     - $_ITEM : The current item of the array.
 #     - $_ARG1 : Caller specified item callback arg 1.
 #     - $_ARG2 : Caller specified item callback arg 2.
+#   The callback function should put return code on stack.  If the return code
+#   is empty (""), LoopArray will continue to process the next item.
+#   Otherwise, LoopArray will abort item processing, and use the non-empty
+#   return code from the callback function as return code of LoopArray.
 #
 #   NSIS script does not support array, this function is a extremely
 #   inefficient workaround.  It only works in limited cases.
@@ -171,7 +175,9 @@
 #     - $_ARG1          : Item callback arg 1.
 #     - $_ARG2          : Item callback arg 2.
 #   Returns:
-#     N/A
+#     - $_EXIT_CODE     : Empty if the item callback function has never
+#                         returned non-empty return code;  Otherwise, this is
+#                         whatever the item callback returned.
 ##############################################################################
 
 # Shortcuts to declare the function for installer/uninstaller:
@@ -181,7 +187,7 @@
 # Shortcut to call the function:
 !define LoopArray           '!insertmacro _LoopArrayCall'
 
-!macro _LoopArrayCall _SPEC _ITEM_CALLBACK _ARG1 _ARG2
+!macro _LoopArrayCall _SPEC _ITEM_CALLBACK _ARG1 _ARG2 _EXIT_CODE
     !ifndef __UNINSTALL__
         !define _FUNC_PREFIX ""
     !else
@@ -195,6 +201,7 @@
     Push `${_ARG1}`  # Argument 1
     Push `${_ARG2}`  # Argument 2
     Call ${_FUNC_PREFIX}_LoopArrayFunc
+    Pop ${_EXIT_CODE}
 
     !undef _FUNC_PREFIX
 !macroend
@@ -212,6 +219,7 @@
         Push $R0        # Item index, 1 based
         Push $R1        # Item count
         Push $R2        # Current item
+        Push $R3        # Return code from the item callback
 
         # Count items: items are delimited by newline (\n):
         ${CountFields} "$0" "$\n" $R1
@@ -220,6 +228,7 @@
         ${Log} "### Array items: $R1"
 
         # Loop all items:
+        StrCpy $R3 ""
         ${For} $R0 1 $R1
             # Get current item (item no. $R0):
             ${WordFindS} "$0" "$\n" "+$R0" $R2
@@ -236,24 +245,38 @@
             Push $R2
 
             # Call the row callback function:
-            Push $2  # Row callback arg 1
-            Push $3  # Row callback arg 2
+            Push $2   # Item callback arg 1
+            Push $3   # Item callback arg 2
             Call $1
+            Pop  $R3  # Return code from the item callback
+
+            # Check return code from the item callback:
+            ${If} "$R3" != ""
+                # ??? Debug:
+                ${Log} "Abort LoopArray: Item callback returns [$R3]"
+
+                # Abort if non-empty return code found:
+                ${ExitFor}
+            ${EndIf}
         ${Next}
 
+        # Return code:
+        StrCpy $0 $R3
+
         # Restore the stack:
-        Pop $R2
-        Pop $R1
-        Pop $R0
-        Pop $3
-        Pop $2
-        Pop $1
-        Pop $0
+        Pop  $R3
+        Pop  $R2
+        Pop  $R1
+        Pop  $R0
+        Pop  $3
+        Pop  $2
+        Pop  $1
+        Exch $0
     FunctionEnd
 !macroend
 
 ##############################################################################
-# Function LoopMatrix $_SPEC $_ROW_CALLBACK $_COL_ID $_ARG1 $_ARG2        {{{1
+# Function LoopMatrix $_SPEC $_ROW_CALLBACK $_COL_ID $_ARG1/2 $_EXIT_CODE {{{1
 #   Loop through rows of the input text matrix.
 #
 #   This function will loop through all rows of the input text matrix, and
@@ -282,6 +305,11 @@
 #     - $_ARG1 : Caller specified item callback arg 1.
 #     - $_ARG2 : Caller specified item callback arg 2.
 #
+#   The callback function should put return code on stack.  If the return code
+#   is empty (""), LoopMatrix will continue to process the next row.
+#   Otherwise, LoopMatrix will abort row processing, and use the non-empty
+#   return code from the callback function as return code of LoopMatrix.
+#
 #   Row callback function MUST know the number of column in the specified text
 #   matrix, and restore the stack accordingly.
 #
@@ -299,7 +327,9 @@
 #     - $_ARG1         : Row callback arg 1.
 #     - $_ARG2         : Row callback arg 2.
 #   Returns:
-#     N/A
+#     - $_EXIT_CODE    : Empty if the row callback function has never returned
+#                        non-empty return code;  Otherwise, this is whatever
+#                        the row callback returned.
 ##############################################################################
 
 # Shortcuts to declare the function for installer/uninstaller:
@@ -309,7 +339,7 @@
 # Shortcut to call the function:
 !define LoopMatrix           '!insertmacro _LoopMatrixCall'
 
-!macro _LoopMatrixCall _SPEC _ROW_CALLBACK _COL_ID _ARG1 _ARG2
+!macro _LoopMatrixCall _SPEC _ROW_CALLBACK _COL_ID _ARG1 _ARG2 _EXIT_CODE
     !ifndef __UNINSTALL__
         !define _FUNC_PREFIX ""
     !else
@@ -324,6 +354,7 @@
     Push `${_ARG1}`    # Argument 1
     Push `${_ARG2}`    # Argument 2
     Call ${_FUNC_PREFIX}_LoopMatrixFunc
+    Pop  ${_EXIT_CODE}
 
     !undef _FUNC_PREFIX
 !macroend
@@ -345,6 +376,7 @@
         Push $R3        # Column count
         Push $R4        # Current row
         Push $R5        # Current column
+        Push $R6        # Return code of the row callback
 
         # Count rows: rows are delimited by newline (\n):
         ${CountFields} "$0" "$\n" $R2
@@ -357,6 +389,7 @@
         ${Log} "### Rows: $R2, Columns: $R3"
 
         # Loop all rows:
+        StrCpy $R6 ""
         ${For} $R0 1 $R2
             # Get current row (row no. $R0):
             ${WordFindS} "$0" "$\n" "+$R0" $R4
@@ -392,23 +425,37 @@
             ${EndIf}
 
             # Call the row callback function:
-            Push $3  # Row callback arg 1
-            Push $4  # Row callback arg 2
+            Push $3   # Row callback arg 1
+            Push $4   # Row callback arg 2
             Call $1
+            Pop  $R6  # Return code from the row callback
+
+            # Check return code from the row callback:
+            ${If} "$R6" != ""
+                # ??? Debug:
+                ${Log} "Abort LoopMatrix: Row callback returns [$R6]"
+
+                # Abort if non-empty return code found:
+                ${ExitFor}
+            ${EndIf}
         ${Next}
 
+        # Return code:
+        StrCpy $0 $R6
+
         # Restore the stack:
-        Pop $R5
-        Pop $R4
-        Pop $R3
-        Pop $R2
-        Pop $R1
-        Pop $R0
-        Pop $4
-        Pop $3
-        Pop $2
-        Pop $1
-        Pop $0
+        Pop  $R6
+        Pop  $R5
+        Pop  $R4
+        Pop  $R3
+        Pop  $R2
+        Pop  $R1
+        Pop  $R0
+        Pop  $4
+        Pop  $3
+        Pop  $2
+        Pop  $1
+        Exch $0
     FunctionEnd
 !macroend
 

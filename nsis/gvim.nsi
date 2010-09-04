@@ -410,8 +410,10 @@ SilentInstall             normal
 # ----------------------------------------------------------------------------
 !define VimRmShortcuts "!insertmacro _VimRmShortcuts"
 !macro _VimRmShortcuts _SHORTCUT_SPEC _SHORTCUT_ROOT
+    Push $R0
     ${LoopMatrix} "${_SHORTCUT_SPEC}" "un._VimRmFileCallback" \
-        1 "${_SHORTCUT_ROOT}" ""
+        1 "${_SHORTCUT_ROOT}" "" $R0
+    Pop $R0
 !macroend
 
 # ----------------------------------------------------------------------------
@@ -428,7 +430,7 @@ SilentInstall             normal
     Push $R0
     GetFunctionAddress $R0 "un._VimVerifyBatch"
     ${LoopMatrix} "${_BATCH_SPEC}" "un._VimRmFileCallback" \
-        1 "$WINDIR" "$R0"
+        1 "$WINDIR" "$R0" $R0
     Pop  $R0
 !macroend
 
@@ -990,7 +992,8 @@ Function VimCreatePluginDir
     ${Logged1} CreateDirectory "$0"
 
     # Create all subdirectories:
-    ${LoopArray} "${VIM_PLUGIN_SUBDIR}" "_VimCreatePluginDirCallback" "$0" ""
+    ${LoopArray} "${VIM_PLUGIN_SUBDIR}" "_VimCreatePluginDirCallback" \
+        "$0" "" $0
 
     Pop $0
 FunctionEnd
@@ -1008,7 +1011,10 @@ Function _VimCreatePluginDirCallback
 
     Pop $1  # Ignored item callback arg 2
     Pop $1  # Restore stack
-    Pop $0
+
+    # Empty return code:
+    StrCpy $0 ""
+    Exch   $0
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -1029,9 +1035,11 @@ FunctionEnd
         ${Logged1} CreateDirectory "${_SHORTCUT_ROOT}"
     ${EndIf}
 
-    # Create all specified shortcuts:
+    # Create all specified shortcuts, ignore return code.
+    Push $R0
     ${LoopMatrix} "${_SHORTCUT_SPEC}" "_VimCreateShortcutsFunc" "" \
-        "${_SHORTCUT_ROOT}" ""
+        "${_SHORTCUT_ROOT}" "" $R0
+    Pop $R0
 !macroend
 
 Function _VimCreateShortcutsFunc
@@ -1055,7 +1063,10 @@ Function _VimCreateShortcutsFunc
     Pop $3
     Pop $2
     Pop $1
-    Pop $0
+
+    # Empty return code:
+    StrCpy $0 ""
+    Exch   $0
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -1071,8 +1082,10 @@ FunctionEnd
 # ----------------------------------------------------------------------------
 !define VimCreateBatches "!insertmacro _VimCreateBatches"
 !macro _VimCreateBatches _BATCH_SPEC _BATCH_TMPL
+    Push $R0
     ${LoopMatrix} "${_BATCH_SPEC}" "_VimCreateBatchFunc" "" \
-        "${_BATCH_TMPL}" ""
+        "${_BATCH_TMPL}" "" $R0
+    Pop $R0
 !macroend
 
 Function _VimCreateBatchFunc
@@ -1094,7 +1107,10 @@ Function _VimCreateBatchFunc
     Pop $3
     Pop $2
     Pop $1
-    Pop $0
+
+    # Empty return code:
+    StrCpy $0 ""
+    Exch   $0
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -1183,7 +1199,7 @@ Function VimRegShellExt
         '"$vim_bin_path\gvim.exe" "%1"'
 
     # Register all supported extensions:
-    ${LoopArray} "${VIM_FILE_EXT_LIST}" "_VimRegFileExtCallback" "" ""
+    ${LoopArray} "${VIM_FILE_EXT_LIST}" "_VimRegFileExtCallback" "" "" $R0
 
     Pop $R0
     Pop $0
@@ -1202,7 +1218,10 @@ Function _VimRegFileExtCallback
 
     Pop $0  # Ignored item callback arg 2
     Pop $0  # Ignored item callback arg 2
-    Pop $0  # Restore $0
+
+    # Empty return code:
+    StrCpy $0 ""
+    Exch   $0
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -1232,7 +1251,10 @@ Function VimRegUninstallInfoCallback
     Pop $3
     Pop $2
     Pop $1
-    Pop $0
+
+    # Empty return code:
+    StrCpy $0 ""
+    Exch   $0
 FunctionEnd
 
 
@@ -1544,8 +1566,10 @@ SectionEnd
 
 Section -registry_update
     # Register uninstall information:
+    Push $R0
     ${LoopMatrix} "${VIM_UNINSTALL_REG_INFO}" \
-        "VimRegUninstallInfoCallback" "" "" ""
+        "VimRegUninstallInfoCallback" "" "" "" $R0
+    Pop $R0
 
     # Register Vim with OLE:
     # TODO: Translate
@@ -1738,6 +1762,9 @@ Section /o "un.$(str_unsection_plugin)" id_unsection_plugin
 SectionEnd
 
 Section /o "un.$(str_unsection_root)" id_unsection_root
+    # Do not allow user to remove this section initially:
+    SectionIn RO
+
     ${LogSectionStart}
 
     # Remove all possible config file(s):
@@ -1756,9 +1783,6 @@ SectionEnd
 
 Section -un.post
     # Remove uninstall information:
-    ${LoopMatrix} "${VIM_UNINSTALL_REG_INFO}" \
-        "un.VimRmUninstallInfoCallback" "" "" ""
-
     ${Logged3} DeleteRegKey /ifempty SHCTX \
         "${REG_KEY_UNINSTALL}\${VIM_PRODUCT_NAME}"
 
@@ -1988,7 +2012,10 @@ Function un._VimRmFileCallback
     # Restore the stack:
     Pop $2
     Pop $1
-    Pop $0
+
+    # Empty return code:
+    StrCpy $0 ""
+    Exch   $0
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -2068,26 +2095,4 @@ Function un._VimVerifyBatchCallback
 
     Pop  $R1
     Exch $R0
-FunctionEnd
-
-# ----------------------------------------------------------------------------
-# Function un.VimRmUninstallInfoCallback                                  {{{2
-#   Callback function for LoopMatrix.  It's used to remove uninstall
-#   information from windows registry.
-# ----------------------------------------------------------------------------
-Function un.VimRmUninstallInfoCallback
-    Exch      $R4     # Arg 2: Ignored.
-    ${ExchAt} 1 $R3   # Arg 1: Ignored.
-    ${ExchAt} 2 $R2   # Col 3: Registry value, ignored.
-    ${ExchAt} 3 $R1   # Col 2: Registry subkey.
-    ${ExchAt} 4 $R0   # Col 1: Registry type STR|DW, ignored.
-
-    ${Logged3} DeleteRegValue SHCTX \
-        "${REG_KEY_UNINSTALL}\${VIM_PRODUCT_NAME}" "$R1"
-
-    Pop $R4
-    Pop $R3
-    Pop $R2
-    Pop $R1
-    Pop $R0
 FunctionEnd
