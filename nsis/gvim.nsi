@@ -98,47 +98,47 @@ Var vim_batch_ver_found
 # of the macro used to parse such specification.
 #    Title (no extension)        | Target   | Arg | Work-dir
 !define VIM_DESKTOP_SHORTCUTS \
-    "gVim ${VER_SHORT}           | gvim.exe |     | $\n\
-     gVim Easy ${VER_SHORT}      | gvim.exe | -y  | $\n\
-     gVim Read only ${VER_SHORT} | gvim.exe | -R  | "
+    "gVim ${VER_SHORT}.lnk           | gvim.exe |     | $\n\
+     gVim Easy ${VER_SHORT}.lnk      | gvim.exe | -y  | $\n\
+     gVim Read only ${VER_SHORT}.lnk | gvim.exe | -R  | "
 
 # Specification for quick launch shortcuts:
 !define VIM_LAUNCH_SHORTCUTS \
-    "gVim ${VER_SHORT} | gvim.exe | | "
+    "gVim ${VER_SHORT}.lnk | gvim.exe | | "
 
 # Specification for console version startmenu shortcuts:
 !define VIM_CONSOLE_STARTMENU \
-    "Vim           | vim.exe |    | $\n\
-     Vim Read-only | vim.exe | -R | $\n\
-     Vim Diff      | vim.exe | -d | "
+    "Vim.lnk           | vim.exe |    | $\n\
+     Vim Read-only.lnk | vim.exe | -R | $\n\
+     Vim Diff.lnk      | vim.exe | -d | "
 
 # Specification for GUI version startmenu shortcuts:
 !define VIM_GUI_STARTMENU \
-    "gVim           | gvim.exe |    | $\n\
-     gVim Easy      | gvim.exe | -y | $\n\
-     gVim Read-only | gvim.exe | -R | $\n\
-     gVim Diff      | gvim.exe | -d | "
+    "gVim.lnk           | gvim.exe |    | $\n\
+     gVim Easy.lnk      | gvim.exe | -y | $\n\
+     gVim Read-only.lnk | gvim.exe | -R | $\n\
+     gVim Diff.lnk      | gvim.exe | -d | "
 
 # Specification for miscellaneous startmenu shortcuts:
 !define VIM_MISC_STARTMENU \
-    "Uninstall | uninstall-gui.exe |      | $vim_bin_path$\n\
-     Vim tutor | vimtutor.bat      |      | $vim_bin_path$\n\
-     Help      | gvim.exe          | -c h | "
+    "Uninstall.lnk | uninstall-gui.exe |      | $vim_bin_path$\n\
+     Vim tutor.lnk | vimtutor.bat      |      | $vim_bin_path$\n\
+     Help.lnk      | gvim.exe          | -c h | "
 
 # Specification for batch wrapper of console version:
 #    Title    | Target       | Arg
 !define VIM_CONSOLE_BATCH \
-    "vim      | vim.exe      |   $\n\
-     view     | vim.exe      | -R$\n\
-     vimdiff  | vim.exe      | -d$\n\
-     vimtutor | vimtutor.bat |   "
+    "vim.bat      | vim.exe      |   $\n\
+     view.bat     | vim.exe      | -R$\n\
+     vimdiff.bat  | vim.exe      | -d$\n\
+     vimtutor.bat | vimtutor.bat |   "
 
 # Specification for batch wrapper of GUI version:
 !define VIM_GUI_BATCH \
-    "gvim     | gvim.exe     |   $\n\
-     evim     | gvim.exe     | -y$\n\
-     gview    | gvim.exe     | -R$\n\
-     gvimdiff | gvim.exe     | -d"
+    "gvim.bat     | gvim.exe     |   $\n\
+     evim.bat     | gvim.exe     | -y$\n\
+     gview.bat    | gvim.exe     | -R$\n\
+     gvimdiff.bat | gvim.exe     | -d"
 
 # Subdirectories of VIMFILES, delimited by \n:
 !define VIM_PLUGIN_SUBDIR \
@@ -400,7 +400,7 @@ SilentInstall             normal
 
 # ----------------------------------------------------------------------------
 # macro VimRmShortcuts                                                    {{{2
-#   Wrapper to call un.VimRmFileSpecFunc to remove shortcuts.
+#   Macro to remove shortcuts.
 #
 #   Parameters:
 #     $_SHORTCUT_SPEC : Shortcut specification.
@@ -410,12 +410,8 @@ SilentInstall             normal
 # ----------------------------------------------------------------------------
 !define VimRmShortcuts "!insertmacro _VimRmShortcuts"
 !macro _VimRmShortcuts _SHORTCUT_SPEC _SHORTCUT_ROOT
-    Push `${_SHORTCUT_SPEC}`
-    Push `${_SHORTCUT_ROOT}`
-    Push 1         # Field index of file title in shortcut specification.
-    Push ".lnk"    # File name extension of shortcuts.
-    Push ""        # Verification callback
-    Call un.VimRmFileSpecFunc
+    ${LoopMatrix} "${_SHORTCUT_SPEC}" "un._VimRmFileCallback" \
+        1 "${_SHORTCUT_ROOT}" ""
 !macroend
 
 # ----------------------------------------------------------------------------
@@ -429,14 +425,11 @@ SilentInstall             normal
 # ----------------------------------------------------------------------------
 !define VimRmBatches "!insertmacro _VimRmBatches"
 !macro _VimRmBatches _BATCH_SPEC
-    Push `${_BATCH_SPEC}`
-    Push "$WINDIR" # Root of batch files.
-    Push 1         # Field index of file title in batch file specification.
-    Push ".bat"    # File name extension of batch files.
     Push $R0
     GetFunctionAddress $R0 "un._VimVerifyBatch"
-    Exch $R0       # Verification callback
-    Call un.VimRmFileSpecFunc
+    ${LoopMatrix} "${_BATCH_SPEC}" "un._VimRmFileCallback" \
+        1 "$WINDIR" "$R0"
+    Pop  $R0
 !macroend
 
 ##############################################################################
@@ -1038,27 +1031,27 @@ FunctionEnd
 !macroend
 
 Function _VimCreateShortcutsFunc
-    Exch      $R5     # Arg 2: Ignored
-    ${ExchAt} 1 $R4   # Arg 1: Shortcut root path
-    ${ExchAt} 2 $R3   # Col 4: Working directory of the shortcut
-    ${ExchAt} 3 $R2   # Col 3: Target arguments
-    ${ExchAt} 4 $R1   # Col 2: Shortcut target
-    ${ExchAt} 5 $R0   # Col 1: Shortcut filename
+    Exch      $5     # Arg 2: Ignored
+    ${ExchAt} 1 $4   # Arg 1: Shortcut root path
+    ${ExchAt} 2 $3   # Col 4: Working directory of the shortcut
+    ${ExchAt} 3 $2   # Col 3: Target arguments
+    ${ExchAt} 4 $1   # Col 2: Shortcut target
+    ${ExchAt} 5 $0   # Col 1: Shortcut filename
 
     # Prefix binary path to the target:
-    StrCpy $R1 "$vim_bin_path\$R1"
+    StrCpy $1 "$vim_bin_path\$1"
 
     # Create the shortcut:
-    SetOutPath $R3
-    ${Logged5} CreateShortCut "$R4\$R0.lnk" "$R1" "$R2" "$R1" 0
+    SetOutPath $3
+    ${Logged5} CreateShortCut "$4\$0" "$1" "$2" "$1" 0
 
     # Restore the stack:
-    Pop $R5
-    Pop $R4
-    Pop $R3
-    Pop $R2
-    Pop $R1
-    Pop $R0
+    Pop $5
+    Pop $4
+    Pop $3
+    Pop $2
+    Pop $1
+    Pop $0
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -1079,25 +1072,25 @@ FunctionEnd
 !macroend
 
 Function _VimCreateBatchFunc
-    Exch      $R4     # Arg 2: Ignored
-    ${ExchAt} 1 $R3   # Arg 1: Batch file template (in target environment).
-    ${ExchAt} 2 $R2   # Col 3: Argument of the target.
-    ${ExchAt} 3 $R1   # Col 2: Target of the batch.
-    ${ExchAt} 4 $R0   # Col 1: Name of the batch file (sans .bat)
+    Exch      $4     # Arg 2: Ignored
+    ${ExchAt} 1 $3   # Arg 1: Batch file template (in target environment).
+    ${ExchAt} 2 $2   # Col 3: Argument of the target.
+    ${ExchAt} 3 $1   # Col 2: Target of the batch.
+    ${ExchAt} 4 $0   # Col 1: Name of the batch file.
 
     # Create the batch file:
-    StrCpy $R0 "$WINDIR\$R0.bat"
-    StrCpy $vim_batch_exe "$R1"
-    StrCpy $vim_batch_arg "$R2"
-    ${Log} "Create batch file: [$R0], Target=[$R1], Arg=[$R2]"
-    ${LineFind} "$R3" "$R0" "" "_VimCreateBatchCallback"
+    StrCpy $0 "$WINDIR\$0"
+    StrCpy $vim_batch_exe "$1"
+    StrCpy $vim_batch_arg "$2"
+    ${Log} "Create batch file: [$0], Target=[$1], Arg=[$2]"
+    ${LineFind} "$3" "$0" "" "_VimCreateBatchCallback"
 
     # Restore the stack:
-    Pop $R4
-    Pop $R3
-    Pop $R2
-    Pop $R1
-    Pop $R0
+    Pop $4
+    Pop $3
+    Pop $2
+    Pop $1
+    Pop $0
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -1207,28 +1200,28 @@ FunctionEnd
 #   information into windows registry.
 # ----------------------------------------------------------------------------
 Function VimRegUninstallInfoCallback
-    Exch      $R4     # Arg 2: Ignored
-    ${ExchAt} 1 $R3   # Arg 1: Ignored
-    ${ExchAt} 2 $R2   # Col 3: Registry value
-    ${ExchAt} 3 $R1   # Col 2: Registry subkey
-    ${ExchAt} 4 $R0   # Col 1: Registry type STR|DW
+    Exch      $4     # Arg 2: Ignored
+    ${ExchAt} 1 $3   # Arg 1: Ignored
+    ${ExchAt} 2 $2   # Col 3: Registry value
+    ${ExchAt} 3 $1   # Col 2: Registry subkey
+    ${ExchAt} 4 $0   # Col 1: Registry type STR|DW
 
-    # $R3 - Uninstall registry key.
-    StrCpy $R3 "${REG_KEY_UNINSTALL}\${VIM_PRODUCT_NAME}"
+    # $3 - Uninstall registry key.
+    StrCpy $3 "${REG_KEY_UNINSTALL}\${VIM_PRODUCT_NAME}"
 
-    ${If}     $R0 S== "STR"
-        ${Logged4} WriteRegStr   SHCTX "$R3" "$R1" "$R2"
-    ${ElseIf} $R0 S== "DW"
-        ${Logged4} WriteRegDWORD SHCTX "$R3" "$R1" "$R2"
+    ${If}     $0 S== "STR"
+        ${Logged4} WriteRegStr   SHCTX "$3" "$1" "$2"
+    ${ElseIf} $0 S== "DW"
+        ${Logged4} WriteRegDWORD SHCTX "$3" "$1" "$2"
     ${Else}
-        ${Log} "ERROR: Unknow subkey type : [$R0]!"
+        ${Log} "ERROR: Unknow subkey type : [$0]!"
     ${EndIf}
 
-    Pop $R4
-    Pop $R3
-    Pop $R2
-    Pop $R1
-    Pop $R0
+    Pop $4
+    Pop $3
+    Pop $2
+    Pop $1
+    Pop $0
 FunctionEnd
 
 
@@ -1941,20 +1934,13 @@ Function un.VimRmPluginDir
 FunctionEnd
 
 # ----------------------------------------------------------------------------
-# Function un.VimRmFileSpecFunc                                           {{{2
-#   Remove multiple files according to file specification.
-#
-#   The file specification contains multiple lines (delimited by \n), each
-#   line is the specification for one file.  Fields in the specification is
-#   delimited by vertical bar (|).  This is used to remove shortcuts/batch
-#   files according to their specification.
+# Function un._VimRmFileCallback                                          {{{2
+#   Callback function for LoopMatrix to remove files.
 #
 #   Parameters:
-#     The following parameters should be pushed onto stack in order.
-#     - File specification.
+#     The following parameters will be put on stack by LoopMatrix in order.
+#     - Name of the file to be removed (no path).
 #     - File root.
-#     - Field index of the file title in the file specification (1 based).
-#     - File name extension (includes dot).
 #     - Address for verification callback function.  Full path name of the
 #       file to be removed will be put on the top of stack when call the
 #       callback function, return code from the callback should be put on the
@@ -1964,60 +1950,33 @@ FunctionEnd
 #   Returns:
 #     N/A
 # ----------------------------------------------------------------------------
-Function un.VimRmFileSpecFunc
+Function un._VimRmFileCallback
     # Incoming parameters has been put on the stack:
-    Exch      $R4    # Address of the verification callback
-    ${ExchAt} 1 $R3  # File name extension (includes dot).
-    ${ExchAt} 2 $R2  # Field index of the file title
-    ${ExchAt} 3 $R1  # File root
-    ${ExchAt} 4 $R0  # File specification
-    Push $R5         # Loop index, 1 based
-    Push $R6         # Number of files
-    Push $R7         # Specification for the current file
-    Push $R8         # Title of the file to be removed
-    Push $R9         # Return code from verfication callback
+    Exch      $2     # Arg 2: Addr of the verification callback if non-empty.
+    ${ExchAt} 1 $1   # Arg 1: File root.
+    ${ExchAt} 2 $0   # Name of the file to be removed.
 
-    # Remove all shortcuts one by one:
-    ${CountFields} "$R0" "$\n" $R6
-    ${For} $R5 1 $R6
-        # Specification for the current shortcut (No. $R5):
-        ${WordFindS} "$R0" "$\n" "+$R5" $R7
+    # Construct full file name:
+    StrCpy $0 "$1\$0"
 
-        # Name of the shortcut:
-        ${WordFindS} $R7 "|" "+$R2" $R8
+    # Call verification callback if provided, put return code in $1:
+    ${If} $2 == ""
+        StrCpy $1 1
+    ${Else}
+        Push $0  # Call with full name of the file to be removed.
+        Call $2  # Call verification callback.
+        Pop  $1  # Return code. 0 - Skip, 1 - OK to remove.
+    ${EndIf}
 
-        # Trim white space from both ends:
-        ${TrimString} $R8 $R8
-
-        # Construct full file name:
-        StrCpy $R8 "$R1\$R8$R3"
-
-        # Call verification callback if provided:
-        ${If} $R4 == ""
-            StrCpy $R9 1
-        ${Else}
-            Push $R8  # Call with full name of the file to be removed.
-            Call $R4  # Call verification callback.
-            Pop  $R9  # Return code. 0 - Skip, 1 - OK to remove.
-        ${EndIf}
-
-        # Remove the file if the verification function indicates it's OK:
-        ${If} $R9 = 1
-            ${Logged1} Delete "$R8"
-        ${EndIf}
-    ${Next}
+    # Remove the file if the verification function indicates it's OK:
+    ${If} $1 = 1
+        ${Logged1} Delete "$0"
+    ${EndIf}
 
     # Restore the stack:
-    Pop $R9
-    Pop $R8
-    Pop $R7
-    Pop $R6
-    Pop $R5
-    Pop $R4
-    Pop $R3
-    Pop $R2
-    Pop $R1
-    Pop $R0
+    Pop $2
+    Pop $1
+    Pop $0
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -2035,26 +1994,26 @@ FunctionEnd
 #     1 - It's OK to remove the file.
 # ----------------------------------------------------------------------------
 Function un._VimVerifyBatch
-    Exch $R0  # Full path name of the file to be removed.
+    Exch $0  # Full path name of the file to be removed.
 
-    ${If} ${FileExists} "$R0"
+    ${If} ${FileExists} "$0"
         # Search version string in the batch file:
         StrCpy $vim_batch_ver_found 0
-        ${LineFind} "$R0" "/NUL" "1:-1" "un._VimVerifyBatchCallback"
+        ${LineFind} "$0" "/NUL" "1:-1" "un._VimVerifyBatchCallback"
 
         ${If} $vim_batch_ver_found <> 1
-            ${Log} "WARNING: [$R0] cannot be removed since it is installed \
+            ${Log} "WARNING: [$0] cannot be removed since it is installed \
                     by a different version of Vim."
         ${EndIf}
 
-        StrCpy $R0 $vim_batch_ver_found
+        StrCpy $0 $vim_batch_ver_found
     ${Else}
-        ${Log} "WARNING: [$R0] has already been removed."
-        StrCpy $R0 0
+        ${Log} "WARNING: [$0] has already been removed."
+        StrCpy $0 0
     ${EndIf}
 
     # Output:
-    Exch $R0
+    Exch $0
 FunctionEnd
 
 # ----------------------------------------------------------------------------

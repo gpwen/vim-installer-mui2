@@ -382,6 +382,12 @@
                 # The caller specified a column, only put content of that
                 # column on the stack:
                 ${WordFindS} "$R4" "|" "+$2" $R5
+                ${TrimString} $R5 $R5
+
+                # ??? Debug:
+                ${Log} "### Row $R0, Col $2: [$R5]"
+
+                # Put column on the stack:
                 Push $R5
             ${EndIf}
 
