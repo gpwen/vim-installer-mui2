@@ -174,7 +174,7 @@ Var vim_batch_ver_found
 !define VIM_SH_EXT_CLSID  "{51EEE242-AD87-11d3-9C1E-0090278BBD99}"
 
 # List of file extensions to be registered:
-!define VIM_FILE_EXT_LIST ".htm|.html|.vim|*"
+!define VIM_FILE_EXT_LIST ".htm $\n .html $\n .vim $\n *"
 
 Name                      "${VIM_PRODUCT_NAME}"
 OutFile                   gvim${VER_SHORT_NDOT}.exe
@@ -439,8 +439,9 @@ SilentInstall             normal
 # ----------------------------------------------------------------------------
 # Declaration of external functions                                       {{{2
 # ----------------------------------------------------------------------------
-${DECLARE_LoopMatrix}
-${DECLARE_SimpleLogFunctions}
+${DECLARE_LoopArray}           # ${LoopArray}
+${DECLARE_LoopMatrix}          # ${LoopMatrix}
+${DECLARE_SimpleLogFunctions}  # Declare all functions for simple log
 
 # ----------------------------------------------------------------------------
 # Function .onInit                                                        {{{2
@@ -956,17 +957,17 @@ FunctionEnd
 #     Required key on the top of the stack.
 # ----------------------------------------------------------------------------
 Function VimGetOldVerKeyFunc
-    Exch $R0  # Index of the un-install key
+    Exch $0  # Index of the un-install key
 
-    ${If} $R0 >= $vim_old_ver_count
-        StrCpy $R0 ""
+    ${If} $0 >= $vim_old_ver_count
+        StrCpy $0 ""
     ${Else}
         # WordFindS uses 1 based index:
-        IntOp $R0 $R0 + 1
-        ${WordFindS} $vim_old_ver_keys "$\r$\n" "+$R0" $R0
+        IntOp $0 $0 + 1
+        ${WordFindS} $vim_old_ver_keys "$\r$\n" "+$0" $0
     ${EndIf}
 
-    Exch $R0
+    Exch $0
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -979,32 +980,35 @@ FunctionEnd
 #     N/A
 # ----------------------------------------------------------------------------
 Function VimCreatePluginDir
-    Exch $R0  # Name of the environment string for plugin root.
-    Push $R1
-    Push $R2
-    Push $R3
+    Exch $0  # Name of the environment string for plugin root.
 
     # Determine plugin root directory.
-    # $R0 - Plugin root directory
-    ${VimGetPluginRoot} $R0 $R0
+    # $0 - Plugin root directory
+    ${VimGetPluginRoot} $0 $0
 
-    # Create vimfiles:
-    ${Logged1} CreateDirectory "$R0"
+    # Create plugin root directory (vimfiles):
+    ${Logged1} CreateDirectory "$0"
 
     # Create all subdirectories:
-    # $R1 - Loop index, 1 based
-    # $R2 - Number of subdirectories
-    # $R3 - Current subdirectory
-    ${CountFields} "${VIM_PLUGIN_SUBDIR}" "$\n" $R2
-    ${For} $R1 1 $R2
-        ${WordFindS} "${VIM_PLUGIN_SUBDIR}" "$\n" "+$R1" $R3
-        ${Logged1} CreateDirectory "$R0\$R3"
-    ${Next}
+    ${LoopArray} "${VIM_PLUGIN_SUBDIR}" "_VimCreatePluginDirCallback" "$0" ""
 
-    Pop $R3
-    Pop $R2
-    Pop $R1
-    Pop $R0
+    Pop $0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function _VimCreatePluginDirCallback                                    {{{2
+#   Callback function for LoopArray.  It's used to create one plugin
+#   subdirectory.
+# ----------------------------------------------------------------------------
+Function _VimCreatePluginDirCallback
+    ${ExchAt} 1 $1  # Item callback arg 1: Plugin root
+    ${ExchAt} 2 $0  # Array item.
+
+    ${Logged1} CreateDirectory "$1\$0"
+
+    Pop $1  # Ignored item callback arg 2
+    Pop $1  # Restore stack
+    Pop $0
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -1154,16 +1158,15 @@ FunctionEnd
 #     N/A
 # ----------------------------------------------------------------------------
 Function VimRegShellExt
-    Exch $R0  # Full path of the vim shell extension
-    Push $R1
-    Push $R2
+    Exch $0   # Full path of the vim shell extension
+    Push $R0
 
     # Register inproc server:
-    # $R1 - CLSID registry key.
-    StrCpy $R1 "CLSID\${VIM_SH_EXT_CLSID}"
-    ${Logged4} WriteRegStr HKCR "$R1" "" "${VIM_SH_EXT_NAME}"
-    ${Logged4} WriteRegStr HKCR "$R1\InProcServer32" "" "$R0"
-    ${Logged4} WriteRegStr HKCR "$R1\InProcServer32" \
+    # $R0 - CLSID registry key.
+    StrCpy $R0 "CLSID\${VIM_SH_EXT_CLSID}"
+    ${Logged4} WriteRegStr HKCR "$R0" "" "${VIM_SH_EXT_NAME}"
+    ${Logged4} WriteRegStr HKCR "$R0\InProcServer32" "" "$0"
+    ${Logged4} WriteRegStr HKCR "$R0\InProcServer32" \
         "ThreadingModel" "Apartment"
 
     # Register shell extension:
@@ -1180,18 +1183,26 @@ Function VimRegShellExt
         '"$vim_bin_path\gvim.exe" "%1"'
 
     # Register all supported extensions:
-    # $R0 - Loop index, 1 based
-    # $R1 - Number of file extensions to register
-    # $R2 - File extension to register
-    ${CountFields} "${VIM_FILE_EXT_LIST}" "|" $R1
-    ${For} $R0 1 $R1
-        ${WordFindS} "${VIM_FILE_EXT_LIST}" "|" "+$R0" $R2
-        ${Logged4} WriteRegStr HKCR "$R2\OpenWithList\gvim.exe" "" ""
-    ${Next}
+    ${LoopArray} "${VIM_FILE_EXT_LIST}" "_VimRegFileExtCallback" "" ""
 
-    Pop $R2
-    Pop $R1
     Pop $R0
+    Pop $0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function _VimRegFileExtCallback                                         {{{2
+#   Callback function for LoopArray.  It's used to register one file extension
+#   supported by Vim.
+# ----------------------------------------------------------------------------
+Function _VimRegFileExtCallback
+    ${ExchAt} 2 $0  # Array item.
+
+    # Register supported file extension:
+    ${Logged4} WriteRegStr HKCR "$0\OpenWithList\gvim.exe" "" ""
+
+    Pop $0  # Ignored item callback arg 2
+    Pop $0  # Ignored item callback arg 2
+    Pop $0  # Restore $0
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -1777,6 +1788,7 @@ SectionEnd
 # Declaration of external functions                                       {{{2
 # ----------------------------------------------------------------------------
 ${UnStrLoc}              # ${UnStrLoc}
+${DECLARE_UnLoopArray}   # ${LoopArray}
 ${DECLARE_UnLoopMatrix}  # ${LoopMatrix}
 
 # ----------------------------------------------------------------------------
