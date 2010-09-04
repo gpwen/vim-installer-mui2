@@ -1033,7 +1033,7 @@ FunctionEnd
     ${EndIf}
 
     # Create all specified shortcuts:
-    ${LoopMatrix} "${_SHORTCUT_SPEC}" "_VimCreateShortcutsFunc" \
+    ${LoopMatrix} "${_SHORTCUT_SPEC}" "_VimCreateShortcutsFunc" "" \
         "${_SHORTCUT_ROOT}" ""
 !macroend
 
@@ -1074,7 +1074,7 @@ FunctionEnd
 # ----------------------------------------------------------------------------
 !define VimCreateBatches "!insertmacro _VimCreateBatches"
 !macro _VimCreateBatches _BATCH_SPEC _BATCH_TMPL
-    ${LoopMatrix} "${_BATCH_SPEC}" "_VimCreateBatchFunc" \
+    ${LoopMatrix} "${_BATCH_SPEC}" "_VimCreateBatchFunc" "" \
         "${_BATCH_TMPL}" ""
 !macroend
 
@@ -1541,7 +1541,7 @@ SectionEnd
 Section -registry_update
     # Register uninstall information:
     ${LoopMatrix} "${VIM_UNINSTALL_REG_INFO}" \
-        "VimRegUninstallInfoCallback" "" ""
+        "VimRegUninstallInfoCallback" "" "" ""
 
     # Register Vim with OLE:
     # TODO: Translate
@@ -1753,7 +1753,7 @@ SectionEnd
 Section -un.post
     # Remove uninstall information:
     ${LoopMatrix} "${VIM_UNINSTALL_REG_INFO}" \
-        "un.VimRmUninstallInfoCallback" "" ""
+        "un.VimRmUninstallInfoCallback" "" "" ""
 
     ${Logged3} DeleteRegKey /ifempty SHCTX \
         "${REG_KEY_UNINSTALL}\${VIM_PRODUCT_NAME}"

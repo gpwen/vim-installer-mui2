@@ -253,12 +253,12 @@
 !macroend
 
 ##############################################################################
-# Function LoopMatrix $_SPEC $_ROW_CALLBACK $_ARG1 $_ARG2                 {{{1
+# Function LoopMatrix $_SPEC $_ROW_CALLBACK $_COL_ID $_ARG1 $_ARG2        {{{1
 #   Loop through rows of the input text matrix.
 #
 #   This function will loop through all rows of the input text matrix, and
 #   call the row callback function for each row, with content of all columns
-#   of that row pushed onto stack.
+#   (or a specified column) of that row pushed onto stack.
 #
 #   Rows in the matrix should be delimited by newline (\n), columns in each
 #   row should be delimited by vertical bar (|).  All rows must have identical
@@ -269,16 +269,20 @@
 #   for that kind of item, otherwise the word manipulation function used here
 #   (WordFindS) will fail.
 #
-#   The following content will be pushed onto stack when calling the row
-#   callback function:
+#   The following content will be pushed onto the stack when calling the row
+#   callback function, if $_COL_ID is empty:
 #     - $_COL1 : Column 1 of the current row.
 #     - $_COL2 : Column 2 of the current row.
 #     ...
 #     - $_COLn : Column n of the current row.
 #     - $_ARG1 : Caller specified item callback arg 1.
 #     - $_ARG2 : Caller specified item callback arg 2.
+#   Otherwise, the following column will be pushed on the stack:
+#     - $_COLk : Column specified by $_COL_ID.
+#     - $_ARG1 : Caller specified item callback arg 1.
+#     - $_ARG2 : Caller specified item callback arg 2.
 #
-#   Row callback function MUST aware number of column in the specified text
+#   Row callback function MUST know the number of column in the specified text
 #   matrix, and restore the stack accordingly.
 #
 #   NSIS script does not support array, this function is a extremely
@@ -288,6 +292,10 @@
 #     The following parameters should be pushed onto stack in order.
 #     - $_SPEC         : Matrix specification.
 #     - $_ROW_CALLBACK : Row callback function.
+#     - $_COL_ID       : If non-empty, only this column (the ID is 1 based)
+#                        will be put onto the stack when calling row callback
+#                        function; Otherwise, all columns will be put onto the
+#                        stack.
 #     - $_ARG1         : Row callback arg 1.
 #     - $_ARG2         : Row callback arg 2.
 #   Returns:
@@ -301,19 +309,20 @@
 # Shortcut to call the function:
 !define LoopMatrix           '!insertmacro _LoopMatrixCall'
 
-!macro _LoopMatrixCall _SPEC _ROW_CALLBACK _ARG1 _ARG2
+!macro _LoopMatrixCall _SPEC _ROW_CALLBACK _COL_ID _ARG1 _ARG2
     !ifndef __UNINSTALL__
         !define _FUNC_PREFIX ""
     !else
         !define _FUNC_PREFIX "un."
     !endif
 
-    Push `${_SPEC}`  # Matrix specification
+    Push `${_SPEC}`    # Matrix specification
     Push $R0
     GetFunctionAddress $R0 `${_ROW_CALLBACK}`
-    Exch $R0         # Address of row callback
-    Push `${_ARG1}`  # Argument 1
-    Push `${_ARG2}`  # Argument 2
+    Exch $R0           # Address of row callback
+    Push `${_COL_ID}`  # Column ID
+    Push `${_ARG1}`    # Argument 1
+    Push `${_ARG2}`    # Argument 2
     Call ${_FUNC_PREFIX}_LoopMatrixFunc
 
     !undef _FUNC_PREFIX
@@ -323,10 +332,11 @@
 !macro _DECLARE_LoopMatrix _PREFIX
     Function ${_PREFIX}_LoopMatrixFunc
         # Incoming parameters:
-        Exch      $3    # Row callback arg 2
-        ${ExchAt} 1 $2  # Row callback arg 1
-        ${ExchAt} 2 $1  # Row callback address
-        ${ExchAt} 3 $0  # Matrix specification
+        Exch      $4    # $_ARG2
+        ${ExchAt} 1 $3  # $_ARG1
+        ${ExchAt} 2 $2  # $_COL_ID
+        ${ExchAt} 3 $1  # $_ROW_CALLBACK
+        ${ExchAt} 4 $0  # $_SPEC
 
         # Local working variables:
         Push $R0        # Row index, 1 based
@@ -351,26 +361,33 @@
             # Get current row (row no. $R0):
             ${WordFindS} "$0" "$\n" "+$R0" $R4
 
-            # Loop all columns on the current row:
-            ${For} $R1 1 $R3
-                # Get column no. $R1:
-                ${WordFindS} "$R4" "|" "+$R1" $R5
+            ${If} "$2" == ""
+                # No column ID specified, loop all columns on the current row:
+                ${For} $R1 1 $R3
+                    # Get column no. $R1:
+                    ${WordFindS} "$R4" "|" "+$R1" $R5
 
-                # Trim white space from both ends of the column.  WordFindS
-                # cannot support empty fields correctly, so we have to put
-                # white spaces in empty fields and trim them afterward.
-                ${TrimString} $R5 $R5
+                    # Trim white space from both ends of the column.  WordFindS
+                    # cannot support empty fields correctly, so we have to put
+                    # white spaces in empty fields and trim them afterward.
+                    ${TrimString} $R5 $R5
 
-                # ??? Debug:
-                ${Log} "### Row $R0, Col $R1: [$R5]"
+                    # ??? Debug:
+                    ${Log} "### Row $R0, Col $R1: [$R5]"
 
-                # Put column on the stack:
+                    # Put column on the stack:
+                    Push $R5
+                ${Next}
+            ${Else}
+                # The caller specified a column, only put content of that
+                # column on the stack:
+                ${WordFindS} "$R4" "|" "+$2" $R5
                 Push $R5
-            ${Next}
+            ${EndIf}
 
             # Call the row callback function:
-            Push $2  # Row callback arg 1
-            Push $3  # Row callback arg 2
+            Push $3  # Row callback arg 1
+            Push $4  # Row callback arg 2
             Call $1
         ${Next}
 
@@ -381,6 +398,7 @@
         Pop $R2
         Pop $R1
         Pop $R0
+        Pop $4
         Pop $3
         Pop $2
         Pop $1
