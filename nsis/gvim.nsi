@@ -256,6 +256,20 @@ SilentInstall             normal
 ##############################################################################
 
 # ----------------------------------------------------------------------------
+# macro VimSelectRegView                                                  {{{2
+#   Select registry view.  Select 32-bit view on 32-bit systems, and 64-bit
+#   view on 64-bit systems.
+# ----------------------------------------------------------------------------
+!define VimSelectRegView "!insertmacro _VimSelectRegView"
+!macro _VimSelectRegView
+    ${If} ${RunningX64}
+        ${Logged1} SetRegView 64
+    ${Else}
+        ${Logged1} SetRegView 32
+    ${EndIf}
+!macroend
+
+# ----------------------------------------------------------------------------
 # macro VimVerifyRootDir                                                  {{{2
 #   Verify VIM install path $_INPUT_DIR.  If the input path is a valid VIM
 #   install path (ends with "vim"), $_VALID will be set to 1; Otherwise
@@ -286,10 +300,10 @@ SilentInstall             normal
         "SOFTWARE\Microsoft\Windows NT\CurrentVersion" "CurrentVersion"
     ${If} ${Errors}
         # Windows 95/98/ME
-        ${Logged2} File /oname=vim.exe ${VIMSRC}\vimd32.exe
+        ${Logged2} File /oname=vim.exe "${VIMSRC}\vimd32.exe"
     ${Else}
         # Windows NT/2000/XT
-        ${Logged2} File /oname=vim.exe ${VIMSRC}\vimw32.exe
+        ${Logged2} File /oname=vim.exe "${VIMSRC}\vimw32.exe"
     ${EndIf}
 !macroend
 
@@ -467,10 +481,8 @@ Function .onInit
     # Use shell folders for "all" user:
     ${Logged1} SetShellVarContext all
 
-    # 64-bit view should be used on Windows x64:
-    ${If} ${RunningX64}
-        ${Logged1} SetRegView 64
-    ${EndIf}
+    # Set correct registry view:
+    ${VimSelectRegView}
 
     # Read all Vim uninstall keys from registry.  Please note we only support
     # limited number of old version.  Extra version will be ignored!
@@ -869,7 +881,7 @@ Function VimFinalCheck
 
     # Check install path:
     StrCpy $vim_install_root "$INSTDIR"
-    ${VimVerifyRootDir} $vim_install_root $R0
+    ${VimVerifyRootDir} "$vim_install_root" $R0
     ${If} $R0 = 0
         ${ShowErr} $(str_msg_invalid_root)
         Pop $R0
@@ -1198,7 +1210,7 @@ Function VimRegShellExt
         "Applications\gvim.exe\shell\edit\command" "" \
         '"$vim_bin_path\gvim.exe" "%1"'
 
-    # Register all supported extensions:
+    # Register all supported file extensions:
     ${LoopArray} "${VIM_FILE_EXT_LIST}" "_VimRegFileExtCallback" "" "" $R0
 
     Pop $R0
@@ -1299,60 +1311,60 @@ Section $(str_section_exe) id_section_exe
 
     ${LogSectionStart}
 
-    ${Logged1} SetOutPath $vim_bin_path
-    ${Logged2} File /oname=gvim.exe     ${VIMSRC}\gvim_ole.exe
-    ${Logged2} File /oname=uninstal.exe ${VIMSRC}\uninstalw32.exe
-    ${Logged1} File ${VIMSRC}\vimrun.exe
-    ${Logged2} File /oname=xxd.exe      ${VIMSRC}\xxdw32.exe
-    ${Logged1} File ${VIMTOOLS}\diff.exe
-    ${Logged1} File ${VIMRT}\vimtutor.bat
-    ${Logged1} File ${VIMRT}\README.txt
-    ${Logged1} File ${VIMRT}\uninstal.txt
-    ${Logged1} File ${VIMRT}\*.vim
-    ${Logged1} File ${VIMRT}\rgb.txt
+    ${Logged1} SetOutPath "$vim_bin_path"
+    ${Logged2} File /oname=gvim.exe     "${VIMSRC}\gvim_ole.exe"
+    ${Logged2} File /oname=uninstal.exe "${VIMSRC}\uninstalw32.exe"
+    ${Logged2} File /oname=xxd.exe      "${VIMSRC}\xxdw32.exe"
+    ${Logged1} File "${VIMSRC}\vimrun.exe"
+    ${Logged1} File "${VIMTOOLS}\diff.exe"
+    ${Logged1} File "${VIMRT}\vimtutor.bat"
+    ${Logged1} File "${VIMRT}\README.txt"
+    ${Logged1} File "${VIMRT}\uninstal.txt"
+    ${Logged1} File "${VIMRT}\*.vim"
+    ${Logged1} File "${VIMRT}\rgb.txt"
 
-    ${Logged1} SetOutPath $vim_bin_path\colors
-    ${Logged1} File ${VIMRT}\colors\*.*
+    ${Logged1} SetOutPath "$vim_bin_path\colors"
+    ${Logged1} File "${VIMRT}\colors\*.*"
 
-    ${Logged1} SetOutPath $vim_bin_path\compiler
-    ${Logged1} File ${VIMRT}\compiler\*.*
+    ${Logged1} SetOutPath "$vim_bin_path\compiler"
+    ${Logged1} File "${VIMRT}\compiler\*.*"
 
-    ${Logged1} SetOutPath $vim_bin_path\doc
-    ${Logged1} File ${VIMRT}\doc\*.txt
-    ${Logged1} File ${VIMRT}\doc\tags
+    ${Logged1} SetOutPath "$vim_bin_path\doc"
+    ${Logged1} File "${VIMRT}\doc\*.txt"
+    ${Logged1} File "${VIMRT}\doc\tags"
 
-    ${Logged1} SetOutPath $vim_bin_path\ftplugin
-    ${Logged1} File ${VIMRT}\ftplugin\*.*
+    ${Logged1} SetOutPath "$vim_bin_path\ftplugin"
+    ${Logged1} File "${VIMRT}\ftplugin\*.*"
 
-    ${Logged1} SetOutPath $vim_bin_path\indent
-    ${Logged1} File ${VIMRT}\indent\*.*
+    ${Logged1} SetOutPath "$vim_bin_path\indent"
+    ${Logged1} File "${VIMRT}\indent\*.*"
 
-    ${Logged1} SetOutPath $vim_bin_path\macros
-    ${Logged1} File ${VIMRT}\macros\*.*
+    ${Logged1} SetOutPath "$vim_bin_path\macros"
+    ${Logged1} File "${VIMRT}\macros\*.*"
 
-    ${Logged1} SetOutPath $vim_bin_path\plugin
-    ${Logged1} File ${VIMRT}\plugin\*.*
+    ${Logged1} SetOutPath "$vim_bin_path\plugin"
+    ${Logged1} File "${VIMRT}\plugin\*.*"
 
-    ${Logged1} SetOutPath $vim_bin_path\autoload
-    ${Logged1} File ${VIMRT}\autoload\*.*
+    ${Logged1} SetOutPath "$vim_bin_path\autoload"
+    ${Logged1} File "${VIMRT}\autoload\*.*"
 
-    ${Logged1} SetOutPath $vim_bin_path\autoload\xml
-    ${Logged1} File ${VIMRT}\autoload\xml\*.*
+    ${Logged1} SetOutPath "$vim_bin_path\autoload\xml"
+    ${Logged1} File "${VIMRT}\autoload\xml\*.*"
 
-    ${Logged1} SetOutPath $vim_bin_path\syntax
-    ${Logged1} File ${VIMRT}\syntax\*.*
+    ${Logged1} SetOutPath "$vim_bin_path\syntax"
+    ${Logged1} File "${VIMRT}\syntax\*.*"
 
-    ${Logged1} SetOutPath $vim_bin_path\spell
-    ${Logged1} File ${VIMRT}\spell\*.txt
-    ${Logged1} File ${VIMRT}\spell\*.vim
-    ${Logged1} File ${VIMRT}\spell\*.spl
-    ${Logged1} File ${VIMRT}\spell\*.sug
+    ${Logged1} SetOutPath "$vim_bin_path\spell"
+    ${Logged1} File "${VIMRT}\spell\*.txt"
+    ${Logged1} File "${VIMRT}\spell\*.vim"
+    ${Logged1} File "${VIMRT}\spell\*.spl"
+    ${Logged1} File "${VIMRT}\spell\*.sug"
 
-    ${Logged1} SetOutPath $vim_bin_path\tools
-    ${Logged1} File ${VIMRT}\tools\*.*
+    ${Logged1} SetOutPath "$vim_bin_path\tools"
+    ${Logged1} File "${VIMRT}\tools\*.*"
 
-    ${Logged1} SetOutPath $vim_bin_path\tutor
-    ${Logged1} File ${VIMRT}\tutor\*.*
+    ${Logged1} SetOutPath "$vim_bin_path\tutor"
+    ${Logged1} File "${VIMRT}\tutor\*.*"
 
     ${LogSectionEnd}
 SectionEnd
@@ -1362,7 +1374,7 @@ Section $(str_section_console) id_section_console
 
     ${LogSectionStart}
 
-    ${Logged1} SetOutPath $vim_bin_path
+    ${Logged1} SetOutPath "$vim_bin_path"
     ${VimExtractConsoleExe}
 
     # Flags that console version has been installed:
@@ -1484,11 +1496,11 @@ Section $(str_section_vim_rc) id_section_vimrc
 
     # Write default _vimrc only if the file does not exist.  We'll test for
     # .vimrc (and its short version) and _vimrc:
-    SetOutPath $vim_install_root
+    SetOutPath "$vim_install_root"
     ${IfNot}    ${FileExists} "$vim_install_root\_vimrc"
     ${AndIfNot} ${FileExists} "$vim_install_root\.vimrc"
     ${AndIfNot} ${FileExists} "$vim_install_root\vimrc~1"
-        ${Logged2} File /oname=_vimrc data\mswin_vimrc.vim
+        ${Logged2} File /oname=_vimrc "data\mswin_vimrc.vim"
     ${EndIf}
 
     ${LogSectionEnd}
@@ -1529,8 +1541,8 @@ SectionEnd
             "${VIMSRC}\VisVim\VisVim.dll" \
             "$vim_bin_path\VisVim.dll" "$vim_bin_path"
 
-        ${Logged1} SetOutPath $vim_bin_path
-        ${Logged1} File ${VIMSRC}\VisVim\README_VisVim.txt
+        ${Logged1} SetOutPath "$vim_bin_path"
+        ${Logged1} File "${VIMSRC}\VisVim\README_VisVim.txt"
 
         ${LogSectionEnd}
     SectionEnd
@@ -1542,14 +1554,14 @@ SectionEnd
 
         ${LogSectionStart}
 
-        SetOutPath $vim_bin_path\lang
-        File /r ${VIMRT}\lang\*.*
-        SetOutPath $vim_bin_path\keymap
-        File ${VIMRT}\keymap\README.txt
-        File ${VIMRT}\keymap\*.vim
+        SetOutPath "$vim_bin_path\lang"
+        File /r "${VIMRT}\lang\*.*"
+        SetOutPath "$vim_bin_path\keymap"
+        File "${VIMRT}\keymap\README.txt"
+        File "${VIMRT}\keymap\*.vim"
 
         # Install NLS support DLLs:
-        SetOutPath $vim_bin_path
+        SetOutPath "$vim_bin_path"
         !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
             "${VIMRT}\libintl.dll" \
             "$vim_bin_path\libintl.dll" "$vim_bin_path"
@@ -1641,25 +1653,31 @@ Section "un.$(str_unsection_register)" id_unsection_register
     # TODO: Any special handling on x64?
     !ifdef HAVE_VIS_VIM
         !insertmacro UninstallLib REGDLL NOTSHARED REBOOT_NOTPROTECTED \
-            "$INSTDIR\VisVim.dll"
+            "$vim_bin_path\VisVim.dll"
     !endif
 
     # Remove gvimext.dll:
     !define LIBRARY_SHELL_EXTENSION
 
-    ${If} ${FileExists} "$INSTDIR\gvimext64.dll"
+    ${If} ${FileExists} "$vim_bin_path\gvimext64.dll"
+        # Remove 64-bit shell extension:
         !define LIBRARY_X64
         !insertmacro UninstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
-            "$INSTDIR\gvimext64.dll"
+            "$vim_bin_path\gvimext64.dll"
         !undef LIBRARY_X64
     ${EndIf}
 
-    ${If} ${FileExists} "$INSTDIR\gvimext32.dll"
+    ${If} ${FileExists} "$vim_bin_path\gvimext32.dll"
+        # Remove 32-bit shell extension:
         !insertmacro UninstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
-            "$INSTDIR\gvimext32.dll"
+            "$vim_bin_path\gvimext32.dll"
     ${EndIf}
 
     !undef LIBRARY_SHELL_EXTENSION
+
+    # Registry view might be changed in the above code, we should restore it
+    # to correct setting:
+    ${VimSelectRegView}
 
     # Delete quick launch:
     ${VimRmShortcuts} "${VIM_LAUNCH_SHORTCUTS}" "$QUICKLAUNCH"
@@ -1688,10 +1706,19 @@ Section "un.$(str_unsection_register)" id_unsection_register
     # Delete batch files:
     ${VimRmBatches} "${VIM_CONSOLE_BATCH}$\n${VIM_GUI_BATCH}"
 
-    # Delete log file:
+    # Delete install log:
     !ifdef VIM_LOG_FILE
-        ${Logged1} Delete "$INSTDIR\${VIM_LOG_FILE}"
+        ${Logged1} Delete "$vim_bin_path\${VIM_LOG_FILE}"
     !endif
+
+    # Unregister gvim with OLE:
+    # TODO: Translate
+    DetailPrint "Attempting to unregister Vim with OLE ..."
+    ${Logged1} ExecWait '"$vim_bin_path\gvim.exe" -silent -unregister'
+
+    # Remove uninstall information:
+    ${Logged3} DeleteRegKey /ifempty SHCTX \
+        "${REG_KEY_UNINSTALL}\${VIM_PRODUCT_NAME}"
 
     # We may have been put to the background when uninstall did something.
     BringToFront
@@ -1705,36 +1732,36 @@ Section "un.$(str_unsection_exe)" id_unsection_exe
     # Remove NLS support DLLs.  This is overkill.
     !ifdef HAVE_NLS
         !insertmacro UninstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
-            "$INSTDIR\libintl.dll"
+            "$vim_bin_path\libintl.dll"
 
         !ifdef HAVE_ICONV
             !insertmacro UninstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
-                "$INSTDIR\iconv.dll"
+                "$vim_bin_path\iconv.dll"
         !endif
     !endif
 
     # Remove everything but *.dll files.  Avoids that a lot remains when
     # gvimext.dll cannot be deleted.
     ClearErrors
-    ${Logged2} RMDir /r "$INSTDIR\VisVim"   # TODO: Does this exist?
-    ${Logged2} RMDir /r "$INSTDIR\autoload"
-    ${Logged2} RMDir /r "$INSTDIR\colors"
-    ${Logged2} RMDir /r "$INSTDIR\compiler"
-    ${Logged2} RMDir /r "$INSTDIR\doc"
-    ${Logged2} RMDir /r "$INSTDIR\ftplugin"
-    ${Logged2} RMDir /r "$INSTDIR\indent"
-    ${Logged2} RMDir /r "$INSTDIR\keymap"
-    ${Logged2} RMDir /r "$INSTDIR\lang"
-    ${Logged2} RMDir /r "$INSTDIR\macros"
-    ${Logged2} RMDir /r "$INSTDIR\plugin"
-    ${Logged2} RMDir /r "$INSTDIR\spell"
-    ${Logged2} RMDir /r "$INSTDIR\syntax"
-    ${Logged2} RMDir /r "$INSTDIR\tools"
-    ${Logged2} RMDir /r "$INSTDIR\tutor"
-    ${Logged1} Delete "$INSTDIR\*.bat"
-    ${Logged1} Delete "$INSTDIR\*.exe"
-    ${Logged1} Delete "$INSTDIR\*.txt"
-    ${Logged1} Delete "$INSTDIR\*.vim"
+    ${Logged2} RMDir /r "$vim_bin_path\VisVim"
+    ${Logged2} RMDir /r "$vim_bin_path\autoload"
+    ${Logged2} RMDir /r "$vim_bin_path\colors"
+    ${Logged2} RMDir /r "$vim_bin_path\compiler"
+    ${Logged2} RMDir /r "$vim_bin_path\doc"
+    ${Logged2} RMDir /r "$vim_bin_path\ftplugin"
+    ${Logged2} RMDir /r "$vim_bin_path\indent"
+    ${Logged2} RMDir /r "$vim_bin_path\keymap"
+    ${Logged2} RMDir /r "$vim_bin_path\lang"
+    ${Logged2} RMDir /r "$vim_bin_path\macros"
+    ${Logged2} RMDir /r "$vim_bin_path\plugin"
+    ${Logged2} RMDir /r "$vim_bin_path\spell"
+    ${Logged2} RMDir /r "$vim_bin_path\syntax"
+    ${Logged2} RMDir /r "$vim_bin_path\tools"
+    ${Logged2} RMDir /r "$vim_bin_path\tutor"
+    ${Logged1} Delete "$vim_bin_path\*.bat"
+    ${Logged1} Delete "$vim_bin_path\*.exe"
+    ${Logged1} Delete "$vim_bin_path\*.txt"
+    ${Logged1} Delete "$vim_bin_path\*.vim"
 
     ${If} ${Errors}
         ${ShowErr} $(str_msg_rm_exe_fail)
@@ -1742,7 +1769,7 @@ Section "un.$(str_unsection_exe)" id_unsection_exe
 
     # No error message if the "vim62" directory can't be removed, the
     # gvimext.dll may still be there.
-    ${Logged1} RMDir "$INSTDIR"
+    ${Logged1} RMDir "$vim_bin_path"
 
     ${LogSectionEnd}
 SectionEnd
@@ -1768,12 +1795,12 @@ Section /o "un.$(str_unsection_root)" id_unsection_root
     ${LogSectionStart}
 
     # Remove all possible config file(s):
-    ${Logged1} Delete $vim_install_root\_vimrc
-    ${Logged1} Delete $vim_install_root\.vimrc
-    ${Logged1} Delete $vim_install_root\vimrc~1
+    ${Logged1} Delete "$vim_install_root\_vimrc"
+    ${Logged1} Delete "$vim_install_root\.vimrc"
+    ${Logged1} Delete "$vim_install_root\vimrc~1"
 
     # Remove install root if it is empty:
-    ${Logged1} RMDir $vim_install_root
+    ${Logged1} RMDir "$vim_install_root"
     ${If} ${Errors}
         ${Log} "WARNING: Cannot remove $vim_install_root, it is not empty!"
     ${EndIf}
@@ -1782,10 +1809,6 @@ Section /o "un.$(str_unsection_root)" id_unsection_root
 SectionEnd
 
 Section -un.post
-    # Remove uninstall information:
-    ${Logged3} DeleteRegKey /ifempty SHCTX \
-        "${REG_KEY_UNINSTALL}\${VIM_PRODUCT_NAME}"
-
     # Close log:
     !ifdef VIM_LOG_FILE
         ${LogClose}
@@ -1839,28 +1862,38 @@ Function un.onInit
     # Use shell folders for "all" user:
     ${Logged1} SetShellVarContext all
 
-    # 64-bit view should be used on Windows x64:
-    ${If} ${RunningX64}
-        ${Logged1} SetRegView 64
-    ${EndIf}
+    # Set correct registry view:
+    ${VimSelectRegView}
 
-    # Get root path of the installation:
-    ${GetParent} $INSTDIR $vim_install_root
+    # Get stored language preference:
+    !ifdef HAVE_MULTI_LANG
+        !insertmacro MUI_UNGETLANGUAGE
+    !endif
+
+    # Please note $INSTDIR is set to the directory where the uninstaller is
+    # created, i.e., the binary path.  Thus the "vim73" is included in it.
+    # The root path of the installation is it's parent path:
+    ${GetParent} "$INSTDIR" $vim_install_root
 
     # Check to make sure this is a valid directory:
-    ${VimVerifyRootDir} $vim_install_root $R0
+    ${VimVerifyRootDir} "$vim_install_root" $R0
     ${If} $R0 = 0
         ${ShowErr} $(str_msg_invalid_root)
         Pop $R0
         Abort
     ${EndIf}
 
-    Pop $R0
+    # Construct and check the binary path.  It must be the same as the
+    # $INSTDIR, otherwise something must be wrong:
+    StrCpy $vim_bin_path "$vim_install_root\${VIM_BIN_DIR}"
+    ${If} "$vim_bin_path" S!= "$INSTDIR"
+        # TODO: Add a new error message
+        ${ShowErr} $(str_msg_invalid_root)
+        Pop $R0
+        Abort
+    ${EndIf}
 
-    # Get stored language preference:
-    !ifdef HAVE_MULTI_LANG
-        !insertmacro MUI_UNGETLANGUAGE
-    !endif
+    Pop $R0
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -1902,7 +1935,7 @@ FunctionEnd
 Function un.VimCheckRunning
     Push $R0
 
-    ${VimIsRuning} $INSTDIR $R0
+    ${VimIsRuning} "$vim_bin_path" $R0
     ${If} $R0 <> 0
         ${ShowErr} $(str_msg_vim_running)
         Pop $R0
