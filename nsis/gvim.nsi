@@ -259,6 +259,9 @@ SilentInstall             normal
 # macro VimSelectRegView                                                  {{{2
 #   Select registry view.  Select 32-bit view on 32-bit systems, and 64-bit
 #   view on 64-bit systems.
+#
+#   Parameters: N/A
+#   Returns:    N/A
 # ----------------------------------------------------------------------------
 !define VimSelectRegView "!insertmacro _VimSelectRegView"
 !macro _VimSelectRegView
@@ -270,10 +273,14 @@ SilentInstall             normal
 !macroend
 
 # ----------------------------------------------------------------------------
-# macro VimVerifyRootDir                                                  {{{2
-#   Verify VIM install path $_INPUT_DIR.  If the input path is a valid VIM
-#   install path (ends with "vim"), $_VALID will be set to 1; Otherwise
-#   $_VALID will be set to 0.
+# macro VimVerifyRootDir $_INPUT_DIR $_VALID                              {{{2
+#   Verify VIM install path $_INPUT_DIR.
+#
+#   Parameters:
+#     $_INPUT_DIR : The directory to be verified.
+#   Returns:
+#     $_VALID     : 1 if the input path is a valid VIM install path (ends with
+#                   "vim"); 0 otherwise.
 # ----------------------------------------------------------------------------
 !define VimVerifyRootDir "!insertmacro _VimVerifyRootDir"
 !macro _VimVerifyRootDir _INPUT_DIR _VALID
@@ -293,6 +300,9 @@ SilentInstall             normal
 #   Extract different version of vim console executable based on detected
 #   Windows version.  The output path is whatever has already been set before
 #   this macro.
+#
+#   Parameters: N/A
+#   Returns:    N/A
 # ----------------------------------------------------------------------------
 !define VimExtractConsoleExe "!insertmacro _VimExtractConsoleExe"
 !macro _VimExtractConsoleExe
@@ -308,7 +318,7 @@ SilentInstall             normal
 !macroend
 
 # ----------------------------------------------------------------------------
-# macro VimIsRuning                                                       {{{2
+# macro VimIsRuning $_VIM_CONSOLE_PATH $_IS_RUNNING                       {{{2
 #   Detect whether an instance of Vim is running or not.  The console version
 #   of Vim will be executed (silently) to list Vim servers.  If found, there
 #   must be some instances of Vim running.
@@ -325,7 +335,7 @@ SilentInstall             normal
     Pop ${_IS_RUNNING}
 !macroend
 !macro _VimIsRuning
-    Exch $R0 # Parameter: _VIM_CONSOLE_PATH
+    Exch $R0 # Parameter: $_VIM_CONSOLE_PATH
     Push $R1
 
     ${Logged1} nsExec::ExecToStack '"$R0\vim.exe" --serverlist'
@@ -353,34 +363,48 @@ SilentInstall             normal
 !macroend
 
 # ----------------------------------------------------------------------------
-# macro VimGetOldVerSecID                                                 {{{2
+# macro VimGetOldVerSecID $_INDEX $_ID                                    {{{2
 #   Get ID of the specified old version section.  This is a wrapper for
-#   function VimGetOldVerSecIDFunc.
+#   function _VimGetOldVerSecIDFunc.
+#
+#   Parameters:
+#     $_INDEX : Index of the old version section (zero based).
+#   Returns:
+#     $_ID    : ID of the corresponding old version section.
 # ----------------------------------------------------------------------------
 !define VimGetOldVerSecID "!insertmacro _VimGetOldVerSecID"
 !macro _VimGetOldVerSecID _INDEX _ID
     Push ${_INDEX}
-    Call VimGetOldVerSecIDFunc
+    Call _VimGetOldVerSecIDFunc
     Pop  ${_ID}
 !macroend
 
 # ----------------------------------------------------------------------------
-# macro VimGetOldVerKey                                                   {{{2
+# macro VimGetOldVerKey $_INDEX $_KEY                                     {{{2
 #   Get the uninstall registry key for the specified old version.  This is a
-#   wrapper for function VimGetOldVerKeyFunc.
+#   wrapper for function _VimGetOldVerKeyFunc.
+#
+#   Parameters:
+#     $_INDEX : Index of the key to be retrieved (zero based).
+#   Returns:
+#     $_ID    : The corresponding uninstall registry key.
 # ----------------------------------------------------------------------------
 !define VimGetOldVerKey "!insertmacro _VimGetOldVerKey"
 !macro _VimGetOldVerKey _INDEX _KEY
     Push ${_INDEX}
-    Call VimGetOldVerKeyFunc
+    Call _VimGetOldVerKeyFunc
     Pop  ${_KEY}
 !macroend
 
 # ----------------------------------------------------------------------------
-# macro VimGetPluginRoot                                                  {{{2
-#   Get root directory for plugins (vimfiles directory). $_ENV_STR is the name
-#   of the environment string to check for VIM root directory; $_PLUGIN_ROOT
-#   is the output plugin root directory.
+# macro VimGetPluginRoot $_ENV_STR $_PLUGIN_ROOT                          {{{2
+#   Get root directory for plugins (vimfiles directory).
+#
+#   Parameters:
+#     $_ENV_STR     : The name of the environment string to check for VIM root
+#                     directory.
+#   Returns:
+#     $_PLUGIN_ROOT : The output plugin root directory.
 # ----------------------------------------------------------------------------
 !define VimGetPluginRoot "!insertmacro _VimGetPluginRootCall"
 !macro _VimGetPluginRootCall _ENV_STR _PLUGIN_ROOT
@@ -413,7 +437,51 @@ SilentInstall             normal
 !macroend
 
 # ----------------------------------------------------------------------------
-# macro VimRmShortcuts                                                    {{{2
+# macro VimCreateShortcuts $_SHORTCUT_SPEC $_SHORTCUT_ROOT                {{{2
+#   Create specified shortcuts.
+#
+#   Parameters:
+#     $_SHORTCUT_SPEC : Shortcut specification.
+#     $_SHORTCUT_ROOT : Shortcut root.
+#   Returns:
+#     N/A
+# ----------------------------------------------------------------------------
+!define VimCreateShortcuts "!insertmacro _VimCreateShortcuts"
+!macro _VimCreateShortcuts _SHORTCUT_SPEC _SHORTCUT_ROOT
+    # Create shortcut root if necessary:
+    ${IfNot} ${FileExists} "${_SHORTCUT_ROOT}\*.*"
+        ${Logged1} CreateDirectory "${_SHORTCUT_ROOT}"
+    ${EndIf}
+
+    # Create all specified shortcuts, ignore return code.
+    Push $R0
+    ${LoopMatrix} "${_SHORTCUT_SPEC}" "_VimCreateShortcutsFunc" "" \
+        "${_SHORTCUT_ROOT}" "" $R0
+    Pop $R0
+!macroend
+
+# ----------------------------------------------------------------------------
+# macro VimCreateBatches $_BATCH_SPEC $_BATCH_TMPL                        {{{2
+#   Create specified batch files.
+#
+#   Parameters:
+#     The following parameters should be pushed onto stack in order.
+#     $_BATCH_SPEC : Batch file specification.
+#     $_BATCH_TMPL : Name of the batch file template (in target environment).
+#   Returns:
+#     N/A
+# ----------------------------------------------------------------------------
+!define VimCreateBatches "!insertmacro _VimCreateBatches"
+!macro _VimCreateBatches _BATCH_SPEC _BATCH_TMPL
+    # Create all specified batch files and ignore the return code:
+    Push $R0
+    ${LoopMatrix} "${_BATCH_SPEC}" "_VimCreateBatchFunc" "" \
+        "${_BATCH_TMPL}" "" $R0
+    Pop $R0
+!macroend
+
+# ----------------------------------------------------------------------------
+# macro VimRmShortcuts $_SHORTCUT_SPEC $_SHORTCUT_ROOT                    {{{2
 #   Macro to remove shortcuts.
 #
 #   Parameters:
@@ -431,7 +499,7 @@ SilentInstall             normal
 !macroend
 
 # ----------------------------------------------------------------------------
-# macro VimRmBatches                                                      {{{2
+# macro VimRmBatches $_BATCH_SPEC                                         {{{2
 #   Wrapper to call un.VimRmFileSpecFunc to remove batch files.
 #
 #   Parameters:
@@ -447,6 +515,369 @@ SilentInstall             normal
         1 "$WINDIR" "$R0" $R0
     Pop  $R0
 !macroend
+
+##############################################################################
+# Dynamic sections to support removal of old versions                     {{{1
+##############################################################################
+
+!define OldVerSection "!insertmacro _OldVerSection"
+!macro _OldVerSection _ID
+    Section "Uninstall existing version ${_ID}" `id_section_old_ver_${_ID}`
+        SectionIn 1 2 3
+
+        ${Log} "$\r$\nEnter old ver section ${_ID}"
+        Push ${_ID}
+        Call VimRmOldVer
+        ${Log} "Leave old ver section ${_ID}"
+    SectionEnd
+!macroend
+
+${OldVerSection} 0
+${OldVerSection} 1
+${OldVerSection} 2
+${OldVerSection} 3
+${OldVerSection} 4
+
+# Push section ID of all above sections onto stack.
+Function PushOldVerSectionIDs
+    Push ${id_section_old_ver_4}
+    Push ${id_section_old_ver_3}
+    Push ${id_section_old_ver_2}
+    Push ${id_section_old_ver_1}
+    Push ${id_section_old_ver_0}
+FunctionEnd
+
+
+##############################################################################
+# Installer Sections                                                      {{{1
+##############################################################################
+
+# ----------------------------------------------------------------------------
+# Section: Install GUI executables & runtime files                        {{{2
+# ----------------------------------------------------------------------------
+Section $(str_section_exe) id_section_exe
+    SectionIn 1 2 3 RO
+
+    ${LogSectionStart}
+
+    ${Logged1} SetOutPath "$vim_bin_path"
+    ${Logged2} File /oname=gvim.exe "${VIMSRC}\gvim_ole.exe"
+    ${Logged2} File /oname=xxd.exe  "${VIMSRC}\xxdw32.exe"
+    ${Logged1} File "${VIMSRC}\vimrun.exe"
+    ${Logged1} File "${VIMTOOLS}\diff.exe"
+    ${Logged1} File "${VIMRT}\vimtutor.bat"
+    ${Logged1} File "${VIMRT}\README.txt"
+    ${Logged1} File "${VIMRT}\uninstal.txt"
+    ${Logged1} File "${VIMRT}\*.vim"
+    ${Logged1} File "${VIMRT}\rgb.txt"
+
+    ${Logged1} SetOutPath "$vim_bin_path\colors"
+    ${Logged1} File "${VIMRT}\colors\*.*"
+
+    ${Logged1} SetOutPath "$vim_bin_path\compiler"
+    ${Logged1} File "${VIMRT}\compiler\*.*"
+
+    ${Logged1} SetOutPath "$vim_bin_path\doc"
+    ${Logged1} File "${VIMRT}\doc\*.txt"
+    ${Logged1} File "${VIMRT}\doc\tags"
+
+    ${Logged1} SetOutPath "$vim_bin_path\ftplugin"
+    ${Logged1} File "${VIMRT}\ftplugin\*.*"
+
+    ${Logged1} SetOutPath "$vim_bin_path\indent"
+    ${Logged1} File "${VIMRT}\indent\*.*"
+
+    ${Logged1} SetOutPath "$vim_bin_path\macros"
+    ${Logged1} File "${VIMRT}\macros\*.*"
+
+    ${Logged1} SetOutPath "$vim_bin_path\plugin"
+    ${Logged1} File "${VIMRT}\plugin\*.*"
+
+    ${Logged1} SetOutPath "$vim_bin_path\autoload"
+    ${Logged1} File "${VIMRT}\autoload\*.*"
+
+    ${Logged1} SetOutPath "$vim_bin_path\autoload\xml"
+    ${Logged1} File "${VIMRT}\autoload\xml\*.*"
+
+    ${Logged1} SetOutPath "$vim_bin_path\syntax"
+    ${Logged1} File "${VIMRT}\syntax\*.*"
+
+    ${Logged1} SetOutPath "$vim_bin_path\spell"
+    ${Logged1} File "${VIMRT}\spell\*.txt"
+    ${Logged1} File "${VIMRT}\spell\*.vim"
+    ${Logged1} File "${VIMRT}\spell\*.spl"
+    ${Logged1} File "${VIMRT}\spell\*.sug"
+
+    ${Logged1} SetOutPath "$vim_bin_path\tools"
+    ${Logged1} File "${VIMRT}\tools\*.*"
+
+    ${Logged1} SetOutPath "$vim_bin_path\tutor"
+    ${Logged1} File "${VIMRT}\tutor\*.*"
+
+    ${LogSectionEnd}
+SectionEnd
+
+# ----------------------------------------------------------------------------
+# Section: Install console executables                                    {{{2
+# ----------------------------------------------------------------------------
+Section $(str_section_console) id_section_console
+    SectionIn 1 3
+
+    ${LogSectionStart}
+
+    ${Logged1} SetOutPath "$vim_bin_path"
+    ${VimExtractConsoleExe}
+
+    # Flags that console version has been installed:
+    StrCpy $vim_has_console 1
+
+    ${LogSectionEnd}
+SectionEnd
+
+# ----------------------------------------------------------------------------
+# Section: Install batch files                                            {{{2
+# ----------------------------------------------------------------------------
+Section $(str_section_batch) id_section_batch
+    SectionIn 3
+
+    ${LogSectionStart}
+
+    # Create batch files for the console version if installed:
+    ${If} $vim_has_console <> 0
+        GetTempFileName $R0
+        ${Logged2} File "/oname=$R0" "data\cli_template.bat"
+        ${VimCreateBatches} "${VIM_CONSOLE_BATCH}" "$R0"
+        ${Logged1} Delete "$R0"
+    ${EndIf}
+
+    # Create batch files for the GUI version:
+    GetTempFileName $R0
+    ${Logged2} File "/oname=$R0" "data\gui_template.bat"
+    ${VimCreateBatches} "${VIM_GUI_BATCH}" "$R0"
+    ${Logged1} Delete "$R0"
+
+    ${LogSectionEnd}
+SectionEnd
+
+# ----------------------------------------------------------------------------
+# Section: Install desktop icons                                          {{{2
+# ----------------------------------------------------------------------------
+Section $(str_section_desktop) id_section_desktop
+    SectionIn 1 3
+
+    ${LogSectionStart}
+    ${VimCreateShortcuts} "${VIM_DESKTOP_SHORTCUTS}" "$DESKTOP"
+    ${LogSectionEnd}
+SectionEnd
+
+# ----------------------------------------------------------------------------
+# Section: Install startmenu items                                        {{{2
+# ----------------------------------------------------------------------------
+Section $(str_section_start_menu) id_section_startmenu
+    SectionIn 1 3
+
+    ${LogSectionStart}
+
+    # Create shortcuts for the console version if installed:
+    ${If} $vim_has_console <> 0
+        ${VimCreateShortcuts} "${VIM_CONSOLE_STARTMENU}" \
+            "$SMPROGRAMS\${VIM_PRODUCT_NAME}"
+    ${EndIf}
+
+    # Create shortcuts for the GUI version:
+    ${VimCreateShortcuts} "${VIM_GUI_STARTMENU}"  \
+        "$SMPROGRAMS\${VIM_PRODUCT_NAME}"
+
+    # Create misc shortcuts:
+    ${VimCreateShortcuts} "${VIM_MISC_STARTMENU}" \
+        "$SMPROGRAMS\${VIM_PRODUCT_NAME}"
+
+    # Create URL shortcut to vim online:
+    # TODO: Which link should be used for vim online?
+    #   http://vim.sf.net/
+    #   http://www.vim.org/
+    WriteINIStr "$SMPROGRAMS\${VIM_PRODUCT_NAME}\Vim Online.URL" \
+        "InternetShortcut" "URL" "http://www.vim.org/"
+
+    ${LogSectionEnd}
+SectionEnd
+
+# ----------------------------------------------------------------------------
+# Section: Install quick launch shortcuts                                 {{{2
+# ----------------------------------------------------------------------------
+Section $(str_section_quick_launch) id_section_quicklaunch
+    SectionIn 1 3
+
+    ${LogSectionStart}
+
+    ${If} $QUICKLAUNCH != $TEMP
+        ${VimCreateShortcuts} "${VIM_LAUNCH_SHORTCUTS}" "$QUICKLAUNCH"
+    ${EndIf}
+
+    ${LogSectionEnd}
+SectionEnd
+
+# ----------------------------------------------------------------------------
+# Section: Install shell extension                                        {{{2
+# ----------------------------------------------------------------------------
+Section $(str_section_edit_with) id_section_editwith
+    SectionIn 1 3
+
+    ${LogSectionStart}
+
+    # Install/Upgrade gvimext.dll:
+    !define LIBRARY_SHELL_EXTENSION
+
+    ${If} ${RunningX64}
+        !define LIBRARY_X64
+        !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
+            "${VIMSRC}\GvimExt\gvimext64.dll" \
+            "$vim_bin_path\gvimext64.dll" "$vim_bin_path"
+        !undef LIBRARY_X64
+
+        StrCpy $vim_shell_ext_name "$vim_bin_path\gvimext64.dll"
+    ${Else}
+        !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
+            "${VIMSRC}\GvimExt\gvimext.dll" \
+            "$vim_bin_path\gvimext32.dll" "$vim_bin_path"
+
+        StrCpy $vim_shell_ext_name "$vim_bin_path\gvimext32.dll"
+    ${EndIf}
+
+    !undef LIBRARY_SHELL_EXTENSION
+
+    # Register the shell extension:
+    ${If} $vim_shell_ext_name != ""
+        Push $vim_shell_ext_name
+        Call VimRegShellExt
+    ${EndIf}
+
+    ${LogSectionEnd}
+SectionEnd
+
+# ----------------------------------------------------------------------------
+# Section: Install vimrc                                                  {{{2
+# ----------------------------------------------------------------------------
+Section $(str_section_vim_rc) id_section_vimrc
+    SectionIn 1 3
+
+    ${LogSectionStart}
+
+    # Write default _vimrc only if the file does not exist.  We'll test for
+    # .vimrc (and its short version) and _vimrc:
+    SetOutPath "$vim_install_root"
+    ${IfNot}    ${FileExists} "$vim_install_root\_vimrc"
+    ${AndIfNot} ${FileExists} "$vim_install_root\.vimrc"
+    ${AndIfNot} ${FileExists} "$vim_install_root\vimrc~1"
+        ${Logged2} File /oname=_vimrc "data\mswin_vimrc.vim"
+    ${EndIf}
+
+    ${LogSectionEnd}
+SectionEnd
+
+# ----------------------------------------------------------------------------
+# Section: Create $HOME/vimfiles                                          {{{2
+# ----------------------------------------------------------------------------
+Section $(str_section_plugin_home) id_section_pluginhome
+    SectionIn 1 3
+
+    ${LogSectionStart}
+
+    # Create vimfiles directory hierarchy under $HOME or install root:
+    Push "HOME"
+    Call VimCreatePluginDir
+
+    ${LogSectionEnd}
+SectionEnd
+
+# ----------------------------------------------------------------------------
+# Section: Create $VIM/vimfiles                                           {{{2
+# ----------------------------------------------------------------------------
+Section $(str_section_plugin_vim) id_section_pluginvim
+    SectionIn 3
+
+    ${LogSectionStart}
+
+    # Create vimfiles directory hierarchy under $VIM or install root:
+    Push "VIM"
+    Call VimCreatePluginDir
+
+    ${LogSectionEnd}
+SectionEnd
+
+# ----------------------------------------------------------------------------
+# Section: Install VisVim                                                 {{{2
+# ----------------------------------------------------------------------------
+!ifdef HAVE_VIS_VIM
+    Section $(str_section_vis_vim) id_section_visvim
+        SectionIn 3
+
+        ${LogSectionStart}
+
+        # TODO: Check if this works on x64 or not.
+        !insertmacro InstallLib REGDLL NOTSHARED REBOOT_NOTPROTECTED \
+            "${VIMSRC}\VisVim\VisVim.dll" \
+            "$vim_bin_path\VisVim.dll" "$vim_bin_path"
+
+        ${Logged1} SetOutPath "$vim_bin_path"
+        ${Logged1} File "${VIMSRC}\VisVim\README_VisVim.txt"
+
+        ${LogSectionEnd}
+    SectionEnd
+!endif
+
+# ----------------------------------------------------------------------------
+# Section: Install NLS files                                              {{{2
+# ----------------------------------------------------------------------------
+!ifdef HAVE_NLS
+    Section $(str_section_nls) id_section_nls
+        SectionIn 1 3
+
+        ${LogSectionStart}
+
+        SetOutPath "$vim_bin_path\lang"
+        File /r "${VIMRT}\lang\*.*"
+        SetOutPath "$vim_bin_path\keymap"
+        File "${VIMRT}\keymap\README.txt"
+        File "${VIMRT}\keymap\*.vim"
+
+        # Install NLS support DLLs:
+        SetOutPath "$vim_bin_path"
+        !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
+            "${VIMRT}\libintl.dll" \
+            "$vim_bin_path\libintl.dll" "$vim_bin_path"
+
+        !ifdef HAVE_ICONV
+            !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
+                "${VIMRT}\iconv.dll" \
+                "$vim_bin_path\iconv.dll" "$vim_bin_path"
+        !endif
+
+        ${LogSectionEnd}
+    SectionEnd
+!endif
+
+# ----------------------------------------------------------------------------
+# Section: Final touch                                                    {{{2
+# ----------------------------------------------------------------------------
+Section -registry_update
+    # Register uninstall information:
+    Push $R0
+    ${LoopMatrix} "${VIM_UNINSTALL_REG_INFO}" \
+        "VimRegUninstallInfoCallback" "" "" "" $R0
+    Pop $R0
+
+    # Register Vim with OLE:
+    # TODO: Translate
+    DetailPrint "Attempting to register Vim with OLE$\r$\n\
+                 There is no message whether this works or not."
+    ${Logged1} ExecWait '"$vim_bin_path\gvim.exe" -silent -register'
+SectionEnd
+
+Section -post
+    BringToFront
+SectionEnd
+
 
 ##############################################################################
 # Installer Functions                                                     {{{1
@@ -909,7 +1340,7 @@ Function VimFinalCheck
 FunctionEnd
 
 # ----------------------------------------------------------------------------
-# Function VimGetOldVerSecIDFunc                                          {{{2
+# Function _VimGetOldVerSecIDFunc                                         {{{2
 #   Get ID of the n-th dynamically generated old version section.
 #
 #   As NSIS does not support array, it's not straightforward to get ID of
@@ -925,7 +1356,7 @@ FunctionEnd
 #   Returns:
 #     ID of the corresponding old version section on the top of the stack.
 # ----------------------------------------------------------------------------
-Function VimGetOldVerSecIDFunc
+Function _VimGetOldVerSecIDFunc
     Exch $R0  # Index of the section
     Push $R1
     Push $R2
@@ -955,7 +1386,7 @@ Function VimGetOldVerSecIDFunc
 FunctionEnd
 
 # ----------------------------------------------------------------------------
-# Function VimGetOldVerKeyFunc                                            {{{2
+# Function _VimGetOldVerKeyFunc                                           {{{2
 #   Get the un-installer key for n-th old Vim version installed on the system.
 #
 #   All un-installer keys found on the system will be stored in a string,
@@ -970,7 +1401,7 @@ FunctionEnd
 #   Returns:
 #     Required key on the top of the stack.
 # ----------------------------------------------------------------------------
-Function VimGetOldVerKeyFunc
+Function _VimGetOldVerKeyFunc
     Exch $0  # Index of the un-install key
 
     ${If} $0 >= $vim_old_ver_count
@@ -1030,30 +1461,13 @@ Function _VimCreatePluginDirCallback
 FunctionEnd
 
 # ----------------------------------------------------------------------------
-# Function VimCreateShortcuts                                             {{{2
-#   Create specified shortcuts.
+# Function _VimCreateShortcutsFunc                                        {{{2
+#   Callback function for LoopMatrix to create one shortcut.
 #
-#   Parameters:
-#     The following parameters should be pushed onto stack in order.
-#     - Shortcut specification.
-#     - Shortcut root.
-#   Returns:
-#     N/A
+#   LoopMatrix will provide content of all columns on the current row of the
+#   shortcut specification, this function will create one shortcut according
+#   to that specification.
 # ----------------------------------------------------------------------------
-!define VimCreateShortcuts "!insertmacro _VimCreateShortcuts"
-!macro _VimCreateShortcuts _SHORTCUT_SPEC _SHORTCUT_ROOT
-    # Create shortcut root if necessary:
-    ${IfNot} ${FileExists} "${_SHORTCUT_ROOT}\*.*"
-        ${Logged1} CreateDirectory "${_SHORTCUT_ROOT}"
-    ${EndIf}
-
-    # Create all specified shortcuts, ignore return code.
-    Push $R0
-    ${LoopMatrix} "${_SHORTCUT_SPEC}" "_VimCreateShortcutsFunc" "" \
-        "${_SHORTCUT_ROOT}" "" $R0
-    Pop $R0
-!macroend
-
 Function _VimCreateShortcutsFunc
     Exch      $5     # Arg 2: Ignored
     ${ExchAt} 1 $4   # Arg 1: Shortcut root path
@@ -1082,24 +1496,13 @@ Function _VimCreateShortcutsFunc
 FunctionEnd
 
 # ----------------------------------------------------------------------------
-# Function VimCreateBatches                                               {{{2
-#   Create specified batch files.
+# Function _VimCreateBatchFunc                                            {{{2
+#   Callback function for LoopMatrix to create one batch file.
 #
-#   Parameters:
-#     The following parameters should be pushed onto stack in order.
-#     - Batch file specification.
-#     - Name of the batch file template (in target environment).
-#   Returns:
-#     N/A
+#   LoopMatrix will provide content of all columns on the current row of the
+#   batch file specification, this function will create one batch file
+#   according to that specification.
 # ----------------------------------------------------------------------------
-!define VimCreateBatches "!insertmacro _VimCreateBatches"
-!macro _VimCreateBatches _BATCH_SPEC _BATCH_TMPL
-    Push $R0
-    ${LoopMatrix} "${_BATCH_SPEC}" "_VimCreateBatchFunc" "" \
-        "${_BATCH_TMPL}" "" $R0
-    Pop $R0
-!macroend
-
 Function _VimCreateBatchFunc
     Exch      $4     # Arg 2: Ignored
     ${ExchAt} 1 $3   # Arg 1: Batch file template (in target environment).
@@ -1271,330 +1674,6 @@ FunctionEnd
 
 
 ##############################################################################
-# Dynamic sections to support removal of old versions                     {{{1
-##############################################################################
-
-!define OldVerSection "!insertmacro _OldVerSection"
-!macro _OldVerSection _ID
-    Section "Uninstall existing version ${_ID}" `id_section_old_ver_${_ID}`
-        SectionIn 1 2 3
-
-        ${Log} "$\r$\nEnter old ver section ${_ID}"
-        Push ${_ID}
-        Call VimRmOldVer
-        ${Log} "Leave old ver section ${_ID}"
-    SectionEnd
-!macroend
-
-${OldVerSection} 0
-${OldVerSection} 1
-${OldVerSection} 2
-${OldVerSection} 3
-${OldVerSection} 4
-
-# Push section ID of all above sections onto stack.
-Function PushOldVerSectionIDs
-    Push ${id_section_old_ver_4}
-    Push ${id_section_old_ver_3}
-    Push ${id_section_old_ver_2}
-    Push ${id_section_old_ver_1}
-    Push ${id_section_old_ver_0}
-FunctionEnd
-
-
-##############################################################################
-# Installer Sections                                                      {{{1
-##############################################################################
-
-Section $(str_section_exe) id_section_exe
-    SectionIn 1 2 3 RO
-
-    ${LogSectionStart}
-
-    ${Logged1} SetOutPath "$vim_bin_path"
-    ${Logged2} File /oname=gvim.exe "${VIMSRC}\gvim_ole.exe"
-    ${Logged2} File /oname=xxd.exe  "${VIMSRC}\xxdw32.exe"
-    ${Logged1} File "${VIMSRC}\vimrun.exe"
-    ${Logged1} File "${VIMTOOLS}\diff.exe"
-    ${Logged1} File "${VIMRT}\vimtutor.bat"
-    ${Logged1} File "${VIMRT}\README.txt"
-    ${Logged1} File "${VIMRT}\uninstal.txt"
-    ${Logged1} File "${VIMRT}\*.vim"
-    ${Logged1} File "${VIMRT}\rgb.txt"
-
-    ${Logged1} SetOutPath "$vim_bin_path\colors"
-    ${Logged1} File "${VIMRT}\colors\*.*"
-
-    ${Logged1} SetOutPath "$vim_bin_path\compiler"
-    ${Logged1} File "${VIMRT}\compiler\*.*"
-
-    ${Logged1} SetOutPath "$vim_bin_path\doc"
-    ${Logged1} File "${VIMRT}\doc\*.txt"
-    ${Logged1} File "${VIMRT}\doc\tags"
-
-    ${Logged1} SetOutPath "$vim_bin_path\ftplugin"
-    ${Logged1} File "${VIMRT}\ftplugin\*.*"
-
-    ${Logged1} SetOutPath "$vim_bin_path\indent"
-    ${Logged1} File "${VIMRT}\indent\*.*"
-
-    ${Logged1} SetOutPath "$vim_bin_path\macros"
-    ${Logged1} File "${VIMRT}\macros\*.*"
-
-    ${Logged1} SetOutPath "$vim_bin_path\plugin"
-    ${Logged1} File "${VIMRT}\plugin\*.*"
-
-    ${Logged1} SetOutPath "$vim_bin_path\autoload"
-    ${Logged1} File "${VIMRT}\autoload\*.*"
-
-    ${Logged1} SetOutPath "$vim_bin_path\autoload\xml"
-    ${Logged1} File "${VIMRT}\autoload\xml\*.*"
-
-    ${Logged1} SetOutPath "$vim_bin_path\syntax"
-    ${Logged1} File "${VIMRT}\syntax\*.*"
-
-    ${Logged1} SetOutPath "$vim_bin_path\spell"
-    ${Logged1} File "${VIMRT}\spell\*.txt"
-    ${Logged1} File "${VIMRT}\spell\*.vim"
-    ${Logged1} File "${VIMRT}\spell\*.spl"
-    ${Logged1} File "${VIMRT}\spell\*.sug"
-
-    ${Logged1} SetOutPath "$vim_bin_path\tools"
-    ${Logged1} File "${VIMRT}\tools\*.*"
-
-    ${Logged1} SetOutPath "$vim_bin_path\tutor"
-    ${Logged1} File "${VIMRT}\tutor\*.*"
-
-    ${LogSectionEnd}
-SectionEnd
-
-Section $(str_section_console) id_section_console
-    SectionIn 1 3
-
-    ${LogSectionStart}
-
-    ${Logged1} SetOutPath "$vim_bin_path"
-    ${VimExtractConsoleExe}
-
-    # Flags that console version has been installed:
-    StrCpy $vim_has_console 1
-
-    ${LogSectionEnd}
-SectionEnd
-
-Section $(str_section_batch) id_section_batch
-    SectionIn 3
-
-    ${LogSectionStart}
-
-    # Create batch files for the console version if installed:
-    ${If} $vim_has_console <> 0
-        GetTempFileName $R0
-        ${Logged2} File "/oname=$R0" "data\cli_template.bat"
-        ${VimCreateBatches} "${VIM_CONSOLE_BATCH}" "$R0"
-        ${Logged1} Delete "$R0"
-    ${EndIf}
-
-    # Create batch files for the GUI version:
-    GetTempFileName $R0
-    ${Logged2} File "/oname=$R0" "data\gui_template.bat"
-    ${VimCreateBatches} "${VIM_GUI_BATCH}" "$R0"
-    ${Logged1} Delete "$R0"
-
-    ${LogSectionEnd}
-SectionEnd
-
-Section $(str_section_desktop) id_section_desktop
-    SectionIn 1 3
-
-    ${LogSectionStart}
-    ${VimCreateShortcuts} "${VIM_DESKTOP_SHORTCUTS}" "$DESKTOP"
-    ${LogSectionEnd}
-SectionEnd
-
-Section $(str_section_start_menu) id_section_startmenu
-    SectionIn 1 3
-
-    ${LogSectionStart}
-
-    # Create shortcuts for the console version if installed:
-    ${If} $vim_has_console <> 0
-        ${VimCreateShortcuts} "${VIM_CONSOLE_STARTMENU}" \
-            "$SMPROGRAMS\${VIM_PRODUCT_NAME}"
-    ${EndIf}
-
-    # Create shortcuts for the GUI version:
-    ${VimCreateShortcuts} "${VIM_GUI_STARTMENU}"  \
-        "$SMPROGRAMS\${VIM_PRODUCT_NAME}"
-
-    # Create misc shortcuts:
-    ${VimCreateShortcuts} "${VIM_MISC_STARTMENU}" \
-        "$SMPROGRAMS\${VIM_PRODUCT_NAME}"
-
-    # Create URL shortcut to vim online:
-    # TODO: Which link should be used for vim online?
-    #   http://vim.sf.net/
-    #   http://www.vim.org/
-    WriteINIStr "$SMPROGRAMS\${VIM_PRODUCT_NAME}\Vim Online.URL" \
-        "InternetShortcut" "URL" "http://www.vim.org/"
-
-    ${LogSectionEnd}
-SectionEnd
-
-Section $(str_section_quick_launch) id_section_quicklaunch
-    SectionIn 1 3
-
-    ${LogSectionStart}
-
-    ${If} $QUICKLAUNCH != $TEMP
-        ${VimCreateShortcuts} "${VIM_LAUNCH_SHORTCUTS}" "$QUICKLAUNCH"
-    ${EndIf}
-
-    ${LogSectionEnd}
-SectionEnd
-
-Section $(str_section_edit_with) id_section_editwith
-    SectionIn 1 3
-
-    ${LogSectionStart}
-
-    # Install/Upgrade gvimext.dll:
-    !define LIBRARY_SHELL_EXTENSION
-
-    ${If} ${RunningX64}
-        !define LIBRARY_X64
-        !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
-            "${VIMSRC}\GvimExt\gvimext64.dll" \
-            "$vim_bin_path\gvimext64.dll" "$vim_bin_path"
-        !undef LIBRARY_X64
-
-        StrCpy $vim_shell_ext_name "$vim_bin_path\gvimext64.dll"
-    ${Else}
-        !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
-            "${VIMSRC}\GvimExt\gvimext.dll" \
-            "$vim_bin_path\gvimext32.dll" "$vim_bin_path"
-
-        StrCpy $vim_shell_ext_name "$vim_bin_path\gvimext32.dll"
-    ${EndIf}
-
-    !undef LIBRARY_SHELL_EXTENSION
-
-    # Register the shell extension:
-    ${If} $vim_shell_ext_name != ""
-        Push $vim_shell_ext_name
-        Call VimRegShellExt
-    ${EndIf}
-
-    ${LogSectionEnd}
-SectionEnd
-
-Section $(str_section_vim_rc) id_section_vimrc
-    SectionIn 1 3
-
-    ${LogSectionStart}
-
-    # Write default _vimrc only if the file does not exist.  We'll test for
-    # .vimrc (and its short version) and _vimrc:
-    SetOutPath "$vim_install_root"
-    ${IfNot}    ${FileExists} "$vim_install_root\_vimrc"
-    ${AndIfNot} ${FileExists} "$vim_install_root\.vimrc"
-    ${AndIfNot} ${FileExists} "$vim_install_root\vimrc~1"
-        ${Logged2} File /oname=_vimrc "data\mswin_vimrc.vim"
-    ${EndIf}
-
-    ${LogSectionEnd}
-SectionEnd
-
-Section $(str_section_plugin_home) id_section_pluginhome
-    SectionIn 1 3
-
-    ${LogSectionStart}
-
-    # Create vimfiles directory hierarchy under $HOME or install root:
-    Push "HOME"
-    Call VimCreatePluginDir
-
-    ${LogSectionEnd}
-SectionEnd
-
-Section $(str_section_plugin_vim) id_section_pluginvim
-    SectionIn 3
-
-    ${LogSectionStart}
-
-    # Create vimfiles directory hierarchy under $VIM or install root:
-    Push "VIM"
-    Call VimCreatePluginDir
-
-    ${LogSectionEnd}
-SectionEnd
-
-!ifdef HAVE_VIS_VIM
-    Section $(str_section_vis_vim) id_section_visvim
-        SectionIn 3
-
-        ${LogSectionStart}
-
-        # TODO: Check if this works on x64 or not.
-        !insertmacro InstallLib REGDLL NOTSHARED REBOOT_NOTPROTECTED \
-            "${VIMSRC}\VisVim\VisVim.dll" \
-            "$vim_bin_path\VisVim.dll" "$vim_bin_path"
-
-        ${Logged1} SetOutPath "$vim_bin_path"
-        ${Logged1} File "${VIMSRC}\VisVim\README_VisVim.txt"
-
-        ${LogSectionEnd}
-    SectionEnd
-!endif
-
-!ifdef HAVE_NLS
-    Section $(str_section_nls) id_section_nls
-        SectionIn 1 3
-
-        ${LogSectionStart}
-
-        SetOutPath "$vim_bin_path\lang"
-        File /r "${VIMRT}\lang\*.*"
-        SetOutPath "$vim_bin_path\keymap"
-        File "${VIMRT}\keymap\README.txt"
-        File "${VIMRT}\keymap\*.vim"
-
-        # Install NLS support DLLs:
-        SetOutPath "$vim_bin_path"
-        !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
-            "${VIMRT}\libintl.dll" \
-            "$vim_bin_path\libintl.dll" "$vim_bin_path"
-
-        !ifdef HAVE_ICONV
-            !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
-                "${VIMRT}\iconv.dll" \
-                "$vim_bin_path\iconv.dll" "$vim_bin_path"
-        !endif
-
-        ${LogSectionEnd}
-    SectionEnd
-!endif
-
-Section -registry_update
-    # Register uninstall information:
-    Push $R0
-    ${LoopMatrix} "${VIM_UNINSTALL_REG_INFO}" \
-        "VimRegUninstallInfoCallback" "" "" "" $R0
-    Pop $R0
-
-    # Register Vim with OLE:
-    # TODO: Translate
-    DetailPrint "Attempting to register Vim with OLE$\r$\n\
-                 There is no message whether this works or not."
-    ${Logged1} ExecWait '"$vim_bin_path\gvim.exe" -silent -register'
-SectionEnd
-
-Section -post
-    BringToFront
-SectionEnd
-
-
-##############################################################################
 # Description for Installer Sections                                      {{{1
 ##############################################################################
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
@@ -1628,6 +1707,9 @@ SectionEnd
 # Uninstaller Sections                                                    {{{1
 ##############################################################################
 
+# ----------------------------------------------------------------------------
+# Section: Unregister Vim                                                 {{{2
+# ----------------------------------------------------------------------------
 Section "un.$(str_unsection_register)" id_unsection_register
     # Do not allow user to keep this section:
     SectionIn RO
@@ -1717,6 +1799,9 @@ Section "un.$(str_unsection_register)" id_unsection_register
     ${LogSectionEnd}
 SectionEnd
 
+# ----------------------------------------------------------------------------
+# Section: Remove executables                                             {{{2
+# ----------------------------------------------------------------------------
 Section "un.$(str_unsection_exe)" id_unsection_exe
     ${LogSectionStart}
 
@@ -1765,6 +1850,9 @@ Section "un.$(str_unsection_exe)" id_unsection_exe
     ${LogSectionEnd}
 SectionEnd
 
+# ----------------------------------------------------------------------------
+# Section: Remove vimfiles                                                {{{2
+# ----------------------------------------------------------------------------
 Section /o "un.$(str_unsection_plugin)" id_unsection_plugin
     ${LogSectionStart}
 
@@ -1779,6 +1867,9 @@ Section /o "un.$(str_unsection_plugin)" id_unsection_plugin
     ${LogSectionEnd}
 SectionEnd
 
+# ----------------------------------------------------------------------------
+# Section: Remove install root                                            {{{2
+# ----------------------------------------------------------------------------
 Section /o "un.$(str_unsection_root)" id_unsection_root
     # Do not allow user to remove this section initially:
     SectionIn RO
@@ -1799,6 +1890,9 @@ Section /o "un.$(str_unsection_root)" id_unsection_root
     ${LogSectionEnd}
 SectionEnd
 
+# ----------------------------------------------------------------------------
+# Section: Final touch                                                    {{{2
+# ----------------------------------------------------------------------------
 Section -un.post
     # Close log:
     !ifdef VIM_LOG_FILE
