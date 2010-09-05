@@ -1922,51 +1922,76 @@ FunctionEnd
 #     N/A
 # ----------------------------------------------------------------------------
 Function un.VimRmPluginDir
-    Exch $R0  # The name of the environment string for plugin root.
-    Push $R1
-    Push $R2
-    Push $R3
-    Push $R4
+    Exch $0   # The name of the environment string for plugin root.
+    Push $R0
 
     # Determine plugin root directory.
-    # $R0 - Plugin root directory
-    ${VimGetPluginRoot} $R0 $R0
+    # $0 - Plugin root directory
+    ${VimGetPluginRoot} $0 $0
 
     # Make sure that all plugin subdirectories are empty:
-    # $R1 - Loop index, 1 based
-    # $R2 - Number of subdirectories
-    # $R3 - Current subdirectory
-    # $R4 - Directory empty flag 1=not empty, 0/-1=empty/not exist
-    StrCpy $R4 0
-    ${CountFields} "${VIM_PLUGIN_SUBDIR}" "$\n" $R2
-    ${For} $R1 1 $R2
-        ${WordFindS} "${VIM_PLUGIN_SUBDIR}" "$\n" "+$R1" $R3
-        ${DirState} "$R0\$R3" $R4
-        ${IfThen} $R4 > 0 ${|} ${ExitFor} ${|}
-    ${Next}
+    ${LoopArray} "${VIM_PLUGIN_SUBDIR}" "un._VimCheckPluginDirCallback" \
+        "$0" "" $R0
 
-    ${If} $R4 <= 0
+    ${If} $R0 == ""
         # All plugin subdirectories are empty, now we're safe to remove them:
-        ${For} $R1 1 $R2
-            ${WordFindS} "${VIM_PLUGIN_SUBDIR}" "$\n" "+$R1" $R3
-            ${Logged1} RMDir "$R0\$R3"
-        ${Next}
+        ${LoopArray} "${VIM_PLUGIN_SUBDIR}" "un._VimRmPluginDirCallback" \
+            "$0" "" $R0
 
         # Remove vimfiles directory if it is empty:
         ClearErrors
-        ${Logged1} RMDir "$R0"
+        ${Logged1} RMDir "$0"
         ${If} ${Errors}
-            ${Log} "WARNING: Cannot remove $R0, it is not empty!"
+            ${Log} "WARNING: Cannot remove $0, it is not empty!"
         ${EndIf}
     ${Else}
-        ${Log} "WARNING: Cannot remove $R0, $R3 is not empty!"
+        ${Log} "WARNING: Cannot remove non-empty $0!"
     ${EndIf}
 
-    Pop $R4
-    Pop $R3
-    Pop $R2
-    Pop $R1
     Pop $R0
+    Pop $0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function un._VimCheckPluginDirCallback                                  {{{2
+#   Callback function for LoopArray.  It's used to check whether one plugin
+#   subdirectory is empty or not.  Return non-empty return code on stack if
+#   the subdirectory is not empty.
+# ----------------------------------------------------------------------------
+Function un._VimCheckPluginDirCallback
+    Exch      $2    # Item callback arg 1: Ignored
+    ${ExchAt} 1 $1  # Item callback arg 1: Plugin root
+    ${ExchAt} 2 $0  # Array item.
+
+    # Check directory status.  Returns non-empty return code (+1) if the
+    # directory exists and is not empty:
+    ${DirState} "$1\$0" $0
+    ${If} $0 <= 0
+        StrCpy $0 ""
+    ${EndIf}
+
+    Pop  $2  # Ignored item callback arg 2
+    Pop  $1
+    Exch $0  # Return code
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function un._VimRmPluginDirCallback                                     {{{2
+#   Callback function for LoopArray.  It's used to remove one plugin
+#   subdirectory.
+# ----------------------------------------------------------------------------
+Function un._VimRmPluginDirCallback
+    ${ExchAt} 1 $1  # Item callback arg 1: Plugin root
+    ${ExchAt} 2 $0  # Array item.
+
+    ${Logged1} RMDir "$1\$0"
+
+    Pop $1  # Ignored item callback arg 2
+    Pop $1  # Restore stack
+
+    # Empty return code:
+    StrCpy $0 ""
+    Exch   $0
 FunctionEnd
 
 # ----------------------------------------------------------------------------
