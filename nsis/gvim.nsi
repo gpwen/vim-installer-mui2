@@ -1312,9 +1312,8 @@ Section $(str_section_exe) id_section_exe
     ${LogSectionStart}
 
     ${Logged1} SetOutPath "$vim_bin_path"
-    ${Logged2} File /oname=gvim.exe     "${VIMSRC}\gvim_ole.exe"
-    ${Logged2} File /oname=uninstal.exe "${VIMSRC}\uninstalw32.exe"
-    ${Logged2} File /oname=xxd.exe      "${VIMSRC}\xxdw32.exe"
+    ${Logged2} File /oname=gvim.exe "${VIMSRC}\gvim_ole.exe"
+    ${Logged2} File /oname=xxd.exe  "${VIMSRC}\xxdw32.exe"
     ${Logged1} File "${VIMSRC}\vimrun.exe"
     ${Logged1} File "${VIMTOOLS}\diff.exe"
     ${Logged1} File "${VIMRT}\vimtutor.bat"
@@ -1635,20 +1634,6 @@ Section "un.$(str_unsection_register)" id_unsection_register
 
     ${LogSectionStart}
 
-    # TODO: Remove language preference.
-    #!ifdef HAVE_MULTI_LANG
-    #!endif
-
-    # Please note $INSTDIR is set to the directory where the uninstaller is
-    # created.  Thus the "vim61" directory is included in it.
-
-    # Delete the context menu entry and batch files:
-    ${Logged1} nsExec::ExecToLog '"$INSTDIR\uninstal.exe" -nsis'
-    # TODO: Check return value:
-    Exch $R0
-    ${Log} "uninstall.exe exit code - $R0"
-    Pop $R0
-
     # Uninstall VisVim if it was included.
     # TODO: Any special handling on x64?
     !ifdef HAVE_VIS_VIM
@@ -1665,12 +1650,18 @@ Section "un.$(str_unsection_register)" id_unsection_register
         !insertmacro UninstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
             "$vim_bin_path\gvimext64.dll"
         !undef LIBRARY_X64
+
+        ${Logged1} SetRegView 64
+        Call un.VimUnregShellExt
     ${EndIf}
 
     ${If} ${FileExists} "$vim_bin_path\gvimext32.dll"
         # Remove 32-bit shell extension:
         !insertmacro UninstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
             "$vim_bin_path\gvimext32.dll"
+
+        ${Logged1} SetRegView 32
+        Call un.VimUnregShellExt
     ${EndIf}
 
     !undef LIBRARY_SHELL_EXTENSION
@@ -2153,4 +2144,69 @@ Function un._VimVerifyBatchCallback
 
     Pop  $R1
     Exch $R0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function un.VimUnregShellExt                                            {{{2
+#   Unregister vim shell extension.
+#
+#   Register view should be set before call this function.
+#
+#   Parameters : N/A
+#   Returns    : N/A
+# ----------------------------------------------------------------------------
+Function un.VimUnregShellExt
+    Push $R0
+
+    # Unregister all supported file extensions:
+    ${LoopArray} "${VIM_FILE_EXT_LIST}" "un._VimUnregFileExtCallback" \
+        "" "" $R0
+
+    # .vim file extension is specific to Vim, try to remove that from
+    # registry:
+    ${Logged3} DeleteRegKey /ifempty HKCR ".vim\OpenWithList"
+    ${Logged3} DeleteRegKey /ifempty HKCR ".vim"
+
+    # Unregister "Open With ..." list entry:
+    ${Logged3} DeleteRegKey /ifempty HKCR \
+        "Applications\gvim.exe\shell\edit\command"
+    ${Logged3} DeleteRegKey /ifempty HKCR \
+        "Applications\gvim.exe\shell\edit"
+    ${Logged3} DeleteRegKey /ifempty HKCR \
+        "Applications\gvim.exe\shell"
+    ${Logged3} DeleteRegKey /ifempty HKCR \
+        "Applications\gvim.exe"
+
+    # Unregister shell extension:
+    ${Logged3} DeleteRegKey /ifempty HKCR "*\shellex\ContextMenuHandlers\gvim"
+    ${Logged3} DeleteRegValue SHCTX "${REG_KEY_SH_EXT}" "${VIM_SH_EXT_CLSID}"
+    ${Logged3} DeleteRegKey /ifempty SHCTX "${REG_KEY_VIM}\Gvim"
+    ${Logged3} DeleteRegKey /ifempty SHCTX "${REG_KEY_VIM}"
+
+    # Unregister inproc server:
+    # $R0 - CLSID registry key.
+    StrCpy $R0 "CLSID\${VIM_SH_EXT_CLSID}"
+    ${Logged3} DeleteRegKey /ifempty HKCR "$R0\InProcServer32"
+    ${Logged3} DeleteRegKey /ifempty HKCR "$R0"
+
+    Pop $R0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function un._VimUnregFileExtCallback                                         {{{2
+#   Callback function for LoopArray.  It's used to unregister one file
+#   extension supported by Vim.
+# ----------------------------------------------------------------------------
+Function un._VimUnregFileExtCallback
+    ${ExchAt} 2 $0  # Array item.
+
+    # Register supported file extension:
+    ${Logged3} DeleteRegKey /ifempty HKCR "$0\OpenWithList\gvim.exe"
+
+    Pop $0  # Ignored item callback arg 2
+    Pop $0  # Ignored item callback arg 2
+
+    # Empty return code:
+    StrCpy $0 ""
+    Exch   $0
 FunctionEnd
