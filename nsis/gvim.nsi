@@ -17,6 +17,11 @@
 # Location of extra tools: diff.exe
 !define VIMTOOLS ..\..
 
+# URL for vim online:
+# TODO: Which link should be used for vim online?
+#   http://vim.sf.net or http://www.vim.org
+!define VIM_ONLINE_URL "http://www.vim.org"
+
 # Comment the next line if you don't have UPX.
 # Get it at http://upx.sourceforge.net
 !define HAVE_UPX
@@ -159,8 +164,8 @@ Var vim_batch_ver_found
      STR | UninstallString  | $vim_bin_path\uninstall-gui.exe       $\n\
      STR | InstallLocation  | $vim_bin_path                         $\n\
      STR | DisplayIcon      | $vim_bin_path\gvim.exe,0              $\n\
-     STR | HelpLink         | http://www.vim.org/                   $\n\
-     STR | URLUpdateInfo    | http://www.vim.org/download.php#pc    $\n\
+     STR | HelpLink         | ${VIM_ONLINE_URL}/                    $\n\
+     STR | URLUpdateInfo    | ${VIM_ONLINE_URL}/download.php#pc     $\n\
      STR | DisplayVersion   | ${VER_SHORT}                          $\n\
      DW  | NoModify         | 1                                     $\n\
      DW  | NoRepair         | 1 "
@@ -693,11 +698,8 @@ Section $(str_section_start_menu) id_section_startmenu
         "$SMPROGRAMS\${VIM_PRODUCT_NAME}"
 
     # Create URL shortcut to vim online:
-    # TODO: Which link should be used for vim online?
-    #   http://vim.sf.net/
-    #   http://www.vim.org/
     WriteINIStr "$SMPROGRAMS\${VIM_PRODUCT_NAME}\Vim Online.URL" \
-        "InternetShortcut" "URL" "http://www.vim.org/"
+        "InternetShortcut" "URL" "${VIM_ONLINE_URL}/"
 
     ${LogSectionEnd}
 SectionEnd
@@ -868,9 +870,7 @@ Section -registry_update
     Pop $R0
 
     # Register Vim with OLE:
-    # TODO: Translate
-    DetailPrint "Attempting to register Vim with OLE$\r$\n\
-                 There is no message whether this works or not."
+    ${LogPrint} "$(str_msg_register_ole)"
     ${Logged1} ExecWait '"$vim_bin_path\gvim.exe" -silent -register'
 SectionEnd
 
@@ -915,15 +915,21 @@ Function .onInit
     # Set correct registry view:
     ${VimSelectRegView}
 
+    # Show language selection dialog:  User selected language will be
+    # represented by Local ID (LCID) and assigned to $LANGUAGE.  If registry
+    # key defined, the LCID will also be stored in Windows registry.  For list
+    # of LCID, check "Locale IDs Assigned by Microsoft":
+    #   http://msdn.microsoft.com/en-us/goglobal/bb964664.aspx
+    !ifdef HAVE_MULTI_LANG
+        !insertmacro MUI_LANGDLL_DISPLAY
+    !endif
+
     # Read all Vim uninstall keys from registry.  Please note we only support
-    # limited number of old version.  Extra version will be ignored!
+    # limited number of old version.
     Call VimLoadUninstallKeys
     ${If} $vim_old_ver_count > ${VIM_MAX_OLD_VER}
-        # TODO: Change to error and abort!
-        ${Log} "WARNING: $vim_old_ver_count versions found, \
-                exceeds upper limit ${VIM_MAX_OLD_VER}. \
-                Extra versions ignored!"
-        StrCpy $vim_old_ver_count ${VIM_MAX_OLD_VER}
+        ${ShowErr} "$(str_msg_too_many_ver)"
+        Abort
     ${EndIf}
 
     # Determine default install path:
@@ -939,17 +945,6 @@ Function .onInit
     StrCpy $vim_bin_path      "$INSTDIR\${VIM_BIN_DIR}"
 
     ${Log} "Default install path: $vim_install_root"
-
-    # TODO: Shouldn't we move this to the beginning?
-    #
-    # Show language selection dialog:  User selected language will be
-    # represented by Local ID (LCID) and assigned to $LANGUAGE.  If registry
-    # key defined, the LCID will also be stored in Windows registry.  For list
-    # of LCID, check "Locale IDs Assigned by Microsoft":
-    #   http://msdn.microsoft.com/en-us/goglobal/bb964664.aspx
-    !ifdef HAVE_MULTI_LANG
-        !insertmacro MUI_LANGDLL_DISPLAY
-    !endif
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -1785,8 +1780,7 @@ Section "un.$(str_unsection_register)" id_unsection_register
     !endif
 
     # Unregister gvim with OLE:
-    # TODO: Translate
-    DetailPrint "Attempting to unregister Vim with OLE ..."
+    ${LogPrint} "$(str_msg_unreg_ole)"
     ${Logged1} ExecWait '"$vim_bin_path\gvim.exe" -silent -unregister'
 
     # Remove uninstall information:
@@ -1972,8 +1966,7 @@ Function un.onInit
     # $INSTDIR, otherwise something must be wrong:
     StrCpy $vim_bin_path "$vim_install_root\${VIM_BIN_DIR}"
     ${If} "$vim_bin_path" S!= "$INSTDIR"
-        # TODO: Add a new error message
-        ${ShowErr} $(str_msg_invalid_root)
+        ${ShowErr} "$(str_msg_bin_mismatch)"
         Pop $R0
         Abort
     ${EndIf}

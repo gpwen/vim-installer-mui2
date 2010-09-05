@@ -140,13 +140,32 @@ LangString str_desc_rm_root         ${LANG_ENGLISH} \
 # Messages                                                                {{{1
 ##############################################################################
 
+LangString str_msg_too_many_ver  ${LANG_ENGLISH} \
+    "Found $vim_old_ver_count Vim versions on your system.$\r$\n\
+     This installer can only handle ${VIM_MAX_OLD_VER} versions \
+     at most.$\r$\n\
+     Please remove some versions and start again."
+
 LangString str_msg_invalid_root  ${LANG_ENGLISH} \
     "Invalid install path: $vim_install_root!$\r$\n\
      It should end with $\"vim$\"."
 
+LangString str_msg_bin_mismatch  ${LANG_ENGLISH} \
+    "Binary path mismatch!$\r$\n$\r$\n\
+     Expect the binary path to be $\"$vim_bin_path$\",$\r$\n\
+     but system indicates the binary path is $\"$INSTDIR$\"."
+
 LangString str_msg_vim_running   ${LANG_ENGLISH} \
     "Vim is still running on your system.$\r$\n\
      Please close all instances of Vim before you continue."
+
+LangString str_msg_register_ole  ${LANG_ENGLISH} \
+    "Attempting to register Vim with OLE. \
+     There is no message indicates whether this works or not."
+
+LangString str_msg_unreg_ole     ${LANG_ENGLISH} \
+    "Attempting to unregister Vim with OLE. \
+     There is no message indicates whether this works or not."
 
 LangString str_msg_rm_start      ${LANG_ENGLISH} \
     "Uninstalling the following version:"

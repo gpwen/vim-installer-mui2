@@ -123,21 +123,37 @@ LangString str_desc_rm_plugin       ${LANG_SIMPCHINESE} \
 LangString str_unsection_root       ${LANG_SIMPCHINESE} \
     "删除 Vim 安装目录 $vim_install_root"
 LangString str_desc_rm_root         ${LANG_SIMPCHINESE} \
-    "删除 Vim 安装目录 $vim_install_root。请注意该目录下可能有您的 Vim 配置\
-     文件。如果你需要保留该目录下您修改过的配置文件，请勿选择该项。"
+    "删除 Vim 安装目录“$vim_install_root”。请注意该目录下可能有您的 Vim \
+     配置文件。如果你需要保留该目录下您修改过的配置文件，请勿选择该项。"
 
 
 ##############################################################################
 # Messages                                                                {{{1
 ##############################################################################
 
+LangString str_msg_too_many_ver  ${LANG_SIMPCHINESE} \
+    "您的系统上安装了 $vim_old_ver_count 个不同版本的 Vim，$\r$\n\
+     但本安装程序最多只能处理 ${VIM_MAX_OLD_VER} 个版本。$\r$\n\
+     请您手工删除一些旧版本以后再运行本安装程序。"
+
 LangString str_msg_invalid_root  ${LANG_SIMPCHINESE} \
-    "安装路径 $vim_install_root 无效！$\r$\n\
+    "安装路径“$vim_install_root”无效！$\r$\n\
      该路径必须以 vim 结尾。"
+
+LangString str_msg_bin_mismatch  ${LANG_SIMPCHINESE} \
+    "Vim 执行程序安装路径异常！$\r$\n$\r$\n\
+     该版本 Vim 的执行程序安装路径应该是“$vim_bin_path”,$\r$\n\
+     而系统却指示该路径为“$INSTDIR”。"
 
 LangString str_msg_vim_running   ${LANG_SIMPCHINESE} \
     "您的系统上仍有 Vim 在运行，$\r$\n\
      请您在执行后续步骤前退出这些 Vim。"
+
+LangString str_msg_register_ole  ${LANG_SIMPCHINESE} \
+    "试图注册 Vim OLE 服务器。请注意无论成功与否都不再显示进一步的信息。"
+
+LangString str_msg_unreg_ole     ${LANG_SIMPCHINESE} \
+    "试图注销 Vim OLE 服务器。请注意无论成功与否都不再显示进一步的信息。"
 
 LangString str_msg_rm_start      ${LANG_SIMPCHINESE} \
     "开始卸载以下版本："
@@ -167,5 +183,5 @@ LangString str_msg_install_fail  ${LANG_SIMPCHINESE} \
     "安装失败。祝您下次好运。"
 
 LangString str_msg_rm_exe_fail   ${LANG_SIMPCHINESE} \
-    "目录 $INSTDIR 下有部分文件删除失败！$\r$\n\
-     您必须手工删除该目录。"
+    "目录“$INSTDIR”下有部分文件删除失败！$\r$\n\
+     您只能手工删除该目录。"

@@ -123,7 +123,7 @@ LangString str_desc_rm_plugin       ${LANG_TRADCHINESE} \
 LangString str_unsection_root       ${LANG_TRADCHINESE} \
     "移除 Vim 安裝資料夾 $vim_install_root"
 LangString str_desc_rm_root         ${LANG_TRADCHINESE} \
-    "移除 Vim 安裝資料夾 $vim_install_root。請注意該資料夾下可能有閣下的 Vim \
+    "移除 Vim 安裝資料夾「$vim_install_root」。請注意該資料夾下可能有閣下的 Vim \
      設定檔。若閣下需要保留該資料夾下被修訂過的設定檔，切勿勾選該項。"
 
 
@@ -131,13 +131,29 @@ LangString str_desc_rm_root         ${LANG_TRADCHINESE} \
 # Messages                                                                {{{1
 ##############################################################################
 
+LangString str_msg_too_many_ver  ${LANG_TRADCHINESE} \
+    "閣下的電腦上安裝了 $vim_old_ver_count 個不同版本的 Vim，$\r$\n\
+     但是本安裝程式最多只能處理 ${VIM_MAX_OLD_VER} 個版本。$\r$\n\
+     煩請閣下手工移除一些版本以后再運行本安裝程式。"
+
 LangString str_msg_invalid_root  ${LANG_TRADCHINESE} \
-    "安裝資料夾 $vim_install_root 無效！$\r$\n\
-     該資料夾必須以 vim 結尾。"
+    "安裝資料夾「$vim_install_root」無效！$\r$\n\
+     該資料夾必須以「vim」結尾。"
+
+LangString str_msg_bin_mismatch  ${LANG_TRADCHINESE} \
+    "Vim 執行程式安裝路徑異常！$\r$\n$\r$\n\
+     該版本 Vim 的執行程式安裝路徑應該是「$vim_bin_path」,$\r$\n\
+     而系統卻指示該路徑為「$INSTDIR」。"
 
 LangString str_msg_vim_running   ${LANG_TRADCHINESE} \
     "閣下的電腦上尚有正在運行之 Vim，$\r$\n\
      煩請閣下在執行后續步驟前將其全部退出。"
+
+LangString str_msg_register_ole  ${LANG_TRADCHINESE} \
+    "試圖注冊 Vim OLE 伺服程式。請注意不論成功與否都不再顯示進一步的信息。"
+
+LangString str_msg_unreg_ole     ${LANG_TRADCHINESE} \
+    "試圖注銷 Vim OLE 伺服程式。請注意不論成功與否都不再顯示進一步的信息。"
 
 LangString str_msg_rm_start      ${LANG_TRADCHINESE} \
     "正移除如下版本："
@@ -167,5 +183,5 @@ LangString str_msg_install_fail  ${LANG_TRADCHINESE} \
     "安裝失敗。預祝下次好運。"
 
 LangString str_msg_rm_exe_fail   ${LANG_TRADCHINESE} \
-    "資料夾 $INSTDIR 下有部分檔案未能移除！$\r$\n\
-     閣下必須手工移除該資料夾。"
+    "資料夾「$INSTDIR」下有部分檔案未能移除！$\r$\n\
+     閣下只能手工移除該資料夾。"
