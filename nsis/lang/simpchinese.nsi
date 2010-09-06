@@ -113,18 +113,11 @@ LangString str_unsection_exe        ${LANG_SIMPCHINESE} \
 LangString str_desc_rm_exe          ${LANG_SIMPCHINESE} \
     "删除 Vim 的所有执行文件及脚本。"
 
-LangString str_unsection_plugin     ${LANG_SIMPCHINESE} \
-    "删除 Vim 插件目录"
-LangString str_desc_rm_plugin       ${LANG_SIMPCHINESE} \
-    "删除您的 Vim  插件目录。$\r$\n$\r$\n\
-     请注意该目录下所有文件都会被删除。如果您在该目录下有需要保留的文件，\
-     切勿选择该项！"
-
-LangString str_unsection_root       ${LANG_SIMPCHINESE} \
-    "删除 Vim 安装目录 $vim_install_root"
-LangString str_desc_rm_root         ${LANG_SIMPCHINESE} \
-    "删除 Vim 安装目录“$vim_install_root”。请注意该目录下可能有您的 Vim \
-     配置文件。如果你需要保留该目录下您修改过的配置文件，请勿选择该项。"
+LangString str_unsection_rc         ${LANG_SIMPCHINESE} \
+    "删除 Vim 配置文件"
+LangString str_desc_rm_rc           ${LANG_SIMPCHINESE} \
+    "删除 Vim 配置文件“$vim_install_root\_vimrc”。\
+     如果您修改过该配置文件，请勿选择此项。"
 
 
 ##############################################################################
@@ -183,5 +176,9 @@ LangString str_msg_install_fail  ${LANG_SIMPCHINESE} \
     "安装失败。祝您下次好运。"
 
 LangString str_msg_rm_exe_fail   ${LANG_SIMPCHINESE} \
-    "目录“$INSTDIR”下有部分文件删除失败！$\r$\n\
+    "目录“$vim_bin_path”下有部分文件删除失败！$\r$\n\
      您只能手工删除该目录。"
+
+LangString str_msg_rm_root_fail  ${LANG_SIMPCHINESE} \
+    "警告：无法删除 Vim 安装目录“$vim_install_root”，\
+     该目录下仍有其他文件。"

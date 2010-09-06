@@ -120,20 +120,11 @@ LangString str_unsection_exe        ${LANG_ENGLISH} \
 LangString str_desc_rm_exe          ${LANG_ENGLISH} \
     "Remove all Vim excutables and runtime files."
 
-LangString str_unsection_plugin     ${LANG_ENGLISH} \
-    "Remove Vim Plugin Directory"
-LangString str_desc_rm_plugin       ${LANG_ENGLISH} \
-    "Remove all files in your Vim plugin directory.\
-     $\r$\n$\r$\n\
-     CAREFUL: Do NOT remove the directory if you have created something \
-     there that you want to keep."
-
-LangString str_unsection_root       ${LANG_ENGLISH} \
-    "Remove Vim Root Directory $vim_install_root"
-LangString str_desc_rm_root         ${LANG_ENGLISH} \
-    "Remove Vim root directory $vim_install_root.  Please note this \
-     directory contains your Vim configuration files.  Skip this if \
-     you have modified configuration files that you want to keep."
+LangString str_unsection_rc         ${LANG_ENGLISH} \
+    "Remove Vim Config File"
+LangString str_desc_rm_rc           ${LANG_ENGLISH} \
+    "Remove Vim configuration file $vim_install_root\_vimrc. \
+     Skip this if you have modified the configuration file."
 
 
 ##############################################################################
@@ -195,5 +186,8 @@ LangString str_msg_install_fail  ${LANG_ENGLISH} \
     "Installation failed. Better luck next time."
 
 LangString str_msg_rm_exe_fail   ${LANG_ENGLISH} \
-    "Some files in $INSTDIR have not been deleted!$\r$\n\
+    "Some files in $vim_bin_path have not been deleted!$\r$\n\
      You must do it manually."
+
+LangString str_msg_rm_root_fail  ${LANG_ENGLISH} \
+    "WARNING: Cannot remove $\"$vim_install_root$\", it is not empty!"

@@ -85,6 +85,8 @@ Var vim_has_console
 Var vim_batch_exe
 Var vim_batch_arg
 Var vim_batch_ver_found
+Var vim_last_copy
+Var vim_rm_common
 
 # List of alphanumeric:
 !define ALPHA_NUMERIC     "abcdefghijklmnopqrstuvwxyz0123456789"
@@ -275,6 +277,97 @@ SilentInstall             normal
     ${Else}
         ${Logged1} SetRegView 32
     ${EndIf}
+!macroend
+
+# ----------------------------------------------------------------------------
+# macro VimLoadUninstallKeys                                              {{{2
+#   Load all uninstall keys from Windows registry.
+#
+#   All uninstall keys will be concatenate as a single string (delimited by
+#   CR/LF).  This is a workaround since NSIS does not support array.
+#
+#   Parameters : None
+#   Returns    : None
+#   Globals    :
+#     The following globals will be changed by this functions:
+#     - $vim_old_ver_keys  : Concatenated of all uninstall keys found.
+#     - $vim_old_ver_count : Number of uninstall keys found.
+# ----------------------------------------------------------------------------
+!define VimLoadUninstallKeys "!insertmacro _VimLoadUninstallKeysCall"
+!macro _VimLoadUninstallKeysCall
+    ${CallArtificialFunction} _VimLoadUninstallKeys
+!macroend
+!macro _VimLoadUninstallKeys
+    Push $R0
+    Push $R1
+    Push $R2
+
+    ClearErrors
+    StrCpy $R0 0    # Sub-key index
+    StrCpy $R1 ""   # Sub-key
+    StrCpy $vim_old_ver_keys  ""
+    StrCpy $vim_old_ver_count 0
+    ${Do}
+        # Eumerate the sub-key:
+        EnumRegKey $R1 SHCTX ${REG_KEY_UNINSTALL} $R0
+
+        # Stop if no more sub-key:
+        ${If}   ${Errors}
+        ${OrIf} $R1 == ""
+            ${ExitDo}
+        ${EndIf}
+
+        # Move to the next sub-key:
+        IntOp $R0 $R0 + 1
+
+        # Check if the key is Vim uninstall key or not:
+        StrCpy $R2 $R1 4
+        ${IfThen} $R2 S!= "Vim " ${|} ${Continue} ${|}
+
+        # Verifies required sub-keys:
+        ReadRegStr $R2 SHCTX "${REG_KEY_UNINSTALL}\$R1" "DisplayName"
+        ${If}   ${Errors}
+        ${OrIf} $R2 == ""
+            ${Log} "WARNING: Skip uninstall key [$R1]: \
+                    Cannot find sub-key 'DisplayName'!"
+            ${Continue}
+        ${EndIf}
+
+        ReadRegStr $R2 SHCTX "${REG_KEY_UNINSTALL}\$R1" "UninstallString"
+        ${If}   ${Errors}
+        ${OrIf} $R2 == ""
+            ${Log} "WARNING: Skip uninstall key [$R1]: \
+                    Cannot find sub-key 'UninstallString'!"
+            ${Continue}
+        ${EndIf}
+
+        ${IfNot} ${FileExists} $R2
+            ${Log} "WARNING: Skip uninstall key [$R1]: \
+                    Cannot access uninstall executable [$R2]"
+            ${Continue}
+        ${EndIf}
+
+        # Store the sub-key found.  If the old version is the same as the
+        # version currently been installed, its key will always be put at
+        # front to make sure it will be included in the uninstall list as the
+        # first item:
+        IntOp  $vim_old_ver_count $vim_old_ver_count + 1
+        ${If} $R1 S== "${VIM_PRODUCT_NAME}"
+            StrCpy $vim_old_ver_keys "$R1$\r$\n$vim_old_ver_keys"
+        ${Else}
+            StrCpy $vim_old_ver_keys "$vim_old_ver_keys$R1$\r$\n"
+        ${EndIf}
+
+        ${Log} "Found Vim uninstall key No.$vim_old_ver_count: [$R1]"
+    ${Loop}
+
+    ${Log} "Found $vim_old_ver_count uninstall keys:$\r$\n\
+            $vim_old_ver_keys"
+    ClearErrors
+
+    Pop $R2
+    Pop $R1
+    Pop $R0
 !macroend
 
 # ----------------------------------------------------------------------------
@@ -903,6 +996,8 @@ Function .onInit
     StrCpy $vim_batch_exe       ""
     StrCpy $vim_batch_arg       ""
     StrCpy $vim_batch_ver_found 0
+    StrCpy $vim_last_copy       0
+    StrCpy $vim_rm_common       0
 
     # Initialize log:
     !ifdef VIM_LOG_FILE
@@ -926,7 +1021,7 @@ Function .onInit
 
     # Read all Vim uninstall keys from registry.  Please note we only support
     # limited number of old version.
-    Call VimLoadUninstallKeys
+    ${VimLoadUninstallKeys}
     ${If} $vim_old_ver_count > ${VIM_MAX_OLD_VER}
         ${ShowErr} "$(str_msg_too_many_ver)"
         Abort
@@ -972,93 +1067,6 @@ Function .onInstFailed
     !ifdef VIM_LOG_FILE
         ${LogClose}
     !endif
-FunctionEnd
-
-# ----------------------------------------------------------------------------
-# Function VimLoadUninstallKeys                                           {{{2
-#   Load all uninstall keys from Windows registry.
-#
-#   All uninstall keys will be concatenate as a single string (delimited by
-#   CR/LF).  This is a workaround since NSIS does not support array.
-#
-#   Parameters : None
-#   Returns    : None
-#   Globals    :
-#     The following globals will be changed by this functions:
-#     - $vim_old_ver_keys  : Concatenated of all uninstall keys found.
-#     - $vim_old_ver_count : Number of uninstall keys found.
-# ----------------------------------------------------------------------------
-Function VimLoadUninstallKeys
-    Push $R0
-    Push $R1
-    Push $R2
-
-    ClearErrors
-    StrCpy $R0 0    # Sub-key index
-    StrCpy $R1 ""   # Sub-key
-    StrCpy $vim_old_ver_keys  ""
-    StrCpy $vim_old_ver_count 0
-    ${Do}
-        # Eumerate the sub-key:
-        EnumRegKey $R1 SHCTX ${REG_KEY_UNINSTALL} $R0
-
-        # Stop if no more sub-key:
-        ${If}   ${Errors}
-        ${OrIf} $R1 == ""
-            ${ExitDo}
-        ${EndIf}
-
-        # Move to the next sub-key:
-        IntOp $R0 $R0 + 1
-
-        # Check if the key is Vim uninstall key or not:
-        StrCpy $R2 $R1 4
-        ${IfThen} $R2 S!= "Vim " ${|} ${Continue} ${|}
-
-        # Verifies required sub-keys:
-        ReadRegStr $R2 SHCTX "${REG_KEY_UNINSTALL}\$R1" "DisplayName"
-        ${If}   ${Errors}
-        ${OrIf} $R2 == ""
-            ${Log} "WARNING: Skip uninstall key [$R1]: \
-                    Cannot find sub-key 'DisplayName'!"
-            ${Continue}
-        ${EndIf}
-
-        ReadRegStr $R2 SHCTX "${REG_KEY_UNINSTALL}\$R1" "UninstallString"
-        ${If}   ${Errors}
-        ${OrIf} $R2 == ""
-            ${Log} "WARNING: Skip uninstall key [$R1]: \
-                    Cannot find sub-key 'UninstallString'!"
-            ${Continue}
-        ${EndIf}
-
-        ${IfNot} ${FileExists} $R2
-            ${Log} "WARNING: Skip uninstall key [$R1]: \
-                    Cannot access uninstall executable [$R2]"
-            ${Continue}
-        ${EndIf}
-
-        # Store the sub-key found.  If the old version is the same as the
-        # version currently been installed, its key will always be put at
-        # front to make sure it will be included in the uninstall list as the
-        # first item:
-        IntOp  $vim_old_ver_count $vim_old_ver_count + 1
-        ${If} $R1 S== "${VIM_PRODUCT_NAME}"
-            StrCpy $vim_old_ver_keys "$R1$\r$\n$vim_old_ver_keys"
-        ${Else}
-            StrCpy $vim_old_ver_keys "$vim_old_ver_keys$R1$\r$\n"
-        ${EndIf}
-
-        ${Log} "Found Vim uninstall key No.$vim_old_ver_count: [$R1]"
-    ${Loop}
-
-    ${Log} "Found $vim_old_ver_count uninstall keys:$\r$\n\
-            $vim_old_ver_keys"
-    ClearErrors
-
-    Pop $R2
-    Pop $R1
-    Pop $R0
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -1841,44 +1849,26 @@ Section "un.$(str_unsection_exe)" id_unsection_exe
     # gvimext.dll may still be there.
     ${Logged1} RMDir "$vim_bin_path"
 
-    ${LogSectionEnd}
-SectionEnd
-
-# ----------------------------------------------------------------------------
-# Section: Remove vimfiles                                                {{{2
-# ----------------------------------------------------------------------------
-Section /o "un.$(str_unsection_plugin)" id_unsection_plugin
-    ${LogSectionStart}
-
-    # Remove empty plugin directory hierarchy under $HOME:
-    Push "HOME"
-    Call un.VimRmPluginDir
-
-    # Remove empty plugin directory hierarchy under $VIM:
-    Push "VIM"
-    Call un.VimRmPluginDir
+    # Also remove common files if this is the last Vim:
+    StrCpy $vim_rm_common $vim_last_copy
 
     ${LogSectionEnd}
 SectionEnd
 
 # ----------------------------------------------------------------------------
-# Section: Remove install root                                            {{{2
+# Section: Remove $VIM/_vimrc                                             {{{2
 # ----------------------------------------------------------------------------
-Section /o "un.$(str_unsection_root)" id_unsection_root
+Section /o "un.$(str_unsection_rc)" id_unsection_rc
     # Do not allow user to remove this section initially:
     SectionIn RO
 
     ${LogSectionStart}
 
-    # Remove all possible config file(s):
-    ${Logged1} Delete "$vim_install_root\_vimrc"
-    ${Logged1} Delete "$vim_install_root\.vimrc"
-    ${Logged1} Delete "$vim_install_root\vimrc~1"
-
-    # Remove install root if it is empty:
-    ${Logged1} RMDir "$vim_install_root"
-    ${If} ${Errors}
-        ${Log} "WARNING: Cannot remove $vim_install_root, it is not empty!"
+    # Remove all possible config file(s) if this is the last Vim:
+    ${If} $vim_rm_common = 1
+        ${Logged1} Delete "$vim_install_root\_vimrc"
+        ${Logged1} Delete "$vim_install_root\.vimrc"
+        ${Logged1} Delete "$vim_install_root\vimrc~1"
     ${EndIf}
 
     ${LogSectionEnd}
@@ -1888,6 +1878,23 @@ SectionEnd
 # Section: Final touch                                                    {{{2
 # ----------------------------------------------------------------------------
 Section -un.post
+    # Remove unchanged common components when remove the last Vim:
+    ${If} $vim_rm_common = 1
+        # Remove empty plugin directory hierarchy under $HOME:
+        Push "HOME"
+        Call un.VimRmPluginDir
+
+        # Remove empty plugin directory hierarchy under $VIM:
+        Push "VIM"
+        Call un.VimRmPluginDir
+
+        # Remove install root if it is empty:
+        ${Logged1} RMDir "$vim_install_root"
+        ${If} ${Errors}
+            ${LogPrint} "$(str_msg_rm_root_fail)"
+        ${EndIf}
+    ${EndIf}
+
     # Close log:
     !ifdef VIM_LOG_FILE
         ${LogClose}
@@ -1899,10 +1906,9 @@ SectionEnd
 # Description for Uninstaller Sections                                    {{{1
 ##############################################################################
 !insertmacro MUI_UNFUNCTION_DESCRIPTION_BEGIN
-    !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_register}  $(str_desc_unregister)
-    !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_exe}       $(str_desc_rm_exe)
-    !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_plugin}    $(str_desc_rm_plugin)
-    !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_root}      $(str_desc_rm_root)
+    !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_register} $(str_desc_unregister)
+    !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_exe}      $(str_desc_rm_exe)
+    !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_rc}       $(str_desc_rm_rc)
 !insertmacro MUI_UNFUNCTION_DESCRIPTION_END
 
 
@@ -1932,6 +1938,8 @@ Function un.onInit
     StrCpy $vim_batch_exe       ""
     StrCpy $vim_batch_arg       ""
     StrCpy $vim_batch_ver_found 0
+    StrCpy $vim_last_copy       0
+    StrCpy $vim_rm_common       0
 
     # Initialize log:
     !ifdef VIM_LOG_FILE
@@ -1971,6 +1979,28 @@ Function un.onInit
         Abort
     ${EndIf}
 
+    # Count all Vim version installed on this system.  If only one version
+    # found, and it's the version we are about to uninstall, we're free to
+    # remove common components:
+    ${VimLoadUninstallKeys}
+    ${TrimString} "$vim_old_ver_keys" $vim_old_ver_keys
+
+    ${If}    $vim_old_ver_count = 1
+    ${AndIf} $vim_old_ver_keys  S== "${VIM_PRODUCT_NAME}"
+        ${Log} "About to remove the last Vim version."
+        StrCpy $vim_last_copy 1
+
+        # Allow user to remove config file:
+        !insertmacro ClearSectionFlag ${id_unsection_rc} ${SF_RO}
+    ${Else}
+        ${Log} "This is not the last Vim version."
+        StrCpy $vim_last_copy 0
+
+        # Config file should not be removed:
+        !insertmacro UnSelectSection ${id_unsection_rc}
+        !insertmacro SetSectionFlag  ${id_unsection_rc} ${SF_RO}
+    ${EndIf}
+
     Pop $R0
 FunctionEnd
 
@@ -1979,29 +2009,23 @@ FunctionEnd
 # ----------------------------------------------------------------------------
 Function un.onSelChange
     Push $R0
-    Push $R1
 
     # Get selection status of the exe removal section:
     SectionGetFlags ${id_unsection_exe} $R0
 
-    # Status of the plugin removal section:
-    SectionGetFlags ${id_unsection_plugin} $R1
-    IntOp $R0 $R0 & $R1
-
-    # Root directory can be removed only if all sub-directories will be removed:
+    # Config file should not be removed unless executables will be removed,
+    # and this is the last Vim on the system.
     IntOp $R0 $R0 & ${SF_SELECTED}
-    ${If} $R0 = ${SF_SELECTED}
-        # All sub-directories will be removed, so user is allowed to remove
-        # the root directory:
-        !insertmacro ClearSectionFlag ${id_unsection_root} ${SF_RO}
+    ${If}    $R0 = ${SF_SELECTED}
+    ${AndIf} $vim_last_copy = 1
+        # Allow user to remove config file:
+        !insertmacro ClearSectionFlag ${id_unsection_rc} ${SF_RO}
     ${Else}
-        # Some sub-directories will not be removed, disable removal of the
-        # root directory:
-        !insertmacro UnSelectSection ${id_unsection_root}
-        !insertmacro SetSectionFlag  ${id_unsection_root} ${SF_RO}
+        # Config file should not be removed:
+        !insertmacro UnSelectSection ${id_unsection_rc}
+        !insertmacro SetSectionFlag  ${id_unsection_rc} ${SF_RO}
     ${EndIf}
 
-    Pop $R1
     Pop $R0
 FunctionEnd
 

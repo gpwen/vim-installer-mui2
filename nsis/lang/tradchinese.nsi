@@ -113,19 +113,11 @@ LangString str_unsection_exe        ${LANG_TRADCHINESE} \
 LangString str_desc_rm_exe          ${LANG_TRADCHINESE} \
     "移除所有的 Vim 程式及腳本。"
 
-LangString str_unsection_plugin     ${LANG_TRADCHINESE} \
-    "移除 Vim 插件資料夾"
-LangString str_desc_rm_plugin       ${LANG_TRADCHINESE} \
-    "移除您的 Vim 插件資料夾。$\r$\n$\r$\n\
-     請注意該資料夾下所有檔案都會被移除。若閣下在該資料夾下有希望保留的檔案，\
-     切勿勾選該項！"
-
-LangString str_unsection_root       ${LANG_TRADCHINESE} \
-    "移除 Vim 安裝資料夾 $vim_install_root"
-LangString str_desc_rm_root         ${LANG_TRADCHINESE} \
-    "移除 Vim 安裝資料夾「$vim_install_root」。請注意該資料夾下可能有閣下的 Vim \
-     設定檔。若閣下需要保留該資料夾下被修訂過的設定檔，切勿勾選該項。"
-
+LangString str_unsection_rc         ${LANG_TRADCHINESE} \
+    "移除 Vim 設定檔"
+LangString str_desc_rm_rc           ${LANG_TRADCHINESE} \
+    "移除 Vim 設定檔「$vim_install_root\_vimrc」。\
+     若閣下修訂過此設定檔，切勿勾選該項。"
 
 ##############################################################################
 # Messages                                                                {{{1
@@ -183,5 +175,9 @@ LangString str_msg_install_fail  ${LANG_TRADCHINESE} \
     "安裝失敗。預祝下次好運。"
 
 LangString str_msg_rm_exe_fail   ${LANG_TRADCHINESE} \
-    "資料夾「$INSTDIR」下有部分檔案未能移除！$\r$\n\
+    "資料夾「$vim_bin_path」下有部分檔案未能移除！$\r$\n\
      閣下只能手工移除該資料夾。"
+
+LangString str_msg_rm_root_fail  ${LANG_TRADCHINESE} \
+    "警告：無法刪除 Vim 安裝資料夾「$vim_install_root」，\
+     該資料夾下仍有其他檔案。"
