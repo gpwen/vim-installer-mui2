@@ -213,8 +213,6 @@ SilentInstall             normal
 !define MUI_FINISHPAGE_RUN                 "$vim_bin_path\gvim.exe"
 !define MUI_FINISHPAGE_RUN_TEXT            $(str_show_readme)
 !define MUI_FINISHPAGE_RUN_PARAMETERS      "-R $\"$vim_bin_path\README.txt$\""
-!define MUI_FINISHPAGE_REBOOTLATER_DEFAULT
-!define MUI_FINISHPAGE_NOREBOOTSUPPORT
 
 !ifdef HAVE_UPX
     !packhdr temp.dat "upx --best --compress-icons=1 temp.dat"
@@ -235,6 +233,7 @@ SilentInstall             normal
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE VimFinalCheck
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
+!define MUI_FINISHPAGE_NOREBOOTSUPPORT
 !insertmacro MUI_PAGE_FINISH
 
 # Uninstaller pages:
@@ -242,6 +241,7 @@ SilentInstall             normal
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE un.VimCheckRunning
 !insertmacro MUI_UNPAGE_COMPONENTS
 !insertmacro MUI_UNPAGE_INSTFILES
+!define MUI_FINISHPAGE_NOREBOOTSUPPORT
 !insertmacro MUI_UNPAGE_FINISH
 
 ##############################################################################
