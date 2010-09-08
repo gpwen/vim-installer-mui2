@@ -74,10 +74,22 @@ LangString str_section_quick_launch ${LANG_ENGLISH} \
 LangString str_desc_quick_launch    ${LANG_ENGLISH} \
     "Add Vim shortcut to the Quick launch panel."
 
-LangString str_section_edit_with    ${LANG_ENGLISH} \
+LangString str_group_edit_with      ${LANG_ENGLISH} \
     "Add Vim Context Menu"
 LangString str_desc_edit_with       ${LANG_ENGLISH} \
     "Add Vim to the $\"Open With...$\" context menu list."
+
+LangString str_section_edit_with32  ${LANG_ENGLISH} \
+    "32-bit Version"
+LangString str_desc_edit_with32     ${LANG_ENGLISH} \
+    "Add Vim to the $\"Open With...$\" context menu list \
+     for 32-bit applications."
+
+LangString str_section_edit_with64  ${LANG_ENGLISH} \
+    "64-bit Version"
+LangString str_desc_edit_with64     ${LANG_ENGLISH} \
+    "Add Vim to the $\"Open With...$\" context menu list \
+     for 64-bit applications."
 
 LangString str_section_vim_rc       ${LANG_ENGLISH} \
     "Create Default Config"

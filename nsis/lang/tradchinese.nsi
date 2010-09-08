@@ -68,10 +68,20 @@ LangString str_section_quick_launch ${LANG_TRADCHINESE} \
 LangString str_desc_quick_launch    ${LANG_TRADCHINESE} \
     "安裝 Vim 快速啟動項。"
 
-LangString str_section_edit_with    ${LANG_TRADCHINESE} \
+LangString str_group_edit_with      ${LANG_TRADCHINESE} \
     "安裝快捷選單"
 LangString str_desc_edit_with       ${LANG_TRADCHINESE} \
     "在「打開方式」快捷選單中添加 Vim 項。"
+
+LangString str_section_edit_with32  ${LANG_TRADCHINESE} \
+    "32 位元版本"
+LangString str_desc_edit_with32     ${LANG_TRADCHINESE} \
+    "在 32 位元程式的「打開方式」快捷選單中添加 Vim 項。"
+
+LangString str_section_edit_with64  ${LANG_TRADCHINESE} \
+    "64 位元版本"
+LangString str_desc_edit_with64     ${LANG_TRADCHINESE} \
+    "在 64 位元程式的「打開方式」快捷選單中添加 Vim 項。"
 
 LangString str_section_vim_rc       ${LANG_TRADCHINESE} \
     "創建默認設定檔"

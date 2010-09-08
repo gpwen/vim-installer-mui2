@@ -80,7 +80,6 @@ Var vim_install_root
 Var vim_bin_path
 Var vim_old_ver_keys
 Var vim_old_ver_count
-Var vim_shell_ext_name
 Var vim_has_console
 Var vim_batch_exe
 Var vim_batch_arg
@@ -813,42 +812,52 @@ Section $(str_section_quick_launch) id_section_quicklaunch
 SectionEnd
 
 # ----------------------------------------------------------------------------
-# Section: Install shell extension                                        {{{2
+# Group: Install shell extension                                          {{{2
 # ----------------------------------------------------------------------------
-Section $(str_section_edit_with) id_section_editwith
-    SectionIn 1 3
+SectionGroup /e $(str_group_edit_with) id_group_editwith
 
-    ${LogSectionStart}
+    # Install/Upgrade 32-bit gvimext.dll:
+    Section $(str_section_edit_with32) id_section_editwith32
+        SectionIn 1 3
 
-    # Install/Upgrade gvimext.dll:
-    !define LIBRARY_SHELL_EXTENSION
+        ${LogSectionStart}
 
-    ${If} ${RunningX64}
-        !define LIBRARY_X64
-        !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
-            "${VIMSRC}\GvimExt\gvimext64.dll" \
-            "$vim_bin_path\gvimext64.dll" "$vim_bin_path"
-        !undef LIBRARY_X64
+        !define LIBRARY_SHELL_EXTENSION
 
-        StrCpy $vim_shell_ext_name "$vim_bin_path\gvimext64.dll"
-    ${Else}
         !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
             "${VIMSRC}\GvimExt\gvimext.dll" \
             "$vim_bin_path\gvimext32.dll" "$vim_bin_path"
 
-        StrCpy $vim_shell_ext_name "$vim_bin_path\gvimext32.dll"
-    ${EndIf}
+        !undef LIBRARY_SHELL_EXTENSION
 
-    !undef LIBRARY_SHELL_EXTENSION
-
-    # Register the shell extension:
-    ${If} $vim_shell_ext_name != ""
-        Push $vim_shell_ext_name
+        Push "$vim_bin_path\gvimext32.dll"
         Call VimRegShellExt
-    ${EndIf}
 
-    ${LogSectionEnd}
-SectionEnd
+        ${LogSectionEnd}
+    SectionEnd
+
+    # Install/Upgrade 64-bit gvimext.dll:
+    Section $(str_section_edit_with64) id_section_editwith64
+        SectionIn 1 3
+
+        ${LogSectionStart}
+
+        ${If} ${RunningX64}
+            !define LIBRARY_SHELL_EXTENSION
+            !define LIBRARY_X64
+            !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
+                "${VIMSRC}\GvimExt\gvimext64.dll" \
+                "$vim_bin_path\gvimext64.dll" "$vim_bin_path"
+            !undef LIBRARY_X64
+            !undef LIBRARY_SHELL_EXTENSION
+
+            Push "$vim_bin_path\gvimext64.dll"
+            Call VimRegShellExt
+        ${EndIf}
+
+        ${LogSectionEnd}
+    SectionEnd
+SectionGroupEnd
 
 # ----------------------------------------------------------------------------
 # Section: Install vimrc                                                  {{{2
@@ -1032,6 +1041,15 @@ Function .onInit
 
     # Config sections for removal of old version:
     Call VimCfgOldVerSections
+
+    # Config sections for shell extension:
+    ${IfNot} ${RunningX64}
+        ${Log} "Disable 64-bit shell extension."
+        !insertmacro UnselectSection ${id_section_editwith64}
+        !insertmacro SetSectionFlag  ${id_section_editwith64} ${SF_RO}
+        SectionSetInstTypes ${id_section_editwith64} 0
+        #SectionSetText      ${id_section_editwith64} ""
+    ${EndIf}
 
     # Initialize user variables:
     # $vim_bin_path
@@ -1691,7 +1709,9 @@ FunctionEnd
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_desktop}     $(str_desc_desktop)
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_startmenu}   $(str_desc_start_menu)
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_quicklaunch} $(str_desc_quick_launch)
-    !insertmacro MUI_DESCRIPTION_TEXT ${id_section_editwith}    $(str_desc_edit_with)
+    !insertmacro MUI_DESCRIPTION_TEXT ${id_group_editwith}      $(str_desc_edit_with)
+    !insertmacro MUI_DESCRIPTION_TEXT ${id_section_editwith32}  $(str_desc_edit_with32)
+    !insertmacro MUI_DESCRIPTION_TEXT ${id_section_editwith64}  $(str_desc_edit_with64)
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_vimrc}       $(str_desc_vim_rc)
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_pluginhome}  $(str_desc_plugin_home)
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_pluginvim}   $(str_desc_plugin_vim)

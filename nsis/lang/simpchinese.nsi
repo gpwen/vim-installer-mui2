@@ -68,10 +68,20 @@ LangString str_section_quick_launch ${LANG_SIMPCHINESE} \
 LangString str_desc_quick_launch    ${LANG_SIMPCHINESE} \
     "在快速启动条上添加 Vim。"
 
-LangString str_section_edit_with    ${LANG_SIMPCHINESE} \
+LangString str_group_edit_with      ${LANG_SIMPCHINESE} \
     "安装快捷菜单"
 LangString str_desc_edit_with       ${LANG_SIMPCHINESE} \
     "将 Vim 添加到“打开方式”快捷菜单中。"
+
+LangString str_section_edit_with32  ${LANG_SIMPCHINESE} \
+    "32 位版本"
+LangString str_desc_edit_with32     ${LANG_SIMPCHINESE} \
+    "将 Vim 添加到 32 位程序的“打开方式”快捷菜单中。"
+
+LangString str_section_edit_with64  ${LANG_SIMPCHINESE} \
+    "64 位版本"
+LangString str_desc_edit_with64     ${LANG_SIMPCHINESE} \
+    "将 Vim 添加到 64 位程序的“打开方式”快捷菜单中。"
 
 LangString str_section_vim_rc       ${LANG_SIMPCHINESE} \
     "创建缺省配置文件"
