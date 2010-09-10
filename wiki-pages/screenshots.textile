@@ -53,8 +53,6 @@ h3. Page 5 : Installation
 
 !http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/screenshots/install/p6.png!
 
-There is a noticeable pause near the end when "install.exe" being executed silently in background (2s delay in install.exe).
-
 h3. Page 6 : Finish
 
 !http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/screenshots/install/p7.png!
@@ -73,9 +71,9 @@ h3. Page 2: Components
 
 !http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/screenshots/uninstall/u2.png!
 
-User can choose whether or not to remove @vimfiles@ and Vim installation root directories.  Those are common directories shared by all Vim versions installed under the same root directory.  They won't be removed by default.  The component description will warn user above consequences of removing those directories.
-
-Combination of components will be checked to make sure it's valid.  Vim installation root is not allowed to be removed if user choose to keep some components under it.
+If the version to be removed is the last one on the system, user can choose whether to remove the default Vim config file @_vimrc@ or not.  The config file won't be removed by default.  When uninstalling the last Vim from the system:
+* @vimfiles@ directory hierarchy (under Vim install path and user home) will be removed automatically _if they are empty_.  Non-empty @vimfiles@ will be left intact.
+* Vim install root will be removed automatically _if it's empty_.  If fact, if no files has been changed under that directory, and user choose to remove defalt config file, that directory will be empty.
 
 Uninstaller will check for running instances of Vim once user press "Uninstall".
 
@@ -83,10 +81,6 @@ h3. Page 3: Uninstallation
 
 !http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/screenshots/uninstall/u3.png!
 
-Noticeable pause when "Unregistering Vim ...", as "uninstall.exe" is been executed silently there.
-
 h3. Page 4: Finish
 
 !http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/screenshots/uninstall/u4.png!
-
-If some components cannot be removed without reboot, the reboot selections will be shown on this page.  Otherwise, those selections won't be shown.  This is a nice feature of NSIS.
