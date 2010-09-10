@@ -1,0 +1,3 @@
+This branch (misc) contains some files to support the NSIS installer, but not
+necessarily part of the installer.  It's used as a catchall place for
+miscellaneous files to avoid cluttering of the main development branch.
