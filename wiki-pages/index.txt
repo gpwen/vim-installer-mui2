@@ -1,0 +1,8 @@
+home.markdown
+    Introduction
+
+screenshots.markdown
+    Screenshots
+
+build.markdown
+    Patch and Build Vim NSIS Installer

@@ -1,20 +1,46 @@
-h1. Introduction
+# Introduction
 
-This repository contains "NSIS":http://nsis.sourceforge.net/Main_Page scripts to build "Vim self-installing executables":http://www.vim.org/download.php#pc for MS-Windows (_a.k.a._, Windows installer).  The installer is upgraded to use "NSIS Modern User Interface 2.0":http://nsis.sourceforge.net/Docs/Modern%20UI%202/Readme.html, which provides a user interface for NSIS installers with a modern wizard style, similar to the wizards of recent Windows versions.  You can check the above link for detailed description and screenshots.
+This repository contains [[NSIS | http://nsis.sourceforge.net/]] scripts to
+build [[Vim self-installing executables | http://www.vim.org/download.php#pc]]
+for MS-Windows (*a.k.a.*, Windows installer).  The installer is upgraded to
+use [[NSIS Modern User Interface 2.0 |
+http://nsis.sourceforge.net/Docs/Modern%20UI%202/Readme.html]], which provides
+a user interface for NSIS installers with a modern wizard style, similar to
+the wizards of recent Windows versions.  You can check the above link for
+detailed description and screenshots.
 
-Please note code in this repository is a subset of Vim codebase, it won't build by itself.  This repository is primarily aimed for those who build their own Vim NSIS installer.
+Please note code in this repository is a subset of Vim codebase, it won't
+build by itself.  This repository is primarily aimed for those who build their
+own Vim NSIS installer.
 
-Screenshots of the installer can be found "here":http://wiki.github.com/gpwen/vim-installer-mui2/screenshots.
+Screenshots of the installer can be found [[here |
+http://wiki.github.com/gpwen/vim-installer-mui2/screenshots]].
 
-h1. Branches
+# Branches
 
-The following table shown all branches in this repository:
+All branches in this repository are listed below:
 
-|_. Branch  |_. Description |
-| "@master@":http://github.com/gpwen/vim-installer-mui2 | NSIS scripts for the new installer. |
-| "@vim-official@":http://github.com/gpwen/vim-installer-mui2/tree/vim-official | NSIS scripts from the "official mercurial repository of Vim":http://www.vim.org/mercurial.php.  It's used to track the official code (manually). |
-| "@wiki-files@":http://github.com/gpwen/vim-installer-mui2/tree/wiki-files | Files to be used on Wiki pages.  It used to make it easier to upload images to github.  You should ignore this branch. |
+* [[master|http://github.com/gpwen/vim-installer-mui2]]:
+  NSIS scripts for the new installer.
 
-h1. Build Instruction
+* [[vim-official|http://github.com/gpwen/vim-installer-mui2/tree/vim-official]]:
+  NSIS scripts from the [[official mercurial repository of
+  Vim|http://www.vim.org/mercurial.php]].  It's used to track the official
+  code (manually).
 
-To build the new installer, you should *overwrite* the content of the @nsis/@ sub-directory of the official Vim code with files on the "@master@":http://github.com/gpwen/vim-installer-mui2 branch, and then build the NSIS installer as normal.
+* [[misc|http://github.com/gpwen/vim-installer-mui2/tree/misc]]:
+  This branch contains some files to support the NSIS installer, but not
+  necessarily part of the installer.  It's used as a catchall place for
+  miscellaneous files to avoid cluttering of the
+  [[master|http://github.com/gpwen/vim-installer-mui2]] branch.
+
+* [[wiki-files|http://github.com/gpwen/vim-installer-mui2/tree/wiki-files]]:
+  Files to be used on Wiki pages.  It used to make it easier to upload images
+  to github.  You should ignore this branch.
+
+# Build Instruction
+
+To build the new installer, you should *overwrite* the content of the `nsis/`
+sub-directory of the official Vim code with files on the
+[[master|http://github.com/gpwen/vim-installer-mui2]] branch, and then build
+the NSIS installer as normal.
