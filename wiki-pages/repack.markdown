@@ -28,37 +28,29 @@ You need to installed the following software to repack the official installer.
 If you have installed [[cygwin|http://www.cygwin.com/]], you can use the fully
 automated shell script to repack Vim installer.
 
-1.  Download source code for the new NSIS installer
+1.  Create a new directory for repacking.  I'll refer to it as `repack` in the
+    following text.
+
+2.  Download source code for the new NSIS installer, checkout the
+    `origin/misc` branch, and copy file `scripts/repack-vim.sh` to the
+    `repack` directory:
 ```ksh
 mkdir vim-nsis
 cd vim-nsis
 git clone git://github.com/gpwen/vim-installer-mui2.git
-```
-
-2.  Create a new directory for repacking, and copy the repacking shell script
-    into that directory.  The shell script can be found on the
-    [[misc|http://github.com/gpwen/vim-installer-mui2/tree/misc]] branch.
-```ksh
-mkdir repack
-cd path/to/vim-installer-mui2
-git co misc
+cd vim-installer-mui2
+git co -b temp origin/misc
 cp scripts/repack-vim.sh path/to/repack
 ```
 
-    You may also download the shell script directly from [[ here |
-    http://github.com/gpwen/vim-installer-mui2/tree/misc/scripts/repack-vim.sh]]
-
-3.  Check out master branch in the git repository, the script need to access
-    code on that branch.
-```ksh
-cd path/to/vim-installer-mui2
-git co master
-```
+    You may also download the batch file directly from [[ here |
+    http://github.com/gpwen/vim-installer-mui2/raw/misc/scripts/repack-vim.sh]]
+    and put it in the `repack` directory.
 
 4.  Repack Vim installer with the following command:
 ```ksh
 cd path/to/repack
-./repack-vim.sh -ds path/to/vim-installer-mui2
+./repack-vim.sh -d
 ```
 
     The script will perform the following steps automatically:
@@ -66,8 +58,7 @@ cd path/to/repack
       http://www.vim.org/download.php#pc]].
     * Unpack the installer using 7-Zip, restore the original NSIS build
       environment.
-    * Copy new NSIS installer script from the git repository (from the path
-      you specified on the command line).
+    * Download new NSIS install script (git clone).
     * Build the new NSIS installer.
 
 Once done, the new installer can be found at:
@@ -81,14 +72,15 @@ path/to/repack/vim-repack/vim/nsis/gvim73.exe
 If you do not have shell environment, you can repack the installer manually
 using DOS batch file, which could be tedious.
 
-1.  Create a new directory for repacking (I'll refer to it as `repack` in the
-    following text).
+1.  Create a new directory for repacking.  I'll refer to it as `repack` in the
+    following text.
 
-2.  Download source code for the new NSIS installer, checkout the `misc`
-    branch, and copy file `batch\repack-vim.bat` to the `repack` directory.
+2.  Download source code for the new NSIS installer, checkout the
+    `origin/misc` branch, and copy file `batch\repack-vim.bat` to the `repack`
+    directory.
 
     You may also download the batch file directly from [[ here |
-    http://github.com/gpwen/vim-installer-mui2/tree/misc/batch/repack-vim.bat]]
+    http://github.com/gpwen/vim-installer-mui2/raw/misc/batch/repack-vim.bat]]
     and put it in the `repack` directory.
 
 3.  The path to 7-Zip command line is hardcoded in the batch file as:
