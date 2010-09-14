@@ -31,17 +31,18 @@ OPT_NSIS_GIT=
 function print_usage
 {
    print -u2 "
-Setup cygwin environment.
+Repack official Vim installer using new MUI 2.0 NSIS scripts.  Please note
+this shell script only runs under cygwin.
 
 USAGE:
     $CMD [-d] [-s <nsis-git>]
 
 Where:
-  -d            : Download Vim PC installer from Vim online.
-  -s <nsis-git> : Full path name of Vim nsis git.  If specified, this scirpt
-                  will try to copy NSIS script from that git and run makensis.
-                  Please note you must checkout correct version in that git
-                  before you run this script."
+  -d            : Download Vim PC installer (needs wget) and source code for
+                  new Vim NSIS installer (needs git) automatically.
+  -s <nsis-git> : Full path name of the local Vim nsis git repository.  If
+                  specified, this shell script will try to copy NSIS script
+                  from that location instead of cloning remote repository."
 
 return 0
 }
@@ -76,7 +77,7 @@ shift $OPTIND-1
 
 # Make sure this is invoked under cygwin:
 if [[ $SYSTEM_TYPE != CYGWIN* ]]; then
-    print -u2 "$CMD: ERROR : This script should be run under cygwin shell!"
+    print -u2 "$CMD: ERROR : This script only supports cygwin!"
     return 1
 fi
 
@@ -138,23 +139,41 @@ mv -v README_VisVim.txt src/VisVim
 
 rm -vrf \$R2 \$PLUGINSDIR
 
+# Try to copy NSIS script first if user specified path to the local git
+# repository:
+rm -vrf nsis
 if [[ -n "$OPT_NSIS_GIT"  ]]; then
     if [[ -d "$OPT_NSIS_GIT/nsis" ]]; then
-        rm -vrf nsis
         cp -vr /cygdrive/d/users/VIM-LATEST/HG-BUFFER/vim-nsis.git/nsis .
-
-        cd nsis
-        makensis gvim.nsi
-        if [[ $? -eq 0 ]]; then
-            print
-            print "$CMD: Vim installer successfully repacked as:"
-            print "    vim-repack/vim/nsis/gvim73.exe"
-        else
-            print "$CMD: ERROR : Fail to repack Vim installer."
-        fi
     else
         print -u2 "$CMD: ERROR : Cannot find nsis under $OPT_NSIS_GIT!"
         print -u2 "Is that a valid Vim nsis git?"
+        exit 1
+    fi
+fi
+
+# If the above failed, try to download the git repository directly:
+if [[ ! -d nsis  &&  $OPT_DOWNLOAD -ne 0 ]]; then
+    git clone git://github.com/gpwen/vim-installer-mui2.git
+    if [[ $? -ne 0  ||  ! -d vim-installer-mui2 ]]; then
+        print -u2 "$CMD: ERROR : Fail to download source code for the new installer!"
+        exit 1
+    fi
+
+    ( cd vim-installer-mui2  &&  git co -b test origin/master )
+    mv -v vim-installer-mui2/nsis .
+    rm -vrf vim-installer-mui2
+fi
+
+if [[ -d nsis ]]; then
+    cd nsis
+    makensis gvim.nsi
+    if [[ $? -eq 0 ]]; then
+        print
+        print "$CMD: Vim installer successfully repacked as:"
+        print "    vim-repack/vim/nsis/gvim73.exe"
+    else
+        print "$CMD: ERROR : Fail to repack Vim installer."
     fi
 else
     print
