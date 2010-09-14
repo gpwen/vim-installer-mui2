@@ -32,7 +32,7 @@ automated shell script to repack Vim installer.
 ```ksh
 mkdir vim-nsis
 cd vim-nsis
-git clone http://github.com/gpwen/vim-installer-mui2
+git clone git://github.com/gpwen/vim-installer-mui2.git
 ```
 
 2.  Create a new directory for repacking, and copy the repacking shell script

@@ -1,4 +1,6 @@
-# Introduction
+# Modern UI 2.0 upgrade for Vim NSIS installer
+
+## Introduction
 
 This repository contains [[NSIS | http://nsis.sourceforge.net/]] scripts to
 build [[Vim self-installing executables | http://www.vim.org/download.php#pc]]
@@ -13,10 +15,10 @@ Please note code in this repository is a subset of Vim codebase, it won't
 build by itself.  This repository is primarily aimed for those who build their
 own Vim NSIS installer.
 
-Screenshots of the installer can be found [[screenshots page |
+Screenshots of the new installer can be found [[screenshots page |
 http://wiki.github.com/gpwen/vim-installer-mui2/screenshots]].
 
-# Branches
+## Branches
 
 All branches in this repository are listed below:
 
@@ -38,7 +40,7 @@ All branches in this repository are listed below:
   Files to be used on Wiki pages.  It used to make it easier to upload images
   to github.  You should ignore this branch.
 
-# Build Instruction
+## Build Instruction
 
 There are two possible ways to build the new NSIS installer:
 
@@ -49,4 +51,4 @@ There are two possible ways to build the new NSIS installer:
 2.  Repack the official Vim installer.  This method is much simpler, it's the
     recommended method to try and test the new installer.  Please find
     detailed instruction on the [[repack page |
-    http://wiki.github.com/gpwen/vim-installer-mui2/build]].
+    http://wiki.github.com/gpwen/vim-installer-mui2/repack]].

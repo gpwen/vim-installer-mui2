@@ -23,15 +23,15 @@ Please follow steps listed below to patch and build the new installer:
 ```ksh
 mkdir vim-nsis
 cd vim-nsis
-git clone http://github.com/gpwen/vim-installer-mui2
+git clone git://github.com/gpwen/vim-installer-mui2.git
 ```
 
-2.  Generate patch for Vim official code (the lastest revision on the default
+2.  Generate patch for Vim official code (the latest revision on the default
     branch of the [[official mercurial repository of
     Vim|http://www.vim.org/mercurial.php]]):
 ```ksh
 cd path/to/vim-installer-mui2
-git diff -p vim-official master > path/to/nsis.patch
+git diff -p origin/vim-official origin/master > path/to/nsis.patch
 ```
 
 3.  Applies the patch to the official Vim code:

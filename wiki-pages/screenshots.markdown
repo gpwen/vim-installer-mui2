@@ -1,4 +1,6 @@
-# Installer Pages
+# Screenshots
+
+## Installer Pages
 
 Installer has 7 to 8 pages.
 
@@ -43,7 +45,7 @@ the one been installed for obvious reason.
 
 Currently the installer supports 5 old versions at most.  The number can be
 increased, but *who needs more than 5 different versions of Vim installed in
-parallel?*(TM)
+parallel?*
 
 Once installation starts, the installer will launch uninstaller for those
 selected old versions one by one, wait until they complete.  All these will be
@@ -57,7 +59,9 @@ done "natively" with NSIS script, no external executable will be used, so no
 Let user choose destination path to install Vim.
 
 Once user pressed "install", the following check will be performed:
+
 * No running Vim instance should exist;
+
 * The destination path must end with "vim" (case-insensitive).
 
 The installer won't continue until all above conditions have been satisfied.
@@ -72,9 +76,7 @@ The installer won't continue until all above conditions have been satisfied.
 
 User can determine whether README.txt should be shown or not on this page.
 
-----------
-
-# Uninstaller Pages
+## Uninstaller Pages
 
 Uninstaller has 4 pages.
 
@@ -90,9 +92,11 @@ If the version to be removed is the last one on the system, user can choose
 whether to remove the default Vim config file `_vimrc` or not.  The config
 file won't be removed by default.  When uninstalling the last Vim from the
 system:
+
 * `vimfiles` directory hierarchy (under Vim install path and user home) will
   be removed automatically *if they are empty*.  Non-empty `vimfiles` will be
   left intact.
+
 * Vim install root will be removed automatically *if it's empty*.  If fact, if
   no files has been changed under that directory, and user choose to remove
   defalt config file, that directory will be empty.
