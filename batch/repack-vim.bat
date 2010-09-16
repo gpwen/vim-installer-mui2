@@ -2,14 +2,16 @@
 
 REM This batch file is used to repack Vim executable installer.
 REM
-REM Please note 7-zip should be installed to use this script.  7-zip can be
+REM Please note 7-Zip should be installed to use this script.  7-zip can be
 REM downloaded from here:
 REM     http://www.7-zip.org/
-REM Please verify 7-zip install path is specified correctly (the EXE_7Z
-REM setting below).
+REM The install path of 7-Zip should be added to your PATH environment so your
+REM can access "7z" command from the DOS prompt.
 REM
 REM If you need to rebuild the installer, you need to install NSIS:
 REM     http://nsis.sourceforge.net/
+REM The install path of NSIS should be added to your PATH environment so your
+REM can access "makensis" command from the DOS prompt.
 REM
 REM Synopsis:
 REM   repack-vim.bat [<vim-nsis-git>]
@@ -21,8 +23,6 @@ REM The new NSIS installer, if built, can be found in:
 REM   vim-repack\vim\nsis
 REM
 REM Author: Guopeng Wen
-
-SET EXE_7Z="C:\Program Files\7-Zip\7z"
 
 IF NOT EXIST "vim-repack" GOTO chk_installer
 @echo ERROR : "vim-repack" already exist under the current directory,
@@ -39,7 +39,7 @@ REM Unpack the installer, auto-rename duplicated files:
 :do_unpack
 MKDIR vim-repack
 CD vim-repack
-@ECHO u | %EXE_7Z% x ..\gvim73.exe
+@ECHO u | 7z x ..\gvim73.exe
 IF %ERRORLEVEL% LEQ 1 GOTO do_rename
 CD ..
 @echo ERROR : Fail to unpack vim installer!
@@ -52,6 +52,13 @@ XCOPY /E /H "$_OUTDIR\*" vim\lang
 RMDIR /S /Q "$_OUTDIR"
 
 CD    vim
+
+REM lang\nb is an alias for lang\no, files under those directories are exactly
+REM the same, it seems 7z cannot handle such case, lang\no has to be recovered
+REM manually:
+XCOPY /E /H /I lang\nb lang\no
+
+REM $3* are exactly the same as gvimext*.dll:
 DEL   /Q  "$3*"
 
 MKDIR src
@@ -107,4 +114,3 @@ CD ..\..\..
 @echo   vim-repack\vim\nsis\gvim73.exe
 
 :eof
-set EXE_7Z=

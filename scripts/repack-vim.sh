@@ -4,7 +4,8 @@
 # This script is used to repack vim self-excutable installer.  It runs under
 # cywin, and assumes 7z is available.
 #
-# If you need to repack Vim installer, NSIS must be installed.
+# If you need to repack Vim installer, NSIS must be installed, and the install
+# path of NSIS should be added to your Windows PATH environment.
 #
 # Author: Guopeng Wen
 #
@@ -116,6 +117,13 @@ mv -v \$_OUTDIR/* vim/lang
 rm -vrf \$_OUTDIR
 
 cd vim
+
+# lang/nb is an alias for lang/no, files under those directories are exactly
+# the same, it seems 7z cannot handle such case, lang/no has to be recovered
+# manually:
+cp -vpr lang/nb lang/no
+
+# $3* are exactly the same as gvimext*.dll:
 rm -vf \$3*
 
 mkdir -v src
