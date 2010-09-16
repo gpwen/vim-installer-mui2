@@ -12,21 +12,35 @@ You need to installed the following software to repack the official installer.
 
   You need [[7-Zip|http://www.7-zip.org/]] to unpack the official Vim
   installer so we can repack it.  It can be downloaded from
-  [[here|http://www.7-zip.org/]].
+  [[here|http://www.7-zip.org/]].  After installation, you should add its
+  install path to Windows PATH environment so that "7z" command can be
+  accessed from DOS prompt.
 
   If you have already installed [[cygwin|http://www.cygwin.com/]], you may
-  have already installed 7-Zip as part of it.  You can check if you can access
-  the `7z` command or not.
+  have already installed 7-Zip port as part of it (the p7zip package).  You
+  can check if you can access the `7z` command or not.
 
 * [[NSIS|http://nsis.sourceforge.net/]]
 
   You need this to generate the installer.  It can be downloaded from [[here |
   http://nsis.sourceforge.net/]].
 
+  Again, after installation, you should add its install path to Windows PATH
+  environment so that "makensis" command can be accessed from DOS prompt.
+
 ## Repack Automatically with Shell Script
 
 If you have installed [[cygwin|http://www.cygwin.com/]], you can use the fully
-automated shell script to repack Vim installer.
+automated shell script to repack Vim installer.  Please verify the following
+cygwin packages have been installed before you start:
+
+* `p7zip`: This is a 7-Zip port, as mentioned above.
+
+* `wget`: Used to download file.
+
+* `git`: Used for repository access.
+
+Please follow steps listed below to repack the installer:
 
 1.  Create a new directory for repacking.  I'll refer to it as `repack` in the
     following text.
@@ -83,20 +97,12 @@ using DOS batch file, which could be tedious.
     http://github.com/gpwen/vim-installer-mui2/raw/misc/batch/repack-vim.bat]]
     and put it in the `repack` directory.
 
-3.  The path to 7-Zip command line is hardcoded in the batch file as:
-```batchfile
-SET EXE_7Z="C:\Program Files\7-Zip\7z"
-```
-
-    If that's not the location where you install 7-Zip, please edit that line
-    manually.
-
-4.  Download [[Vim self-installing executables |
+3.  Download [[Vim self-installing executables |
     http://www.vim.org/download.php#pc]] from [[here |
     ftp://ftp.vim.org/pub/vim/pc/gvim73.exe]], and put it in the `repack`
     directory.
 
-5.  Repack Vim installer with the following command in DOS prompt:
+4.  Repack Vim installer with the following command in DOS prompt:
 ```bat
 cd path\to\repack
 repack-vim.bat path\to\vim-installer-mui2
