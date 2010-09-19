@@ -13,11 +13,11 @@ You need to installed the following software to repack the official installer.
   You need [[7-Zip|http://www.7-zip.org/]] to unpack the official Vim
   installer so we can repack it.  It can be downloaded from
   [[here|http://www.7-zip.org/]].  After installation, you should add its
-  install path to Windows PATH environment so that "7z" command can be
+  install path to Windows PATH environment so that `7z` command can be
   accessed from DOS prompt.
 
   If you have already installed [[cygwin|http://www.cygwin.com/]], you may
-  have already installed 7-Zip port as part of it (the p7zip package).  You
+  have already installed 7-Zip port as part of it (the `p7zip` package).  You
   can check if you can access the `7z` command or not.
 
 * [[NSIS|http://nsis.sourceforge.net/]]
@@ -98,8 +98,7 @@ using DOS batch file, which could be tedious.
     and put it in the `repack` directory.
 
 3.  Download [[Vim self-installing executables |
-    http://www.vim.org/download.php#pc]] from [[here |
-    ftp://ftp.vim.org/pub/vim/pc/gvim73.exe]], and put it in the `repack`
+    http://www.vim.org/download.php#pc]], and put it in the `repack`
     directory.
 
 4.  Repack Vim installer with the following command in DOS prompt:
