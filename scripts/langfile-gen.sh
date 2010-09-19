@@ -16,8 +16,18 @@ SYSTEM_TYPE=$(uname -s)
 # Name of the English template file:
 OPT_EN_LANG_FILE=/tmp/english.nsi.$$
 
+# Link for git repository:
+LINK_GIT_RAW_BASE="http://github.com/gpwen/vim-installer-mui2/raw"
+
+# Link for language template:
+LINK_LANG_TMPL_BASE="$LINK_GIT_RAW_BASE/misc/lang"
+
+# Link for language file:
+LINK_LANG_FILE_BASE="$LINK_GIT_RAW_BASE/master/nsis/lang"
+
 # Command line options:
 OPT_NSIS_PATH=
+OPT_WIKI_PAGE=
 
 # Remove temporary file when exit:
 trap "rm -rf ${OPT_EN_LANG_FILE}" EXIT
@@ -39,12 +49,14 @@ This command must be run within git repository, it needs to access files in
 the repository.
 
 USAGE:
-    $CMD [-s <nsis-path>]
+    $CMD [-s <nsis-path>] [-w]
 
 Where:
   -s <nsis-path> : NSIS install path, cygwin format.  This script will try to
                    detect it automatically from path of makensis command if
-                   not specified."
+                   not specified.
+  -w             : Generate wiki-page summarized all language file instead of
+                   generating language files."
 
 return 0
 }
@@ -53,13 +65,16 @@ return 0
 # Main script begins here                                                 {{{1
 # ============================================================================
 # Parse the command line:
-while getopts :sh option; do
+while getopts :s:hw option; do
     case $option in
         h) print_usage
            exit 0
            ;;
 
         s) OPT_NSIS_PATH="$OPTARG"
+           ;;
+
+        w) OPT_WIKI_PAGE=1
            ;;
 
         :) print -u2 "$CMD: ERROR:"
@@ -107,6 +122,26 @@ if [[ ! -d "$OPT_NSIS_PATH" ]]; then
     exit 1
 fi
 
+# Output wiki-page:
+if [[ $OPT_WIKI_PAGE -ne 0 ]]; then
+    print "<TABLE BORDER=\"1\" ALIGN=\"CENTER\" CELLSPACING=\"0\""
+    print "  RULES=\"GROUPS\" FRAME=\"HSIDES\">"
+    print "  <THEAD>"
+    print "    <TR>"
+    print "      <TH>Language</TH>"
+    print "      <TH>&nbsp;</TH>"
+    print "      <TH>Local ID</TH>"
+    print "      <TH>&nbsp;</TH>"
+    print "      <TH>Template</TH>"
+    print "      <TH>&nbsp;</TH>"
+    print "      <TH>Final</TH>"
+    print "      <TH>&nbsp;</TH>"
+    print "      <TH>Author</TH>"
+    print "    </TR>"
+    print "  </THEAD>"
+    print "  <TBODY ALIGN=\"CENTER\">"
+fi
+
 # Generate templates for all languages:
 for LANG_FILE_FULL in "$OPT_NSIS_PATH"/*.nlf; do
     # Name of the language:
@@ -119,6 +154,52 @@ for LANG_FILE_FULL in "$OPT_NSIS_PATH"/*.nlf; do
     # Name of the language file, all lower case:
     typeset -l NSIS_LANG_FILE="${NSIS_LANG_NAME}.nsi"
 
+    # Determine Locale ID (LCID):
+    NSIS_LCID=$(
+    perl -p -e '
+        s/[\s\r\n]+$//iox;
+        if (!$lcid_found)
+        {
+            $lcid_found = /^ \s* \# \s+ Language \s+ ID \s*/iox;
+            $_          = "";
+            next;
+        }
+        else
+        {
+            print "$_\n";
+            last;
+        }' "$LANG_FILE_FULL")
+
+    # Output wiki-page:
+    if [[ $OPT_WIKI_PAGE -ne 0 ]]; then
+        LINK_TEMP="LINK_LANG_TMPL_BASE/$NSIS_LANG_FILE"
+        print "    <TR>"
+        print "      <TD>$NSIS_LANG_NAME</TD>"
+        print "      <TD>&nbsp;</TD>"
+        print "      <TD>$NSIS_LCID</TD>"
+        print "      <TD>&nbsp;</TD>"
+        print "      <TD><A HREF=\"$LINK_TEMP\">$NSIS_LANG_FILE</A></TD>"
+        print "      <TD>&nbsp;</TD>"
+
+        if git cat-file -e master:nsis/lang/$NSIS_LANG_FILE 2>/dev/null; then
+            # Get author of the language file:
+            NSIS_AUTHOR=$(git show master:nsis/lang/english.nsi | \
+                          grep '^# Author: ' | sed -e 's/^# Author: //g')
+            NSIS_AUTHOR=${NSIS_AUTHOR:-"Cannot Find"}
+
+            LINK_TEMP="$LINK_LANG_FILE_BASE/$NSIS_LANG_FILE"
+            print "      <TD><A HREF=\"$LINK_TEMP\">$NSIS_LANG_FILE</A></TD>"
+            print "      <TD>&nbsp;</TD>"
+            print "      <TD>$NSIS_AUTHOR</TD>"
+        else
+            print "      <TD>&nbsp;</TD>"
+            print "      <TD>&nbsp;</TD>"
+            print "      <TD>&nbsp;</TD>"
+        fi
+        print "    </TR>"
+        continue;
+    fi
+
     # Skip English, that's the original template:
     if [[ "$NSIS_LANG_NAME" == "English" ]]; then
         continue;
@@ -130,22 +211,6 @@ for LANG_FILE_FULL in "$OPT_NSIS_PATH"/*.nlf; do
     else
         print "Generating language file : $NSIS_LANG_FILE ..."
     fi
-
-    # Determine Locale ID (LCID):
-    NSIS_LCID=$(
-    perl -p -e '
-        chomp;
-        if (!$lcid_found)
-        {
-            $lcid_found = /^ \s* \# \s+ Language \s+ ID \s* $/iox;
-            $_          = "";
-            next;
-        }
-        else
-        {
-            print "$_\n";
-            last;
-        }' "$LANG_FILE_FULL")
 
     # Copy English language file:
     cp -p $OPT_EN_LANG_FILE $NSIS_LANG_FILE
@@ -182,6 +247,12 @@ for LANG_FILE_FULL in "$OPT_NSIS_PATH"/*.nlf; do
         s/ \${LANG_ENGLISH} / \${$ENV{NSIS_LANG_ID}} /go;
         $_ .= "\n";' $NSIS_LANG_FILE
 done
+
+# Output wiki-page:
+if [[ $OPT_WIKI_PAGE -ne 0 ]]; then
+    print "  </TBODY>"
+    print "</TABLE>"
+fi
 
 # Remove backup files:
 rm -f nsis_orig_*.bak
