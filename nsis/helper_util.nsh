@@ -225,7 +225,7 @@
         ${CountFields} "$0" "$\n" $R1
 
         # ??? Debug:
-        ${Log} "### Array items: $R1"
+        #${Log} "### Array items: $R1"
 
         # Loop all items:
         StrCpy $R3 ""
@@ -239,7 +239,7 @@
             ${TrimString} $R2 $R2
 
             # ??? Debug:
-            ${Log} "### Array item $R0: [$R2]"
+            #${Log} "### Array item $R0: [$R2]"
 
             # Put item on the stack:
             Push $R2
@@ -386,7 +386,7 @@
         ${CountFields} "$R4" "|" $R3
 
         # ??? Debug:
-        ${Log} "### Rows: $R2, Columns: $R3"
+        #${Log} "### Rows: $R2, Columns: $R3"
 
         # Loop all rows:
         StrCpy $R6 ""
@@ -406,7 +406,7 @@
                     ${TrimString} $R5 $R5
 
                     # ??? Debug:
-                    ${Log} "### Row $R0, Col $R1: [$R5]"
+                    #${Log} "### Row $R0, Col $R1: [$R5]"
 
                     # Put column on the stack:
                     Push $R5
@@ -418,7 +418,7 @@
                 ${TrimString} $R5 $R5
 
                 # ??? Debug:
-                ${Log} "### Row $R0, Col $2: [$R5]"
+                #${Log} "### Row $R0, Col $2: [$R5]"
 
                 # Put column on the stack:
                 Push $R5

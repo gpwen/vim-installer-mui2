@@ -207,6 +207,7 @@ SilentInstall             normal
 # Show all languages, despite user's codepage:
 !define MUI_LANGDLL_ALLLANGUAGES
 
+!define MUI_COMPONENTSPAGE_SMALLDESC
 !define MUI_DIRECTORYPAGE_TEXT_DESTINATION $(str_dest_folder)
 !define MUI_LICENSEPAGE_CHECKBOX
 !define MUI_FINISHPAGE_RUN                 "$vim_bin_path\gvim.exe"
@@ -822,16 +823,19 @@ SectionGroup /e $(str_group_edit_with) id_group_editwith
 
         ${LogSectionStart}
 
+        ${Logged1} SetRegView 32
         !define LIBRARY_SHELL_EXTENSION
-
         !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
             "${VIMSRC}\GvimExt\gvimext.dll" \
             "$vim_bin_path\gvimext32.dll" "$vim_bin_path"
-
         !undef LIBRARY_SHELL_EXTENSION
 
+        ${Logged1} SetRegView 32
         Push "$vim_bin_path\gvimext32.dll"
         Call VimRegShellExt
+
+        # Restore registry view:
+        ${VimSelectRegView}
 
         ${LogSectionEnd}
     SectionEnd
@@ -843,6 +847,7 @@ SectionGroup /e $(str_group_edit_with) id_group_editwith
         ${LogSectionStart}
 
         ${If} ${RunningX64}
+            ${Logged1} SetRegView 64
             !define LIBRARY_SHELL_EXTENSION
             !define LIBRARY_X64
             !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
@@ -851,9 +856,13 @@ SectionGroup /e $(str_group_edit_with) id_group_editwith
             !undef LIBRARY_X64
             !undef LIBRARY_SHELL_EXTENSION
 
+            ${Logged1} SetRegView 64
             Push "$vim_bin_path\gvimext64.dll"
             Call VimRegShellExt
         ${EndIf}
+
+        # Restore registry view:
+        ${VimSelectRegView}
 
         ${LogSectionEnd}
     SectionEnd
@@ -1751,6 +1760,7 @@ Section "un.$(str_unsection_register)" id_unsection_register
 
     ${If} ${FileExists} "$vim_bin_path\gvimext64.dll"
         # Remove 64-bit shell extension:
+        ${Logged1} SetRegView 64
         !define LIBRARY_X64
         !insertmacro UninstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
             "$vim_bin_path\gvimext64.dll"
@@ -1762,6 +1772,7 @@ Section "un.$(str_unsection_register)" id_unsection_register
 
     ${If} ${FileExists} "$vim_bin_path\gvimext32.dll"
         # Remove 32-bit shell extension:
+        ${Logged1} SetRegView 32
         !insertmacro UninstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
             "$vim_bin_path\gvimext32.dll"
 
@@ -1771,8 +1782,7 @@ Section "un.$(str_unsection_register)" id_unsection_register
 
     !undef LIBRARY_SHELL_EXTENSION
 
-    # Registry view might be changed in the above code, we should restore it
-    # to correct setting:
+    # Restore registry view:
     ${VimSelectRegView}
 
     # Delete quick launch:
