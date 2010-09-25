@@ -53,20 +53,25 @@ LangString str_section_batch        ${LANG_SIMPCHINESE} \
 LangString str_desc_batch           ${LANG_SIMPCHINESE} \
     "为 Vim 的各种变体创建批处理程序，以便在命令行下运行 Vim。"
 
+LangString str_group_icons          ${LANG_SIMPCHINESE} \
+    "创建 Vim 图标"
+LangString str_desc_icons           ${LANG_SIMPCHINESE} \
+    "为 Vim 创建若干图标，以方便使用 Vim。"
+
 LangString str_section_desktop      ${LANG_SIMPCHINESE} \
-    "安装桌面快捷方式"
+    "在桌面上"
 LangString str_desc_desktop         ${LANG_SIMPCHINESE} \
-    "在桌面上为 Vim 创建若干快捷方式，以方便启动 Vim。"
+    "在桌面上为 Vim 创建若干图标，以方便启动 Vim。"
 
 LangString str_section_start_menu   ${LANG_SIMPCHINESE} \
-    "安装启动菜单项"
+    "在启动菜单的程序菜单下"
 LangString str_desc_start_menu      ${LANG_SIMPCHINESE} \
-    "在启动菜单中添加 Vim 组。适用于 Windows 95 及以上版本。"
+    "在启动菜单的程序菜单下添加 Vim 组。适用于 Windows 95 及以上版本。"
 
 LangString str_section_quick_launch ${LANG_SIMPCHINESE} \
-    "安装快速启动"
+    "在快速启动启动栏中"
 LangString str_desc_quick_launch    ${LANG_SIMPCHINESE} \
-    "在快速启动条上添加 Vim。"
+    "在快速启动栏中添加 Vim 图标。"
 
 LangString str_group_edit_with      ${LANG_SIMPCHINESE} \
     "安装快捷菜单"
@@ -89,14 +94,20 @@ LangString str_desc_vim_rc          ${LANG_SIMPCHINESE} \
     "在安装目录下生成缺省的 Vim 配置文件(_vimrc)。\
      如果该文件已经存在，则略过此项。"
 
-LangString str_section_plugin_home  ${LANG_SIMPCHINESE} \
+LangString str_group_plugin         ${LANG_SIMPCHINESE} \
     "创建插件目录"
+LangString str_desc_plugin          ${LANG_SIMPCHINESE} \
+    "创建(空的)插件目录结构。插件目录用于安装 Vim 扩展插件，\
+     只要将文件复制到相关的子目录中即可。"
+
+LangString str_section_plugin_home  ${LANG_SIMPCHINESE} \
+    "私有插件目录"
 LangString str_desc_plugin_home     ${LANG_SIMPCHINESE} \
     "在 HOME 目录下创建(空的)插件目录结构。若您未设置 HOME 目录，会在安装\
      目录下创建该目录结构。"
 
 LangString str_section_plugin_vim   ${LANG_SIMPCHINESE} \
-    "创建公共插件目录"
+    "公共插件目录"
 LangString str_desc_plugin_vim      ${LANG_SIMPCHINESE} \
     "在 Vim 安装目录下创建(空的)插件目录结构，系统上所有用户都能使用安装在\
      该目录下的扩展插件。"

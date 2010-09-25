@@ -51,7 +51,7 @@ LangString str_desc_exe             ${LANG_ENGLISH} \
 LangString str_section_console      ${LANG_ENGLISH} \
     "Vim console program"
 LangString str_desc_console         ${LANG_ENGLISH} \
-    "Console version of vim (vim.exe)."
+    "Console version of Vim (vim.exe)."
 
 LangString str_section_batch        ${LANG_ENGLISH} \
     "Create .bat files"
@@ -59,20 +59,26 @@ LangString str_desc_batch           ${LANG_ENGLISH} \
     "Create .bat files for Vim variants in the Windows directory for \
      command line use."
 
+LangString str_group_icons          ${LANG_ENGLISH} \
+    "Create icons for Vim"
+LangString str_desc_icons           ${LANG_ENGLISH} \
+    "Create icons for Vim at various locations to facilitate easy access."
+
 LangString str_section_desktop      ${LANG_ENGLISH} \
-    "Create icons on the Desktop"
+    "On the Desktop"
 LangString str_desc_desktop         ${LANG_ENGLISH} \
     "Create icons for gVim executables on the desktop."
 
 LangString str_section_start_menu   ${LANG_ENGLISH} \
-    "Add Start Menu Entry"
+    "In the Start Menu Programs Folder"
 LangString str_desc_start_menu      ${LANG_ENGLISH} \
-    "Add Vim to the start menu.  Appicable to Windows 95 and later."
+    "Add Vim in the programs folder of the start menu.  \
+     Appicable to Windows 95 and later."
 
 LangString str_section_quick_launch ${LANG_ENGLISH} \
-    "Add Quick Launch Entry"
+    "In the Quick Launch Bar"
 LangString str_desc_quick_launch    ${LANG_ENGLISH} \
-    "Add Vim shortcut to the Quick launch panel."
+    "Add Vim shortcut in the quick launch bar."
 
 LangString str_group_edit_with      ${LANG_ENGLISH} \
     "Add Vim Context Menu"
@@ -96,17 +102,23 @@ LangString str_section_vim_rc       ${LANG_ENGLISH} \
 LangString str_desc_vim_rc          ${LANG_ENGLISH} \
     "Create a default config file (_vimrc) if one does not already exist."
 
-LangString str_section_plugin_home  ${LANG_ENGLISH} \
+LangString str_group_plugin         ${LANG_ENGLISH} \
     "Create Plugin Directories"
+LangString str_desc_plugin          ${LANG_ENGLISH} \
+    "Create plugin directories.  Plugin directories allow extending Vim \
+     by dropping a file into a directory."
+
+LangString str_section_plugin_home  ${LANG_ENGLISH} \
+    "Private"
 LangString str_desc_plugin_home     ${LANG_ENGLISH} \
     "Create plugin directories in HOME (if you defined one) or Vim \
      install directory."
 
 LangString str_section_plugin_vim   ${LANG_ENGLISH} \
-    "Create Shared Plugin Directories"
+    "Shared"
 LangString str_desc_plugin_vim      ${LANG_ENGLISH} \
-    "Create plugin directories in Vim install directory (used for \
-     everybody on the system)."
+    "Create plugin directories in Vim install directory, it is used for \
+     everybody on the system."
 
 LangString str_section_vis_vim      ${LANG_ENGLISH} \
     "VisVim Extension"

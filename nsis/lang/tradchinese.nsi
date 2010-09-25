@@ -53,20 +53,26 @@ LangString str_section_batch        ${LANG_TRADCHINESE} \
 LangString str_desc_batch           ${LANG_TRADCHINESE} \
     "為 Vim 的各種變體創建批次檔，以便在命令行下啟動 Vim。"
 
+LangString str_group_icons          ${LANG_TRADCHINESE} \
+    "建立 Vim 圖示"
+LangString str_desc_icons           ${LANG_TRADCHINESE} \
+    "建立若干 Vim 圖示，以便于使用 Vim。"
+
 LangString str_section_desktop      ${LANG_TRADCHINESE} \
-    "安裝桌面捷徑"
+    "於桌面"
 LangString str_desc_desktop         ${LANG_TRADCHINESE} \
-    "在桌面為 Vim 安裝若干捷徑，以方便啟動 Vim。"
+    "建立若干 Vim 圖示於桌面上，以方便啟動 Vim。"
 
 LangString str_section_start_menu   ${LANG_TRADCHINESE} \
-    "安裝「開始」菜單中的啟動組"
+    "於「開始」功能表的「程式」集"
 LangString str_desc_start_menu      ${LANG_TRADCHINESE} \
-    "在「開始」菜單中創建 Vim 啟動組。適用于 Windows 95 及以上版本。"
+    "在「開始」功能表的「程式」集中建立 Vim 啟動組。\
+     適用于 Windows 95 及以上版本。"
 
 LangString str_section_quick_launch ${LANG_TRADCHINESE} \
-    "安裝快速啟動"
+    "於快速啟動列"
 LangString str_desc_quick_launch    ${LANG_TRADCHINESE} \
-    "安裝 Vim 快速啟動項。"
+    "在快速啟動列中建立 Vim 圖示。"
 
 LangString str_group_edit_with      ${LANG_TRADCHINESE} \
     "安裝快捷選單"
@@ -84,21 +90,27 @@ LangString str_desc_edit_with64     ${LANG_TRADCHINESE} \
     "在 64 位元程式的「打開方式」快捷選單中添加 Vim 項。"
 
 LangString str_section_vim_rc       ${LANG_TRADCHINESE} \
-    "創建默認設定檔"
+    "建立默認設定檔"
 LangString str_desc_vim_rc          ${LANG_TRADCHINESE} \
-    "在安裝資料夾下創建默認的 Vim 設定檔(_vimrc)。\
+    "在安裝資料夾下建立默認的 Vim 設定檔(_vimrc)。\
      若該設定檔已經存在，則略過此項。"
 
+LangString str_group_plugin         ${LANG_TRADCHINESE} \
+    "建立插件資料夾"
+LangString str_desc_plugin          ${LANG_TRADCHINESE} \
+    "建立(空的)插件資料夾結構。插件資料夾用于安裝 Vim 的擴展插件，\
+     只要將檔案復制到相關的子資料夾中即可。"
+
 LangString str_section_plugin_home  ${LANG_TRADCHINESE} \
-    "創建插件資料夾"
+    "建立插件資料夾"
 LangString str_desc_plugin_home     ${LANG_TRADCHINESE} \
-    "在 HOME 資料夾下創建(空的)插件資料夾結構。若閣下未設定 HOME 資料夾，會\
-     在安裝資料夾下創建該資料夾結構。"
+    "在 HOME 資料夾下建立(空的)插件資料夾結構。若閣下未設定 HOME 資料夾，會\
+     在安裝資料夾下建立該資料夾結構。"
 
 LangString str_section_plugin_vim   ${LANG_TRADCHINESE} \
-    "創建共享插件資料夾"
+    "建立共享插件資料夾"
 LangString str_desc_plugin_vim      ${LANG_TRADCHINESE} \
-    "在 Vim 安裝資料夾下創建(空的)插件資料夾結構，電腦上所有用戶都能使用安裝\
+    "在 Vim 安裝資料夾下建立(空的)插件資料夾結構，電腦上所有用戶都能使用安裝\
      在該資料夾里的擴展插件。"
 
 LangString str_section_vis_vim      ${LANG_TRADCHINESE} \

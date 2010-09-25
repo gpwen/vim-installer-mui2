@@ -763,64 +763,63 @@ Section $(str_section_batch) id_section_batch
 SectionEnd
 
 # ----------------------------------------------------------------------------
-# Section: Install desktop icons                                          {{{2
+# Section: Install icons (desktop/start menu/quick launch)                {{{2
 # ----------------------------------------------------------------------------
-Section $(str_section_desktop) id_section_desktop
-    SectionIn 1 3
+SectionGroup $(str_group_icons) id_group_icons
+    # Desktop:
+    Section $(str_section_desktop) id_section_desktop
+        SectionIn 1 3
 
-    ${LogSectionStart}
-    ${VimCreateShortcuts} "${VIM_DESKTOP_SHORTCUTS}" "$DESKTOP"
-    ${LogSectionEnd}
-SectionEnd
+        ${LogSectionStart}
+        ${VimCreateShortcuts} "${VIM_DESKTOP_SHORTCUTS}" "$DESKTOP"
+        ${LogSectionEnd}
+    SectionEnd
 
-# ----------------------------------------------------------------------------
-# Section: Install startmenu items                                        {{{2
-# ----------------------------------------------------------------------------
-Section $(str_section_start_menu) id_section_startmenu
-    SectionIn 1 3
+    # Start menu:
+    Section $(str_section_start_menu) id_section_startmenu
+        SectionIn 1 3
 
-    ${LogSectionStart}
+        ${LogSectionStart}
 
-    # Create shortcuts for the console version if installed:
-    ${If} $vim_has_console <> 0
-        ${VimCreateShortcuts} "${VIM_CONSOLE_STARTMENU}" \
+        # Create shortcuts for the console version if installed:
+        ${If} $vim_has_console <> 0
+            ${VimCreateShortcuts} "${VIM_CONSOLE_STARTMENU}" \
+                "$SMPROGRAMS\${VIM_PRODUCT_NAME}"
+        ${EndIf}
+
+        # Create shortcuts for the GUI version:
+        ${VimCreateShortcuts} "${VIM_GUI_STARTMENU}"  \
             "$SMPROGRAMS\${VIM_PRODUCT_NAME}"
-    ${EndIf}
 
-    # Create shortcuts for the GUI version:
-    ${VimCreateShortcuts} "${VIM_GUI_STARTMENU}"  \
-        "$SMPROGRAMS\${VIM_PRODUCT_NAME}"
+        # Create misc shortcuts:
+        ${VimCreateShortcuts} "${VIM_MISC_STARTMENU}" \
+            "$SMPROGRAMS\${VIM_PRODUCT_NAME}"
 
-    # Create misc shortcuts:
-    ${VimCreateShortcuts} "${VIM_MISC_STARTMENU}" \
-        "$SMPROGRAMS\${VIM_PRODUCT_NAME}"
+        # Create URL shortcut to vim online:
+        WriteINIStr "$SMPROGRAMS\${VIM_PRODUCT_NAME}\Vim Online.URL" \
+            "InternetShortcut" "URL" "${VIM_ONLINE_URL}/"
 
-    # Create URL shortcut to vim online:
-    WriteINIStr "$SMPROGRAMS\${VIM_PRODUCT_NAME}\Vim Online.URL" \
-        "InternetShortcut" "URL" "${VIM_ONLINE_URL}/"
+        ${LogSectionEnd}
+    SectionEnd
 
-    ${LogSectionEnd}
-SectionEnd
+    # Quick launch bar:
+    Section $(str_section_quick_launch) id_section_quicklaunch
+        SectionIn 1 3
 
-# ----------------------------------------------------------------------------
-# Section: Install quick launch shortcuts                                 {{{2
-# ----------------------------------------------------------------------------
-Section $(str_section_quick_launch) id_section_quicklaunch
-    SectionIn 1 3
+        ${LogSectionStart}
 
-    ${LogSectionStart}
+        ${If} $QUICKLAUNCH != $TEMP
+            ${VimCreateShortcuts} "${VIM_LAUNCH_SHORTCUTS}" "$QUICKLAUNCH"
+        ${EndIf}
 
-    ${If} $QUICKLAUNCH != $TEMP
-        ${VimCreateShortcuts} "${VIM_LAUNCH_SHORTCUTS}" "$QUICKLAUNCH"
-    ${EndIf}
-
-    ${LogSectionEnd}
-SectionEnd
+        ${LogSectionEnd}
+    SectionEnd
+SectionGroupEnd
 
 # ----------------------------------------------------------------------------
 # Group: Install shell extension                                          {{{2
 # ----------------------------------------------------------------------------
-SectionGroup /e $(str_group_edit_with) id_group_editwith
+SectionGroup $(str_group_edit_with) id_group_editwith
 
     # Install/Upgrade 32-bit gvimext.dll:
     Section $(str_section_edit_with32) id_section_editwith32
@@ -828,6 +827,7 @@ SectionGroup /e $(str_group_edit_with) id_group_editwith
 
         ${LogSectionStart}
 
+        ${Log} "Install $vim_bin_path\gvimext32.dll"
         ${Logged1} SetRegView 32
         !define LIBRARY_SHELL_EXTENSION
         !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
@@ -852,6 +852,7 @@ SectionGroup /e $(str_group_edit_with) id_group_editwith
         ${LogSectionStart}
 
         ${If} ${RunningX64}
+            ${Log} "Install $vim_bin_path\gvimext64.dll"
             ${Logged1} SetRegView 64
             !define LIBRARY_SHELL_EXTENSION
             !define LIBRARY_X64
@@ -894,34 +895,35 @@ Section $(str_section_vim_rc) id_section_vimrc
 SectionEnd
 
 # ----------------------------------------------------------------------------
-# Section: Create $HOME/vimfiles                                          {{{2
+# Section: Create vimfiles                                                {{{2
 # ----------------------------------------------------------------------------
-Section $(str_section_plugin_home) id_section_pluginhome
-    SectionIn 1 3
+SectionGroup $(str_group_plugin) id_group_plugin
+    # Under $HOME:
+    Section $(str_section_plugin_home) id_section_pluginhome
+        SectionIn 1 3
 
-    ${LogSectionStart}
+        ${LogSectionStart}
 
-    # Create vimfiles directory hierarchy under $HOME or install root:
-    Push "HOME"
-    Call VimCreatePluginDir
+        # Create vimfiles directory hierarchy under $HOME or install root:
+        Push "HOME"
+        Call VimCreatePluginDir
 
-    ${LogSectionEnd}
-SectionEnd
+        ${LogSectionEnd}
+    SectionEnd
 
-# ----------------------------------------------------------------------------
-# Section: Create $VIM/vimfiles                                           {{{2
-# ----------------------------------------------------------------------------
-Section $(str_section_plugin_vim) id_section_pluginvim
-    SectionIn 3
+    # Under $VIM:
+    Section $(str_section_plugin_vim) id_section_pluginvim
+        SectionIn 3
 
-    ${LogSectionStart}
+        ${LogSectionStart}
 
-    # Create vimfiles directory hierarchy under $VIM or install root:
-    Push "VIM"
-    Call VimCreatePluginDir
+        # Create vimfiles directory hierarchy under $VIM or install root:
+        Push "VIM"
+        Call VimCreatePluginDir
 
-    ${LogSectionEnd}
-SectionEnd
+        ${LogSectionEnd}
+    SectionEnd
+SectionGroupEnd
 
 # ----------------------------------------------------------------------------
 # Section: Install VisVim                                                 {{{2
@@ -933,6 +935,7 @@ SectionEnd
         ${LogSectionStart}
 
         # TODO: Check if this works on x64 or not.
+        ${Log} "Install $vim_bin_path\VisVim.dll"
         !insertmacro InstallLib REGDLL NOTSHARED REBOOT_NOTPROTECTED \
             "${VIMSRC}\VisVim\VisVim.dll" \
             "$vim_bin_path\VisVim.dll" "$vim_bin_path"
@@ -953,6 +956,7 @@ SectionEnd
 
         ${LogSectionStart}
 
+        ${Log} "Install $vim_bin_path\xpm4.dll"
         SetOutPath "$vim_bin_path"
         !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
             "${VIMRT}\xpm4.dll" \
@@ -978,12 +982,14 @@ SectionEnd
         File "${VIMRT}\keymap\*.vim"
 
         # Install NLS support DLLs:
+        ${Log} "Install $vim_bin_path\libintl.dll"
         SetOutPath "$vim_bin_path"
         !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
             "${VIMRT}\libintl.dll" \
             "$vim_bin_path\libintl.dll" "$vim_bin_path"
 
         !ifdef HAVE_ICONV
+            ${Log} "Install $vim_bin_path\iconv.dll"
             !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
                 "${VIMRT}\iconv.dll" \
                 "$vim_bin_path\iconv.dll" "$vim_bin_path"
@@ -1738,6 +1744,7 @@ FunctionEnd
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_exe}         $(str_desc_exe)
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_console}     $(str_desc_console)
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_batch}       $(str_desc_batch)
+    !insertmacro MUI_DESCRIPTION_TEXT ${id_group_icons}         $(str_desc_icons)
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_desktop}     $(str_desc_desktop)
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_startmenu}   $(str_desc_start_menu)
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_quicklaunch} $(str_desc_quick_launch)
@@ -1745,6 +1752,7 @@ FunctionEnd
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_editwith32}  $(str_desc_edit_with32)
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_editwith64}  $(str_desc_edit_with64)
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_vimrc}       $(str_desc_vim_rc)
+    !insertmacro MUI_DESCRIPTION_TEXT ${id_group_plugin}        $(str_desc_plugin)
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_pluginhome}  $(str_desc_plugin_home)
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_pluginvim}   $(str_desc_plugin_vim)
 
