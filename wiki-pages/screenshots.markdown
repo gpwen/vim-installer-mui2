@@ -37,20 +37,23 @@ been shown is a license agreement and user must agree to it.
 This page let user choose components to install.  Detailed description of each
 component will be shown here.
 
+[[http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/screenshots/install/p4-expanded.png]]
+
 The installer will find all version(s) of Vim that has been installed on the
-system, and create a dynamic uninstall component for each version found.  User
-can choose to keep some versions, in which case uninstaller of those versions
-will not be launched at all.  However, user cannot keep the same version as
-the one been installed for obvious reason.
+system, and create a dynamic uninstall component for each version found, as
+shown in the above screenshot (with the "Uninstall Existing Version(s)" group
+expanded).  User can choose to keep some versions, in which case uninstaller
+of those versions will not be launched at all.  However, user cannot keep the
+same version as the one been installed for obvious reason.
 
 Currently the installer supports 5 old versions at most.  The number can be
 increased, but *who needs more than 5 different versions of Vim installed in
 parallel?*
 
-Once installation starts, the installer will launch uninstaller for those
-selected old versions one by one, wait until they complete.  All these will be
-done "natively" with NSIS script, no external executable will be used, so no
-"black window" will be shown as compared to the official installer.
+Once installation starts, the installer will launch uninstaller for each of
+those selected versions, wait until they complete.  All these will be done
+"natively" with NSIS script, no external executable will be used, so no "black
+window" will be shown as compared to the official installer.
 
 ### Page 4 : Destination Path
 
