@@ -466,9 +466,32 @@ SilentInstall             normal
 !macroend
 
 # ----------------------------------------------------------------------------
+# macro VimOldVerSection                                                  {{{2
+#   Insert a section to uninstall old version of Vim.
+#
+#   This is used to create dynamic sections to uninstall existing version(s)
+#   of Vim on the system.
+#
+#   Parameters:
+#     $_INDEX : Index of the old version section (zero based).
+#   Returns:
+#     N/A
+# ----------------------------------------------------------------------------
+!define VimOldVerSection "!insertmacro _VimOldVerSection"
+!macro _VimOldVerSection _INDEX
+    Section "Uninstall existing version ${_INDEX}" `id_section_old_ver_${_INDEX}`
+        SectionIn 1 2 3
+
+        ${Log} "$\r$\nEnter old ver section ${_INDEX}"
+        Push ${_INDEX}
+        Call VimRmOldVer
+        ${Log} "Leave old ver section ${_INDEX}"
+    SectionEnd
+!macroend
+
+# ----------------------------------------------------------------------------
 # macro VimGetOldVerSecID $_INDEX $_ID                                    {{{2
-#   Get ID of the specified old version section.  This is a wrapper for
-#   function _VimGetOldVerSecIDFunc.
+#   Get ID of the specified old version section.
 #
 #   Parameters:
 #     $_INDEX : Index of the old version section (zero based).
@@ -477,9 +500,11 @@ SilentInstall             normal
 # ----------------------------------------------------------------------------
 !define VimGetOldVerSecID "!insertmacro _VimGetOldVerSecID"
 !macro _VimGetOldVerSecID _INDEX _ID
-    Push ${_INDEX}
-    Call _VimGetOldVerSecIDFunc
-    Pop  ${_ID}
+    ${If} ${_INDEX} <= ${VIM_MAX_OLD_VER}
+        IntOp ${_ID} ${_INDEX} + ${id_section_old_ver_0}
+    ${Else}
+        StrCpy ${_ID} -1
+    ${EndIf}
 !macroend
 
 # ----------------------------------------------------------------------------
@@ -619,41 +644,33 @@ SilentInstall             normal
     Pop  $R0
 !macroend
 
-##############################################################################
-# Dynamic sections to support removal of old versions                     {{{1
-##############################################################################
-
-!define OldVerSection "!insertmacro _OldVerSection"
-!macro _OldVerSection _ID
-    Section "Uninstall existing version ${_ID}" `id_section_old_ver_${_ID}`
-        SectionIn 1 2 3
-
-        ${Log} "$\r$\nEnter old ver section ${_ID}"
-        Push ${_ID}
-        Call VimRmOldVer
-        ${Log} "Leave old ver section ${_ID}"
-    SectionEnd
-!macroend
-
-${OldVerSection} 0
-${OldVerSection} 1
-${OldVerSection} 2
-${OldVerSection} 3
-${OldVerSection} 4
-
-# Push section ID of all above sections onto stack.
-Function PushOldVerSectionIDs
-    Push ${id_section_old_ver_4}
-    Push ${id_section_old_ver_3}
-    Push ${id_section_old_ver_2}
-    Push ${id_section_old_ver_1}
-    Push ${id_section_old_ver_0}
-FunctionEnd
-
 
 ##############################################################################
 # Installer Sections                                                      {{{1
 ##############################################################################
+
+# ----------------------------------------------------------------------------
+# Section: Log status                                                     {{{2
+# ----------------------------------------------------------------------------
+Section -log_status
+    # Log install path etc.:
+    ${Log} "Final install path: $vim_install_root"
+    ${Log} "Final binary  path: $vim_bin_path"
+
+    # Log status for all sections:
+    ${LogSectionStatus} 100
+SectionEnd
+
+# ----------------------------------------------------------------------------
+# Dynamic sections to support removal of old versions                     {{{2
+# ----------------------------------------------------------------------------
+SectionGroup $(str_group_old_ver) id_group_old_ver
+    ${VimOldVerSection} 0
+    ${VimOldVerSection} 1
+    ${VimOldVerSection} 2
+    ${VimOldVerSection} 3
+    ${VimOldVerSection} 4
+SectionGroupEnd
 
 # ----------------------------------------------------------------------------
 # Section: Install GUI executables & runtime files                        {{{2
@@ -763,7 +780,7 @@ Section $(str_section_batch) id_section_batch
 SectionEnd
 
 # ----------------------------------------------------------------------------
-# Section: Install icons (desktop/start menu/quick launch)                {{{2
+# Group: Install icons (desktop/start menu/quick launch)                  {{{2
 # ----------------------------------------------------------------------------
 SectionGroup $(str_group_icons) id_group_icons
     # Desktop:
@@ -895,7 +912,7 @@ Section $(str_section_vim_rc) id_section_vimrc
 SectionEnd
 
 # ----------------------------------------------------------------------------
-# Section: Create vimfiles                                                {{{2
+# Group: Create vimfiles                                                  {{{2
 # ----------------------------------------------------------------------------
 SectionGroup $(str_group_plugin) id_group_plugin
     # Under $HOME:
@@ -1141,26 +1158,56 @@ Function VimCfgOldVerSections
     Push $R1
     Push $R2
 
+    # Initialize old version section index:
     StrCpy $R0 0
-    ${DoWhile} $R0 < $vim_old_ver_count
-        ${VimGetOldVerSecID} $R0 $R1
-        ${VimGetOldVerKey}   $R0 $R2
-        ${Log} "Old ver section No.$R0, ID=$R1, Key=[$R2]"
 
-        !insertmacro SelectSection $R1
+    ${If} $vim_old_ver_count > 0
+        # Create sections to uninstall old versions if we found any:
+        ${DoWhile} $R0 < $vim_old_ver_count
+            ${VimGetOldVerSecID} $R0 $R1
+            ${VimGetOldVerKey}   $R0 $R2
+            ${Log} "Old ver section No.$R0, ID=$R1, Key=[$R2]"
 
-        # If the same version installed, we must remove it:
-        ${If} $R2 S== "${VIM_PRODUCT_NAME}"
-            !insertmacro SetSectionFlag $R1 ${SF_RO}
+            !insertmacro SelectSection $R1
+
+            # If the same version installed, we must remove it:
+            ${If} $R2 S== "${VIM_PRODUCT_NAME}"
+                !insertmacro SetSectionFlag $R1 ${SF_RO}
+            ${EndIf}
+
+            # Set section title to readable form:
+            ReadRegStr $R2 SHCTX "${REG_KEY_UNINSTALL}\$R2" "DisplayName"
+            SectionSetText $R1 '$R2'
+
+            IntOp $R0 $R0 + 1
+        ${Loop}
+
+        # Create a new group end section after all old version sections to
+        # dynamically shrink the section group:
+        ${If} $R0 < ${VIM_MAX_OLD_VER}
+            ${VimGetOldVerSecID} $R0 $R1
+
+            ${Log} "Create new old ver section group end at section $R1"
+            !insertmacro UnselectSection $R1
+            SectionSetFlags     $R1 ${SF_SECGRPEND}
+            SectionSetInstTypes $R1 0
+            SectionSetText      $R1 "-"
+
+            # Move to the next section:
+            IntOp $R0 $R0 + 1
         ${EndIf}
+    ${Else}
+        # No old version found, convert the original group head section to a
+        # normal inactive section (to hide the group):
+        ${Log} "Disable old ver section group"
+        !insertmacro ClearSectionFlag ${id_group_old_ver} ${SF_SECGRP}
+        !insertmacro UnselectSection  ${id_group_old_ver}
+        !insertmacro SetSectionFlag   ${id_group_old_ver} ${SF_RO}
+        SectionSetInstTypes ${id_group_old_ver} 0
+        SectionSetText      ${id_group_old_ver} ""
+    ${EndIf}
 
-        # Set section title to readable form:
-        ReadRegStr $R2 SHCTX "${REG_KEY_UNINSTALL}\$R2" "DisplayName"
-        SectionSetText $R1 '$(str_section_old_ver) $R2'
-
-        IntOp $R0 $R0 + 1
-    ${Loop}
-
+    # Disable all remaining old version sections:
     ${DoWhile} $R0 < ${VIM_MAX_OLD_VER}
         ${VimGetOldVerSecID} $R0 $R1
         ${Log} "Disable old ver section No.$R0, ID=$R1"
@@ -1171,6 +1218,16 @@ Function VimCfgOldVerSections
 
         IntOp $R0 $R0 + 1
     ${Loop}
+
+    # Convert the original group end section to a normal inactive section if
+    # we have not used all old version sections:
+    ${If} $vim_old_ver_count < ${VIM_MAX_OLD_VER}
+        ${Log} "Disable the original group end for the old ver section group"
+        ${VimGetOldVerSecID} ${VIM_MAX_OLD_VER} $R1
+        !insertmacro ClearSectionFlag $R1 ${SF_SECGRPEND}
+        !insertmacro SetSectionFlag   $R1 ${SF_RO}
+        SectionSetText $R1 ""
+    ${EndIf}
 
     Pop $R2
     Pop $R1
@@ -1392,56 +1449,7 @@ Function VimFinalCheck
     # Update other path:
     StrCpy $vim_bin_path "$INSTDIR\${VIM_BIN_DIR}"
 
-    ${Log} "Final install path: $vim_install_root"
-    ${Log} "Final binary  path: $vim_bin_path"
-
     Pop $R0
-FunctionEnd
-
-# ----------------------------------------------------------------------------
-# Function _VimGetOldVerSecIDFunc                                         {{{2
-#   Get ID of the n-th dynamically generated old version section.
-#
-#   As NSIS does not support array, it's not straightforward to get ID of
-#   dynamically generated sections from its index.  Here we'll call a special
-#   function to push IDs of all dynamically generated sections on to stack in
-#   order, the retrieve the required ID from stack.
-#
-#   This function should better be called using the wrapper macro
-#   VimGetOldVerSecID.
-#
-#   Parameters:
-#     Index of the section should be put on the top of stack.
-#   Returns:
-#     ID of the corresponding old version section on the top of the stack.
-# ----------------------------------------------------------------------------
-Function _VimGetOldVerSecIDFunc
-    Exch $R0  # Index of the section
-    Push $R1
-    Push $R2
-
-    # Push all section ID onto the stack in reverse order, so the first
-    # seciton ID should be the one on the top of the stack:
-    Call PushOldVerSectionIDs
-
-    # Pop out the required one:
-    StrCpy $R1 0
-    ${While} $R1 <= $R0
-        Pop $R2
-        IntOp $R1 $R1 + 1
-    ${EndWhile}
-
-    # Store result in $R0:
-    StrCpy $R0 $R2
-
-    ${While} $R1 < ${VIM_MAX_OLD_VER}
-        Pop $R2
-        IntOp $R1 $R1 + 1
-    ${EndWhile}
-
-    Pop  $R2
-    Pop  $R1
-    Exch $R0
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -1736,6 +1744,7 @@ FunctionEnd
 # Description for Installer Sections                                      {{{1
 ##############################################################################
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
+    !insertmacro MUI_DESCRIPTION_TEXT ${id_group_old_ver}       $(str_desc_old_ver)
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_old_ver_0}   $(str_desc_old_ver)
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_old_ver_1}   $(str_desc_old_ver)
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_old_ver_2}   $(str_desc_old_ver)
@@ -1773,6 +1782,18 @@ FunctionEnd
 ##############################################################################
 # Uninstaller Sections                                                    {{{1
 ##############################################################################
+
+# ----------------------------------------------------------------------------
+# Section: Log status                                                     {{{2
+# ----------------------------------------------------------------------------
+Section -un.log_status
+    # Log install path etc.:
+    ${Log} "Vim install root: $vim_install_root"
+    ${Log} "Vim binary  path: $vim_bin_path"
+
+    # Log status for all sections:
+    ${LogSectionStatus} 100
+SectionEnd
 
 # ----------------------------------------------------------------------------
 # Section: Unregister Vim                                                 {{{2
@@ -2381,7 +2402,7 @@ Function un.VimUnregShellExt
 FunctionEnd
 
 # ----------------------------------------------------------------------------
-# Function un._VimUnregFileExtCallback                                         {{{2
+# Function un._VimUnregFileExtCallback                                    {{{2
 #   Callback function for LoopArray.  It's used to unregister one file
 #   extension supported by Vim.
 # ----------------------------------------------------------------------------

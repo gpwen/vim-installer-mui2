@@ -388,6 +388,102 @@ Var _simple_log_fh      # Log file handle
 !macroend
 
 ##############################################################################
+# LogChkSectionFlag _FLAG _BIT_MASK _SET_TEXT _RESULT                     {{{1
+#   Helper macro to interpret section flag.
+#
+#   Parameters:
+#     $_FLAG     : Section flag to test.
+#     $_BIT_MASK : Flag bit mask to test.
+#     $_SET_TEXT : Text to append when the bit is set.
+#     $_RESULT   : Result string (to append the interpretion).
+#   Returns:
+#     None.
+##############################################################################
+!define LogChkSectionFlag `!insertmacro _LogChkSectionFlag`
+!macro _LogChkSectionFlag _FLAG _BIT_MASK _SET_TEXT _RESULT
+    Push $R0
+
+    IntOp $R0 ${_FLAG} & ${_BIT_MASK}
+    ${If} $R0 = ${_BIT_MASK}
+        ${IfThen} ${_RESULT} S!= "" \
+            ${|} StrCpy ${_RESULT} "${_RESULT}|" ${|}
+        StrCpy ${_RESULT} "${_RESULT}${_SET_TEXT}"
+    ${EndIf}
+
+    Pop $R0
+!macroend
+
+##############################################################################
+# LogSectionStatus _MAX_SECTION                                           {{{1
+#   Log section status, mostly for debug purpose.
+#
+#   Parameters:
+#     $_MAX_SECTION : Upper limit (exclusive) of the section ID to log.
+#   Returns:
+#     None.
+##############################################################################
+!define LogSectionStatus `!insertmacro _LogSectionStatusCall`
+
+!macro _LogSectionStatusCall _MAX_SECTION
+    Push `${_MAX_SECTION}`
+    ${CallArtificialFunction} _LogSectionStatus
+!macroend
+
+!macro _LogSectionStatus
+    # Incoming parameters has been put on the stack:
+    Exch $0   # Upper limit (exclusive) of the section ID to log
+    Push $R0  # Section ID
+    Push $R1  # Section status string
+    Push $R2  # Section properties
+
+    ${Log} "Section status:"
+
+    # Loop all sections:
+    ${For} $R0 0 $0
+        # Get section flag & skip invalid sections:
+        SectionGetFlags $R0 $R2
+        ${IfThen} ${Errors} ${|} ${Continue} ${|}
+
+        # Interpret section flags:
+        StrCpy $R1 ""
+        ${LogChkSectionFlag} $R2 ${SF_SELECTED}  "SEL"     $R1
+        ${LogChkSectionFlag} $R2 ${SF_SECGRP}    "GRP"     $R1
+        ${LogChkSectionFlag} $R2 ${SF_SECGRPEND} "GRPEND"  $R1
+        ${LogChkSectionFlag} $R2 ${SF_BOLD}      "BOLD"    $R1
+        ${LogChkSectionFlag} $R2 ${SF_RO}        "RO"      $R1
+        ${LogChkSectionFlag} $R2 ${SF_EXPAND}    "EXPAND"  $R1
+        ${LogChkSectionFlag} $R2 ${SF_PSELECTED} "PSEL"    $R1
+        ${LogChkSectionFlag} $R2 ${SF_TOGGLED}   "TOGGLE"  $R1
+        ${LogChkSectionFlag} $R2 ${SF_NAMECHG}   "NAMECHG" $R1
+
+        ${If} $R1 S!= ""
+            StrCpy $R1 " [$R1]"
+        ${EndIf}
+
+        StrCpy $R1 "  Section $R0: Flags=$R2$R1"
+
+        # Show other section properties:
+        SectionGetInstTypes $R0 $R2
+        StrCpy $R1 "$R1, InstTypes=$R2"
+
+        SectionGetSize $R0 $R2
+        StrCpy $R1 "$R1, Size=$R2"
+
+        SectionGetText $R0 $R2
+        StrCpy $R1 "$R1, Text=[$R2]"
+
+        # Log section status:
+        ${Log} "$R1"
+    ${Next}
+
+    # Restore the stack:
+    Pop $R2
+    Pop $R1
+    Pop $R0
+    Pop $0
+!macroend
+
+##############################################################################
 # ShowErr $_ERR_MSG                                                       {{{1
 #   Show error message.
 #

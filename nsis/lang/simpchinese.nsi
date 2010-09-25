@@ -33,8 +33,8 @@ LangString str_type_full            ${LANG_SIMPCHINESE} \
 # Section Titles & Description                                            {{{1
 ##############################################################################
 
-LangString str_section_old_ver      ${LANG_SIMPCHINESE} \
-    "卸载"
+LangString str_group_old_ver        ${LANG_SIMPCHINESE} \
+    "卸载旧版本"
 LangString str_desc_old_ver         ${LANG_SIMPCHINESE} \
     "卸载系统上旧版本的 Vim。"
 

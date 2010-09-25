@@ -38,8 +38,8 @@ LangString str_type_full            ${LANG_ENGLISH} \
 # Section Titles & Description                                            {{{1
 ##############################################################################
 
-LangString str_section_old_ver      ${LANG_ENGLISH} \
-    "Uninstall"
+LangString str_group_old_ver        ${LANG_ENGLISH} \
+    "Uninstall Existing Version(s)"
 LangString str_desc_old_ver         ${LANG_ENGLISH} \
     "Uninstall existing Vim version(s) from your system."
 

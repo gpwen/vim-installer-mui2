@@ -33,10 +33,10 @@ LangString str_type_full            ${LANG_TRADCHINESE} \
 # Section Titles & Description                                            {{{1
 ##############################################################################
 
-LangString str_section_old_ver      ${LANG_TRADCHINESE} \
-    "移除"
+LangString str_group_old_ver        ${LANG_TRADCHINESE} \
+    "移除舊版本"
 LangString str_desc_old_ver         ${LANG_TRADCHINESE} \
-    "移除閣下電腦上老版本的 Vim。"
+    "移除閣下電腦上舊版本的 Vim。"
 
 LangString str_section_exe          ${LANG_TRADCHINESE} \
     "安裝 Vim 圖形界面程式"
