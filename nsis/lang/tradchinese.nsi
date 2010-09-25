@@ -86,27 +86,30 @@ LangString str_desc_edit_with64     ${LANG_TRADCHINESE} \
 LangString str_section_vim_rc       ${LANG_TRADCHINESE} \
     "創建默認設定檔"
 LangString str_desc_vim_rc          ${LANG_TRADCHINESE} \
-    "在安裝資料夾下沒有 _vimrc 檔案的情況下，創建該檔案的默認版本。_vimrc \
-     檔案用于設定 Vim 選項。"
+    "在安裝資料夾下創建默認的 Vim 設定檔(_vimrc)。\
+     若該設定檔已經存在，則略過此項。"
 
 LangString str_section_plugin_home  ${LANG_TRADCHINESE} \
     "創建插件資料夾"
 LangString str_desc_plugin_home     ${LANG_TRADCHINESE} \
     "在 HOME 資料夾下創建(空的)插件資料夾結構。若閣下未設定 HOME 資料夾，會\
-     在安裝資料夾下創建該資料夾結構。插件資料夾用于安裝 Vim 的擴展插件，只\
-     要將相應的檔案復制到相關的子資料夾中即可。"
+     在安裝資料夾下創建該資料夾結構。"
 
 LangString str_section_plugin_vim   ${LANG_TRADCHINESE} \
     "創建共享插件資料夾"
 LangString str_desc_plugin_vim      ${LANG_TRADCHINESE} \
     "在 Vim 安裝資料夾下創建(空的)插件資料夾結構，電腦上所有用戶都能使用安裝\
-     在該資料夾里的擴展插件。插件資料夾用于安裝 Vim 的擴展插件，只要將相應的\
-     檔案復制到相關的子資料夾中即可。"
+     在該資料夾里的擴展插件。"
 
 LangString str_section_vis_vim      ${LANG_TRADCHINESE} \
     "安裝 VisVim 插件"
 LangString str_desc_vis_vim         ${LANG_TRADCHINESE} \
     "VisVim 是用于與微軟 Microsoft Visual Studio 軟體進行整合的插件。"
+
+LangString str_section_xpm          ${LANG_TRADCHINESE} \
+    "安裝 XPM 庫"
+LangString str_desc_xpm             ${LANG_TRADCHINESE} \
+    "安裝用于處理 X PixMap (XPM) 圖像的動態鏈接庫。"
 
 LangString str_section_nls          ${LANG_TRADCHINESE} \
     "安裝本地語言支持"

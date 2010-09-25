@@ -29,16 +29,21 @@
 # Comment the next line if you do not want to add Native Language Support
 !define HAVE_NLS
 
-# Commend the next line if you do not want to include VisVim extension:
-!define HAVE_VIS_VIM
-
-# Uncomment the following line to create a multilanguage installer:
-#!define HAVE_MULTI_LANG
-
 # Uncomment the following line if you have newer version of gettext that uses
 # iconv.dll for encoding conversion.  Please note you should rename "intl.dll"
 # from "gettext-win32" archive to "libintl.dll".
 #!define HAVE_ICONV
+
+# Comment the next line if you do not want to include VisVim extension:
+!define HAVE_VIS_VIM
+
+# Uncomment the following line if you have XPM.
+# XPM is ibrary for X PixMap images, it can be downloaded from:
+#   http://gnuwin32.sourceforge.net/packages/xpm.htm
+!define HAVE_XPM
+
+# Uncomment the following line to create a multilanguage installer:
+#!define HAVE_MULTI_LANG
 
 # Uncomment the following line so that the installer/uninstaller would not
 # jump to the finish page automatically, this allows the user to check the
@@ -940,6 +945,24 @@ SectionEnd
 !endif
 
 # ----------------------------------------------------------------------------
+# Section: Install XPM library                                            {{{2
+# ----------------------------------------------------------------------------
+!ifdef HAVE_XPM
+    Section $(str_section_xpm) id_section_xpm
+        SectionIn 3
+
+        ${LogSectionStart}
+
+        SetOutPath "$vim_bin_path"
+        !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
+            "${VIMRT}\xpm4.dll" \
+            "$vim_bin_path\xpm4.dll" "$vim_bin_path"
+
+        ${LogSectionEnd}
+    SectionEnd
+!endif
+
+# ----------------------------------------------------------------------------
 # Section: Install NLS files                                              {{{2
 # ----------------------------------------------------------------------------
 !ifdef HAVE_NLS
@@ -1729,6 +1752,10 @@ FunctionEnd
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_visvim}      $(str_desc_vis_vim)
 !endif
 
+!ifdef HAVE_XPM
+    !insertmacro MUI_DESCRIPTION_TEXT ${id_section_xpm}         $(str_desc_xpm)
+!endif
+
 !ifdef HAVE_NLS
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_nls}         $(str_desc_nls)
 !endif
@@ -1751,6 +1778,7 @@ Section "un.$(str_unsection_register)" id_unsection_register
     # Uninstall VisVim if it was included.
     # TODO: Any special handling on x64?
     !ifdef HAVE_VIS_VIM
+        ${Log} "Remove $vim_bin_path\VisVim.dll"
         !insertmacro UninstallLib REGDLL NOTSHARED REBOOT_NOTPROTECTED \
             "$vim_bin_path\VisVim.dll"
     !endif
@@ -1760,6 +1788,7 @@ Section "un.$(str_unsection_register)" id_unsection_register
 
     ${If} ${FileExists} "$vim_bin_path\gvimext64.dll"
         # Remove 64-bit shell extension:
+        ${Log} "Remove $vim_bin_path\gvimext64.dll"
         ${Logged1} SetRegView 64
         !define LIBRARY_X64
         !insertmacro UninstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
@@ -1772,6 +1801,7 @@ Section "un.$(str_unsection_register)" id_unsection_register
 
     ${If} ${FileExists} "$vim_bin_path\gvimext32.dll"
         # Remove 32-bit shell extension:
+        ${Log} "Remove $vim_bin_path\gvimext32.dll"
         ${Logged1} SetRegView 32
         !insertmacro UninstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
             "$vim_bin_path\gvimext32.dll"
@@ -1839,13 +1869,22 @@ Section "un.$(str_unsection_exe)" id_unsection_exe
 
     # Remove NLS support DLLs.  This is overkill.
     !ifdef HAVE_NLS
+        ${Log} "Remove $vim_bin_path\libintl.dll"
         !insertmacro UninstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
             "$vim_bin_path\libintl.dll"
 
         !ifdef HAVE_ICONV
+            ${Log} "Remove $vim_bin_path\iconv.dll"
             !insertmacro UninstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
                 "$vim_bin_path\iconv.dll"
         !endif
+    !endif
+
+    # Remove XPM:
+    !ifdef HAVE_XPM
+        ${Log} "Remove $vim_bin_path\xpm4.dll"
+        !insertmacro UninstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
+            "$vim_bin_path\xpm4.dll"
     !endif
 
     # Remove everything but *.dll files.  Avoids that a lot remains when

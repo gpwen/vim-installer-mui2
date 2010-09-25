@@ -94,28 +94,29 @@ LangString str_desc_edit_with64     ${LANG_ENGLISH} \
 LangString str_section_vim_rc       ${LANG_ENGLISH} \
     "Create Default Config"
 LangString str_desc_vim_rc          ${LANG_ENGLISH} \
-    "Create a default _vimrc file if one does not already exist. \
-     The _vimrc file is used to set options for how Vim behaves."
+    "Create a default config file (_vimrc) if one does not already exist."
 
 LangString str_section_plugin_home  ${LANG_ENGLISH} \
     "Create Plugin Directories"
 LangString str_desc_plugin_home     ${LANG_ENGLISH} \
     "Create plugin directories in HOME (if you defined one) or Vim \
-     install directory (used for everybody on the system). \
-     Plugin directories allow extending Vim by dropping a file into \
-     a directory."
+     install directory."
 
 LangString str_section_plugin_vim   ${LANG_ENGLISH} \
     "Create Shared Plugin Directories"
 LangString str_desc_plugin_vim      ${LANG_ENGLISH} \
     "Create plugin directories in Vim install directory (used for \
-     everybody on the system).  Plugin directories allow extending \
-     Vim by dropping a file into a directory."
+     everybody on the system)."
 
 LangString str_section_vis_vim      ${LANG_ENGLISH} \
     "VisVim Extension"
 LangString str_desc_vis_vim         ${LANG_ENGLISH} \
     "VisVim Extension for Microsoft Visual Studio integration."
+
+LangString str_section_xpm          ${LANG_ENGLISH} \
+    "XPM Library"
+LangString str_desc_xpm             ${LANG_ENGLISH} \
+    "Library for processing X PixMap (XPM) images."
 
 LangString str_section_nls          ${LANG_ENGLISH} \
     "Native Language Support"

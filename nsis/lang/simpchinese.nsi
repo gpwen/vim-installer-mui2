@@ -86,27 +86,30 @@ LangString str_desc_edit_with64     ${LANG_SIMPCHINESE} \
 LangString str_section_vim_rc       ${LANG_SIMPCHINESE} \
     "创建缺省配置文件"
 LangString str_desc_vim_rc          ${LANG_SIMPCHINESE} \
-    "在安装目录下没有 _vimrc 文件的情况下，生成该文件的缺省版本。_vimrc \
-     文件是用于设置 Vim 选项的配置文件。"
+    "在安装目录下生成缺省的 Vim 配置文件(_vimrc)。\
+     如果该文件已经存在，则略过此项。"
 
 LangString str_section_plugin_home  ${LANG_SIMPCHINESE} \
     "创建插件目录"
 LangString str_desc_plugin_home     ${LANG_SIMPCHINESE} \
     "在 HOME 目录下创建(空的)插件目录结构。若您未设置 HOME 目录，会在安装\
-     目录下创建该目录结构，这将影响系统上所有用户。插件目录用于安\
-     装 Vim 扩展插件，只要将文件复制到相关的子目录中即可。"
+     目录下创建该目录结构。"
 
 LangString str_section_plugin_vim   ${LANG_SIMPCHINESE} \
     "创建公共插件目录"
 LangString str_desc_plugin_vim      ${LANG_SIMPCHINESE} \
     "在 Vim 安装目录下创建(空的)插件目录结构，系统上所有用户都能使用安装在\
-     该目录下的扩展插件。插件目录用于安装 Vim 扩展插件，只要将文件复制到\
-     相关的子目录中即可。"
+     该目录下的扩展插件。"
 
 LangString str_section_vis_vim      ${LANG_SIMPCHINESE} \
     "安装 VisVim 插件"
 LangString str_desc_vis_vim         ${LANG_SIMPCHINESE} \
-    "用于与微软 Microsoft Visual Studio 进行集成的 VisVim 插件。"
+    "安装用于与微软 Microsoft Visual Studio 进行集成的 VisVim 插件。"
+
+LangString str_section_xpm          ${LANG_SIMPCHINESE} \
+    "安装 XPM 库"
+LangString str_desc_xpm             ${LANG_SIMPCHINESE} \
+    "安装用于处理 X PixMap (XPM) 图像的动态库。"
 
 LangString str_section_nls          ${LANG_SIMPCHINESE} \
     "安装多语言支持"
