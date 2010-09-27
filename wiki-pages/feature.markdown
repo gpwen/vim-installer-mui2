@@ -43,4 +43,6 @@ New features introduced by the upgraded Vim NSIS installer includes:
 * Do not make any real change until all running instances of Vim have been
   closed.
 
+# Features to be Added Soon
+
 * (TODO) Silent install mode.
