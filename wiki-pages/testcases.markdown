@@ -49,17 +49,17 @@ directory (if the installer aborted, or you uninstalled Vim only).
 
 2.  Install desktop icons, the following 3 icons should be added on the
     desktop:
-    * gVim 7.3
-    * gVim Easy 7.3
-    * gVim Read only 7.3
+    * `gVim 7.3`
+    * `gVim Easy 7.3`
+    * `gVim Read only 7.3`
 
     Verify that these icons function correctly.
 
 3.  Don't installed start menu icons, verify that nothing has been added to
     the "Programs" folder of the start menu.
 
-4.  Install start menu icons, verify that "Vim 7.3" folder has been added to
-    the "Programs" folder of the start menu, and all items in that folder
+4.  Install start menu icons, verify that `Vim 7.3` folder has been added to
+    the `Programs` folder of the start menu, and all items in that folder
     function correctly, especially the "Vim Online" shortcut.
 
 5.  Don't install the console version, verify that shortcuts for console
@@ -78,14 +78,14 @@ directory (if the installer aborted, or you uninstalled Vim only).
 ### I-3. Test Batch Files
 
 1.  Install batch files, and verify the following commands work in DOS prompt:
-    * evim
-    * gvim
-    * view
-    * vimdiff
-    * gview
-    * gvimdiff
-    * vim
-    * vimtutor
+    * `evim`
+    * `gvim`
+    * `view`
+    * `vimdiff`
+    * `gview`
+    * `gvimdiff`
+    * `vim`
+    * `vimtutor`
 
     Test with various command line parameters, make sure they work as
     expected.
@@ -104,29 +104,33 @@ directory (if the installer aborted, or you uninstalled Vim only).
 
 ### I-5. Test Registry Change
 
-1.  Install Vim context menu, verify that "gvim" present in the "preferred
-    application" list of the "Open With ..." dialog of the following file
-    types:
+1.  Install Vim context menu, verify that "gvim" has been listed in the
+    "Recommended Programs" section of the "Open With &rarr; Choose Program
+    ..." dialog for the following file types:
     * `.htm`
     * `.html`
     * `.vim`
 
-    Also verify that "gvim" present in the "other application" list of the
-    "Open With ..." dialog of all other file types.
+    Also verify that "gvim" has been listed in the "Other Programs" section of
+    the above dialog for all other file types.
 
-2.  Install Vim context menu, verify that "Open With Vim" item present on the
+2.  Install Vim context menu, verify that "Edit With Vim" item present on the
     context menu for all files.
 
-3.  Open "Add/remove program" from control panel, verify that:
-    * Vim present in the list.  
-    * Vim item only supports "Remove" option.
-    * Help and upgrade URL present in the detailed information of the item.
+3.  Open "Add or Remove Program" from control panel, verify that:
+    * "Vim 7.3 (self-installing)" has been listed as currently installed
+      programs.
+    * The above item only supports "Remove" option.
+    * The "Support Info" of the above items includes:
+      * Version (7.3);
+      * URL for Vim online;
+      * URL for downloading the PC installer.
 
 ### I-6. Test OLE Registration
 
-1.  Perform a clean install, verify that gvim will not shown the OLE
-    regitration prompt (meaning that the OLE server has been register
-    correctly).
+1.  Perform a clean install, verify that gvim will NOT show the OLE
+    regitration warning (meaning that the OLE server has been register
+    correctly) on the first lanuch.
 
 ## Uninstaller Test
 
@@ -159,4 +163,4 @@ directory (if the installer aborted, or you uninstalled Vim only).
 
 2.  Verify that "Open With ..." context menu items has been removed.
 
-3.  Verify that "Open With Vim" context menu item has been removed.
+3.  Verify that "Edit With Vim" context menu item has been removed.
