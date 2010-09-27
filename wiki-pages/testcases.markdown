@@ -1,8 +1,11 @@
-# Test Cases for the New Vim NSIS Installer
+# Test Cases for the Upgraded Vim NSIS Installer
 
-This document summarized some test cases for the new Vim NSIS installer.
+This document summarized some test cases for the upgraded Vim NSIS installer.
 You're more than welcomed to run these cases, and report any problem you
-found.
+found.  When you report problem found, please include the install log file
+(vim-install.log) in your report.  The log file can be found in the Vim binary
+directory (if the installer terminated normally) or in Windows temporary
+directory (if the installer aborted, or you uninstalled Vim only).
 
 ## Installer Test
 
@@ -16,54 +19,61 @@ found.
     http://wiki.github.com/gpwen/vim-installer-mui2/difference]].  Various
     install type should be tested.
 
-2.  On 32-bit system, verifies that only `gvimext32.dll` (32-bit version of
-    Vim shell extension) is allowed to be installed, and will be installed
+2.  On 32-bit system, verify that only `gvimext32.dll` (32-bit version of Vim
+    shell extension) is allowed to be installed, and will be installed
     correctly under Vim binary path.
 
-3.  On 64-bit system, verifies that `gvimext32.dll` and `gvimext64.dll` will
-    be installed correctly according to user selection under Vim binary path.
+3.  On 64-bit system, verify that both `gvimext32.dll` and `gvimext64.dll` can
+    be installed correctly according to user selection under the Vim binary
+    path.
 
-4.  Make sure shell extension DLL(s) won't be removed unexpected by old
-    uninstaller upon reboot:
+4.  Verify that shell extension DLL(s) won't be removed by old uninstaller
+    upon reboot:
     * Install Vim using the official installer.
     * Use "Edit With Vim" context menu to open at least one file to make sure
       the shell extension DLL has been loaded by the file explorer.
-    * Install Vim again using the new installer, let the installer uninstall
-      the version installed above.  When asked, remove executables of the old
-      version.  You should find the Vim binary directory can not be removed as
-      the shell extension DLL (`gvimext.dll`) is still in use by file
-      explorer.
-    * After new installer finished, reboot the PC.
+    * Install Vim again using the upgraded installer, let the installer
+      uninstall the version installed above.  When asked, remove executables
+      of the old version.  You should find the Vim binary directory can not be
+      removed as the shell extension DLL (`gvimext.dll`) is still in use by
+      the file explorer.
+    * After upgraded installer finished, reboot the PC.
     * Now check `gvimext*.dll` under Vim binary directory.  `gvimext.dll`
       should be removed, while `gvimext32.dll` and/or `gvimext64.dll` should
       still be there.
 
 ### I-2. Test Icons
 
-1.  Don't install desktop icons, make sure no icon will be added on your
+1.  Don't install desktop icons, verify that no icon has been added on your
     desktop.
 
-2.  Install desktop icons, the following 3 icons should be installed on the
+2.  Install desktop icons, the following 3 icons should be added on the
     desktop:
     * gVim 7.3
     * gVim Easy 7.3
     * gVim Read only 7.3
 
-    Check to make sure they functioned correctly.
+    Verify that these icons function correctly.
 
-3.  Don't installed start menu icons, make sure nothing has been added to the
-    "Programs" folder of the start menu.
+3.  Don't installed start menu icons, verify that nothing has been added to
+    the "Programs" folder of the start menu.
 
-4.  Installed start menu icons, make sure "Vim 7.3" folder will be added to
-    the "Programs" folder of the start menu, and all items in that fold
-    functioned correctly, especially the "Vim Online" shortcut.
+4.  Install start menu icons, verify that "Vim 7.3" folder has been added to
+    the "Programs" folder of the start menu, and all items in that folder
+    function correctly, especially the "Vim Online" shortcut.
 
-5.  Install/don't install console version, make sure shortcuts for console
-    versions will/will not present in the start menu.
+5.  Don't install the console version, verify that shortcuts for console
+    versions does not present in the start menu.
 
-6.  Install Vim menu on quick launch bar, make sure it's installed and
-    functioned correctly.  Please note this won't work with Windows Vista and
-    Windows 7 (there is no quick lanuch bar).
+6.  Install console version, verify that shortcuts for console versions has
+    been added in the start menu.
+
+7.  Don't install quick launch bar icon, verify that nothing has been added
+    to the quick launch bar.
+
+8.  Install quick launch bar icon, verify that one Vim icon has been installed
+    on the quick launch bar and functioned correctly.  Please note this won't
+    work with Windows Vista and Windows 7 (there is no quick lanuch bar).
 
 ### I-3. Test Batch Files
 
@@ -80,23 +90,73 @@ found.
     Test with various command line parameters, make sure they work as
     expected.
 
-2.  Also run the above test with Vim installed under folders with white spaces
-    in name.
+2.  Install Vim under a path with white spaces in name, run the above test
+    again.
 
 ### I-4. Test Plugin Directory
 
+1.  Don't define `HOME` environment string, the installer should only create
+    `vimfiles` directory hierarchy under Vim install root directory.
+
+2.  Define a `HOME` environment string and let the installer create the
+    private plugin directory, verify that `vimfiles` directory hierarchy has
+    been created under `$HOME`.
+
 ### I-5. Test Registry Change
 
+1.  Install Vim context menu, verify that "gvim" present in the "preferred
+    application" list of the "Open With ..." dialog of the following file
+    types:
+    * `.htm`
+    * `.html`
+    * `.vim`
+
+    Also verify that "gvim" present in the "other application" list of the
+    "Open With ..." dialog of all other file types.
+
+2.  Install Vim context menu, verify that "Open With Vim" item present on the
+    context menu for all files.
+
+3.  Open "Add/remove program" from control panel, verify that:
+    * Vim present in the list.  
+    * Vim item only supports "Remove" option.
+    * Help and upgrade URL present in the detailed information of the item.
+
 ### I-6. Test OLE Registration
+
+1.  Perform a clean install, verify that gvim will not shown the OLE
+    regitration prompt (meaning that the OLE server has been register
+    correctly).
 
 ## Uninstaller Test
 
 ### U-1. Test Files Removal
 
-1.  Removal of install root.
+1.  Make sure you install only one version of Vim on your system, and no file
+    has bee installed in the `vimfiles` directory.  Run the uninstaller, let
+    it remove the config file, verify that vim install directory can be
+    removed.
 
-2.  Removal of batch files.
+2.  Same as above, but put some file in the `vimfiles` directory, verify that
+    the entire `vimfiles` directory hierarchy will be kept intact.
 
-### U-2. Test Plugin Directory Removal
+    Run the test for shared `vimfiles` directory and `vimfiles` directory
+    under `$HOME`.
+
+3.  Verify that vim batch files under Windows directory has been removed by
+    the uninstaller.
+
+4.  Change setting of the version string (`VIM_VER_NODOT` environment string)
+    in some of those vim batch files under Windows directory, verify that
+    unintaller does not remove those batch files.
+
+    You can change the major, minor version number, or append some
+    alphanumerics to the version number.
 
 ### U-3. Test Registry Change
+
+1.  Verify that uninstall entry has been removed.
+
+2.  Verify that "Open With ..." context menu items has been removed.
+
+3.  Verify that "Open With Vim" context menu item has been removed.

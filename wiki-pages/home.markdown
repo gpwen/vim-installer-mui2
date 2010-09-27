@@ -15,8 +15,18 @@ Please note code in this repository is a subset of Vim codebase, it won't
 build by itself.  This repository is primarily aimed for those who build their
 own Vim NSIS installer.
 
-Screenshots of the new installer can be found [[screenshots page |
-http://wiki.github.com/gpwen/vim-installer-mui2/screenshots]].
+Features of the new installer can be found on the [[features page |
+http://wiki.github.com/gpwen/vim-installer-mui2/feature]], and screenshots of
+the new installer can be found on the [[screenshots page |
+http://wiki.github.com/gpwen/vim-installer-mui2/screenshots]].  Files
+installed by the new installer has a few difference than that installed by the
+official installer, you can find detailed information on the [[difference page
+| http://wiki.github.com/gpwen/vim-installer-mui2/difference]].
+
+You're more than welcomed to test the new installer and report any problems
+found.  I've included some test cases on the [[test case page |
+http://wiki.github.com/gpwen/vim-installer-mui2/testcases]] for your
+reference.
 
 ## Branches
 
