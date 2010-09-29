@@ -6,10 +6,10 @@
 
 # For a list of languages supported by NSIS, check:
 #   "<nsis>/Contrib/Language files"
-# ${LANG_<language>} will be defined be defined as the language id after you
-# inserted the language.  For example, after you insert "English",
-# ${LANG_ENGLISH} will be defined as the language ID so you can use it in the
-# following language string definition.
+# ${LANG_<language>} will be defined as the language id after you inserted the
+# language.  For example, after you insert "English", ${LANG_ENGLISH} will be
+# defined as the language ID so you can use it in the following language
+# string definition.
 !insertmacro MUI_LANGUAGE "English"
 
 
@@ -73,7 +73,7 @@ LangString str_section_start_menu   ${LANG_ENGLISH} \
     "In the Start Menu Programs Folder"
 LangString str_desc_start_menu      ${LANG_ENGLISH} \
     "Add Vim in the programs folder of the start menu.  \
-     Appicable to Windows 95 and later."
+     Applicable to Windows 95 and later."
 
 LangString str_section_quick_launch ${LANG_ENGLISH} \
     "In the Quick Launch Bar"
@@ -141,9 +141,9 @@ LangString str_desc_unregister      ${LANG_ENGLISH} \
     "Unregister Vim from the system."
 
 LangString str_unsection_exe        ${LANG_ENGLISH} \
-    "Remove Vim Excutables/Runtime Files"
+    "Remove Vim Executables/Runtime Files"
 LangString str_desc_rm_exe          ${LANG_ENGLISH} \
-    "Remove all Vim excutables and runtime files."
+    "Remove all Vim executables and runtime files."
 
 LangString str_unsection_rc         ${LANG_ENGLISH} \
     "Remove Vim Config File"
