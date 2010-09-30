@@ -18,8 +18,6 @@
 !define VIMTOOLS ..\..
 
 # URL for vim online:
-# TODO: Which link should be used for vim online?
-#   http://vim.sf.net or http://www.vim.org
 !define VIM_ONLINE_URL "http://www.vim.org"
 
 # Comment the next line if you don't have UPX.
@@ -40,7 +38,7 @@
 # Uncomment the following line if you have XPM.
 # XPM is ibrary for X PixMap images, it can be downloaded from:
 #   http://gnuwin32.sourceforge.net/packages/xpm.htm
-!define HAVE_XPM
+#!define HAVE_XPM
 
 # Uncomment the following line to create a multilanguage installer:
 #!define HAVE_MULTI_LANG
