@@ -1,9 +1,11 @@
 # vi:set ts=8 sts=4 sw=4 fdm=marker:
 #
 # tradchinese.nsi: Traditional Chinese language strings for gvim NSIS
-# installer, fileencoding should be big5.
+# installer.
 #
-# Author : Guopeng Wen
+# Locale ID    : 1028
+# fileencoding : big5
+# Author       : Guopeng Wen
 
 !insertmacro MUI_LANGUAGE "TradChinese"
 

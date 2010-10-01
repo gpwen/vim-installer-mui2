@@ -2,7 +2,9 @@
 #
 # english.nsi: English language strings for gvim NSIS installer.
 #
-# Author: Guopeng Wen
+# Locale ID    : 1033
+# fileencoding : latin1
+# Author       : Guopeng Wen
 
 # For a list of languages supported by NSIS, check:
 #   "<nsis>/Contrib/Language files"

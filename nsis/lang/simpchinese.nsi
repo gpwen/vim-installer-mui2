@@ -1,9 +1,11 @@
 # vi:set ts=8 sts=4 sw=4 fdm=marker:
 #
 # simpchinese.nsi: Simplified Chinese language strings for gvim NSIS
-# installer, fileencoding should be cp936.
+# installer.
 #
-# Author : Guopeng Wen
+# Locale ID    : 2052
+# fileencoding : cp936
+# Author       : Guopeng Wen
 
 !insertmacro MUI_LANGUAGE "SimpChinese"
 
