@@ -124,7 +124,7 @@ if [[ $OPT_WIKI_PAGE -ne 0 ]]; then
     print "    <TR>"
     print "      <TH>Language</TH>"
     print "      <TH>&nbsp;</TH>"
-    print "      <TH>Local ID</TH>"
+    print "      <TH>Locale ID</TH>"
     print "      <TH>&nbsp;</TH>"
     print "      <TH>Template</TH>"
     print "      <TH>&nbsp;</TH>"
