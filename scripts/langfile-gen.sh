@@ -20,7 +20,7 @@ OPT_EN_LANG_FILE=/tmp/english.nsi.$$
 LINK_GIT_RAW_BASE="http://github.com/gpwen/vim-installer-mui2/raw"
 
 # Link for language template:
-LINK_LANG_TMPL_BASE="$LINK_GIT_RAW_BASE/misc/lang"
+LINK_LANG_TMPL_BASE="$LINK_GIT_RAW_BASE/misc/lang-tmpl"
 
 # Link for language file:
 LINK_LANG_FILE_BASE="$LINK_GIT_RAW_BASE/master/nsis/lang"
@@ -89,12 +89,6 @@ while getopts :s:hw option; do
 done
 shift $OPTIND-1
 
-# Make sure this is invoked under cygwin:
-if [[ $SYSTEM_TYPE != CYGWIN* ]]; then
-    print -u2 "$CMD: ERROR : This script only supports cygwin!"
-    return 1
-fi
-
 # Try to determine NSIS install path:
 if [[ -z "$OPT_NSIS_PATH" ]]; then
     if ! which makensis 1>/dev/null 2>&1; then
@@ -136,6 +130,8 @@ if [[ $OPT_WIKI_PAGE -ne 0 ]]; then
     print "      <TH>&nbsp;</TH>"
     print "      <TH>Final</TH>"
     print "      <TH>&nbsp;</TH>"
+    print "      <TH>fileencoding</TH>"
+    print "      <TH>&nbsp;</TH>"
     print "      <TH>Author</TH>"
     print "    </TR>"
     print "  </THEAD>"
@@ -156,23 +152,23 @@ for LANG_FILE_FULL in "$OPT_NSIS_PATH"/*.nlf; do
 
     # Determine Locale ID (LCID):
     NSIS_LCID=$(
-    perl -p -e '
-        s/[\s\r\n]+$//iox;
-        if (!$lcid_found)
-        {
-            $lcid_found = /^ \s* \# \s+ Language \s+ ID \s*/iox;
-            $_          = "";
-            next;
-        }
-        else
-        {
-            print "$_\n";
-            last;
-        }' "$LANG_FILE_FULL")
+        perl -pe '
+            s/[\s\r\n]+$//iox;
+            if (!$lcid_found)
+            {
+                $lcid_found = /^ \s* \# \s+ Language \s+ ID \s*/iox;
+                $_          = "";
+                next;
+            }
+            else
+            {
+                print "$_\n";
+                last;
+            }' "$LANG_FILE_FULL")
 
     # Output wiki-page:
     if [[ $OPT_WIKI_PAGE -ne 0 ]]; then
-        LINK_TEMP="LINK_LANG_TMPL_BASE/$NSIS_LANG_FILE"
+        LINK_TEMP="$LINK_LANG_TMPL_BASE/$NSIS_LANG_FILE"
         print "    <TR>"
         print "      <TD>$NSIS_LANG_NAME</TD>"
         print "      <TD>&nbsp;</TD>"
@@ -183,15 +179,30 @@ for LANG_FILE_FULL in "$OPT_NSIS_PATH"/*.nlf; do
 
         if git cat-file -e master:nsis/lang/$NSIS_LANG_FILE 2>/dev/null; then
             # Get author of the language file:
-            NSIS_AUTHOR=$(git show master:nsis/lang/english.nsi | \
-                          grep '^# Author: ' | sed -e 's/^# Author: //g')
-            NSIS_AUTHOR=${NSIS_AUTHOR:-"Cannot Find"}
+            NSIS_AUTHOR=$(git show master:nsis/lang/$NSIS_LANG_FILE | \
+                perl -pe '
+                  s/[\s\r\n]+$//iox;
+                  $_ = /^ \# \s+ Author \s* : \s* (.+) $/iox ? $1 : "";
+                  ')
+            NSIS_AUTHOR=${NSIS_AUTHOR:-"N/A"}
+
+            # Get encoding of the file:
+            NSIS_ENCODING=$(git show master:nsis/lang/$NSIS_LANG_FILE | \
+                perl -pe '
+                  s/[\s\r\n]+$//iox;
+                  $_ = /^ \# \s+ fileencoding \s* : \s* (.+)$/iox ? $1 : "";
+                  ')
+            NSIS_ENCODING=${NSIS_ENCODING:-"N/A"}
 
             LINK_TEMP="$LINK_LANG_FILE_BASE/$NSIS_LANG_FILE"
             print "      <TD><A HREF=\"$LINK_TEMP\">$NSIS_LANG_FILE</A></TD>"
             print "      <TD>&nbsp;</TD>"
+            print "      <TD>$NSIS_ENCODING</TD>"
+            print "      <TD>&nbsp;</TD>"
             print "      <TD>$NSIS_AUTHOR</TD>"
         else
+            print "      <TD>&nbsp;</TD>"
+            print "      <TD>&nbsp;</TD>"
             print "      <TD>&nbsp;</TD>"
             print "      <TD>&nbsp;</TD>"
             print "      <TD>&nbsp;</TD>"
@@ -221,7 +232,7 @@ for LANG_FILE_FULL in "$OPT_NSIS_PATH"/*.nlf; do
     NSIS_LCID=$NSIS_LCID \
     NSIS_LANG_FILE=$NSIS_LANG_FILE \
     perl -pi'nsis_orig_*.bak' -e '
-        chomp;
+        s/[\s\r\n]+$//iox;
 
         # Replace file header:
         if (!$content_start)
@@ -232,11 +243,12 @@ for LANG_FILE_FULL in "$OPT_NSIS_PATH"/*.nlf; do
             $_ = ($content_start) ?
                "# vi:set ts=8 sts=4 sw=4 fdm=marker:\n" .
                "#\n" .
-               "# $ENV{NSIS_LANG_FILE}: $ENV{NSIS_LANG_NAME} " .
+               "# $ENV{NSIS_LANG_FILE} : $ENV{NSIS_LANG_NAME} " .
                "language strings for gvim NSIS installer.\n" .
-               "# Locale ID: $ENV{NSIS_LCID}\n" .
                "#\n" .
-               "# Author:\n" .
+               "# Locale ID    : $ENV{NSIS_LCID}\n" .
+	       "# fileencoding :\n" .
+               "# Author       :\n" .
                "\n" .
                "!insertmacro MUI_LANGUAGE \"$ENV{NSIS_LANG_NAME}\"\n" : "";
 
