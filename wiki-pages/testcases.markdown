@@ -11,13 +11,10 @@ directory (if the installer aborted, or you uninstalled Vim only).
 
 ### I-1. Test Files Installed
 
-1.  Compare files installed by the official installer and
-    [[repacked official installer |
-    http://wiki.github.com/gpwen/vim-installer-mui2/repack]], they should be
-    the same except those mentioned on the
-    [[difference page |
-    http://wiki.github.com/gpwen/vim-installer-mui2/difference]].  Various
-    install type should be tested.
+1.  Compare files installed by the official installer and [[repacked official
+    installer | repack]], they should be the same except those mentioned on
+    the [[difference page | difference]].  Various install type should be
+    tested.
 
 2.  On 32-bit system, verify that only `gvimext32.dll` (32-bit version of Vim
     shell extension) is allowed to be installed, and will be installed

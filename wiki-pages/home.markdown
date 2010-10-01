@@ -15,18 +15,22 @@ Please note code in this repository is a subset of Vim codebase, it won't
 build by itself.  This repository is primarily aimed for those who build their
 own Vim NSIS installer.
 
-Features of the new installer can be found on the [[features page |
-http://wiki.github.com/gpwen/vim-installer-mui2/feature]], and screenshots of
-the new installer can be found on the [[screenshots page |
-http://wiki.github.com/gpwen/vim-installer-mui2/screenshots]].  Files
-installed by the new installer has a few difference than that installed by the
-official installer, you can find detailed information on the [[difference page
-| http://wiki.github.com/gpwen/vim-installer-mui2/difference]].
+Features of the new installer can be found on the [[features page | feature]],
+and screenshots of the new installer can be found on the [[screenshots page |
+screenshots]].  Files installed by the new installer has a few difference than
+that installed by the official installer, you can find detailed information on
+the [[difference page | difference]].
 
 You're more than welcomed to test the new installer and report any problems
-found.  I've included some test cases on the [[test case page |
-http://wiki.github.com/gpwen/vim-installer-mui2/testcases]] for your
-reference.
+found.  I've included some test cases on the [[test case page | testcases]]
+for your reference.
+
+## Multiple Language Support
+
+The new installer supports multiple language.  You can find the current
+language support status on the [[language page | language]].  You can help to
+add more languages to the installer by translating the language file, please
+find instruction on that page.  Your help are highly appreciated.
 
 ## Branches
 
@@ -55,10 +59,23 @@ All branches in this repository are listed below:
 There are two possible ways to build the new NSIS installer:
 
 1.  Patch Vim source code, and build NSIS installer as normal.  You can find
-    detailed instruction on the [[build page |
-    http://wiki.github.com/gpwen/vim-installer-mui2/build]].
+    detailed instruction on the [[build page | build]].
 
 2.  Repack the official Vim installer.  This method is much simpler, it's the
     recommended method to try and test the new installer.  Please find
-    detailed instruction on the [[repack page |
-    http://wiki.github.com/gpwen/vim-installer-mui2/repack]].
+    detailed instruction on the [[repack page | repack]].
+
+## Downloads
+
+I have repacked Vim official installer using the new NSIS script, you can find
+the repacked installer on the [[download page |
+http://github.com/gpwen/vim-installer-mui2/downloads]], it has two difference
+flavors:
+
+* `gvim73-en.exe`: This is English only version.  It's a strict repacking of
+  the official installer, no file changed.
+
+* `gvim73-int.exe`: International version.  Multiple language support has been
+  enabled in this version.  I also update some DLLs:
+  * `libintl.dll`/`iconv.dll` : Newer version of `gettext` DLL.
+  * `xpm4.dll` : XPM image support DLL.
