@@ -14,7 +14,7 @@
 ##############################################################################
 
 LangString str_dest_folder          ${LANG_GERMAN} \
-    "Zielverzeichnis auswählen (muss auf $\"vim\" enden)"
+    "Zielverzeichnis auswählen (muss auf $\"vim$\" enden)"
 
 LangString str_show_readme          ${LANG_GERMAN} \
     "README-Datei nach der Installation anzeigen"
@@ -84,13 +84,13 @@ LangString str_desc_edit_with       ${LANG_GERMAN} \
 LangString str_section_edit_with32  ${LANG_GERMAN} \
     "32-Bit-Version"
 LangString str_desc_edit_with32     ${LANG_GERMAN} \
-    "Vim in das $\"Öffnen mit...$\"-Kontextmenü\
+    "Vim in das $\"Öffnen mit...$\"-Kontextmenü \
      für 32-Bit-Anwendungen integrieren."
 
 LangString str_section_edit_with64  ${LANG_GERMAN} \
     "64-Bit-Version"
 LangString str_desc_edit_with64     ${LANG_GERMAN} \
-    "Vim in das $\"Öffnen mit...$\"-Kontextmenü\
+    "Vim in das $\"Öffnen mit...$\"-Kontextmenü \
      für 64-Bit-Anwendungen integrieren."
 
 LangString str_section_vim_rc       ${LANG_GERMAN} \
