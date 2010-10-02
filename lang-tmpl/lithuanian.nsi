@@ -121,11 +121,6 @@ LangString str_section_vis_vim      ${LANG_LITHUANIAN} \
 LangString str_desc_vis_vim         ${LANG_LITHUANIAN} \
     "VisVim Extension for Microsoft Visual Studio integration."
 
-LangString str_section_xpm          ${LANG_LITHUANIAN} \
-    "XPM Library"
-LangString str_desc_xpm             ${LANG_LITHUANIAN} \
-    "Library for processing X PixMap (XPM) images."
-
 LangString str_section_nls          ${LANG_LITHUANIAN} \
     "Native Language Support"
 LangString str_desc_nls             ${LANG_LITHUANIAN} \
