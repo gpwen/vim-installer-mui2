@@ -3,7 +3,7 @@
 # german.nsi : German language strings for gvim NSIS installer.
 #
 # Locale ID    : 1031
-# fileencoding : cp1250
+# fileencoding : cp1252
 # Author       : Christian Brabandt, tux
 
 !insertmacro MUI_LANGUAGE "German"
