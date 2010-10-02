@@ -119,11 +119,6 @@ LangString str_section_vis_vim      ${LANG_SIMPCHINESE} \
 LangString str_desc_vis_vim         ${LANG_SIMPCHINESE} \
     "安装用于与微软 Microsoft Visual Studio 进行集成的 VisVim 插件。"
 
-LangString str_section_xpm          ${LANG_SIMPCHINESE} \
-    "安装 XPM 库"
-LangString str_desc_xpm             ${LANG_SIMPCHINESE} \
-    "安装用于处理 X PixMap (XPM) 图像的动态库。"
-
 LangString str_section_nls          ${LANG_SIMPCHINESE} \
     "安装多语言支持"
 LangString str_desc_nls             ${LANG_SIMPCHINESE} \

@@ -120,11 +120,6 @@ LangString str_section_vis_vim      ${LANG_TRADCHINESE} \
 LangString str_desc_vis_vim         ${LANG_TRADCHINESE} \
     "VisVim 是用于與微軟 Microsoft Visual Studio 軟體進行整合的插件。"
 
-LangString str_section_xpm          ${LANG_TRADCHINESE} \
-    "安裝 XPM 庫"
-LangString str_desc_xpm             ${LANG_TRADCHINESE} \
-    "安裝用于處理 X PixMap (XPM) 圖像的動態鏈接庫。"
-
 LangString str_section_nls          ${LANG_TRADCHINESE} \
     "安裝本地語言支持"
 LangString str_desc_nls             ${LANG_TRADCHINESE} \

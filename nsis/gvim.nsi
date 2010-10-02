@@ -35,8 +35,9 @@
 # Comment the next line if you do not want to include VisVim extension:
 !define HAVE_VIS_VIM
 
-# Uncomment the following line if you have XPM.
-# XPM is ibrary for X PixMap images, it can be downloaded from:
+# Uncomment the following line if you have built support for XPM and need to
+# include XPM DLL in the installer.  XPM is ibrary for X PixMap images, it can
+# be downloaded from:
 #   http://gnuwin32.sourceforge.net/packages/xpm.htm
 #!define HAVE_XPM
 
@@ -690,6 +691,13 @@ Section $(str_section_exe) id_section_exe
     ${Logged1} File "${VIMRT}\*.vim"
     ${Logged1} File "${VIMRT}\rgb.txt"
 
+    # Install XPM DLL:
+    !ifdef HAVE_XPM
+        ${Log} "Install $vim_bin_path\xpm4.dll"
+        !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
+            "${VIMRT}\xpm4.dll" "$vim_bin_path\xpm4.dll" "$vim_bin_path"
+    !endif
+
     ${Logged1} SetOutPath "$vim_bin_path\colors"
     ${Logged1} File "${VIMRT}\colors\*.*"
 
@@ -958,25 +966,6 @@ SectionGroupEnd
 
         ${Logged1} SetOutPath "$vim_bin_path"
         ${Logged1} File "${VIMSRC}\VisVim\README_VisVim.txt"
-
-        ${LogSectionEnd}
-    SectionEnd
-!endif
-
-# ----------------------------------------------------------------------------
-# Section: Install XPM library                                            {{{2
-# ----------------------------------------------------------------------------
-!ifdef HAVE_XPM
-    Section $(str_section_xpm) id_section_xpm
-        SectionIn 3
-
-        ${LogSectionStart}
-
-        ${Log} "Install $vim_bin_path\xpm4.dll"
-        SetOutPath "$vim_bin_path"
-        !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
-            "${VIMRT}\xpm4.dll" \
-            "$vim_bin_path\xpm4.dll" "$vim_bin_path"
 
         ${LogSectionEnd}
     SectionEnd
@@ -1766,10 +1755,6 @@ FunctionEnd
 
 !ifdef HAVE_VIS_VIM
     !insertmacro MUI_DESCRIPTION_TEXT ${id_section_visvim}      $(str_desc_vis_vim)
-!endif
-
-!ifdef HAVE_XPM
-    !insertmacro MUI_DESCRIPTION_TEXT ${id_section_xpm}         $(str_desc_xpm)
 !endif
 
 !ifdef HAVE_NLS
