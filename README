@@ -1,3 +1,9 @@
 This branch (misc) contains some files to support the NSIS installer, but not
 necessarily part of the installer.  It's used as a catchall place for
 miscellaneous files to avoid cluttering of the main development branch.
+
+batch     : DOS batch commands.
+lang-tmpl : Language file template for various languages.
+logo      : Vim logo & miscellaneous artworks in SVG format.  All derived from
+            the scalable logo in Vim repository (runtime/vimlogo.pdf).
+scripts   : Shell scripts.
