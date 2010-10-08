@@ -19,7 +19,74 @@
    inkscape:export-xdpi="90"
    inkscape:export-ydpi="90">
   <defs
-     id="defs4" />
+     id="defs4">
+    <filter
+       id="filter2840"
+       inkscape:label="Drop shadow"
+       width="1.5"
+       height="1.5"
+       x="-.25"
+       y="-.25">
+      <feGaussianBlur
+         id="feGaussianBlur2842"
+         in="SourceAlpha"
+         stdDeviation="3.000000"
+         result="blur" />
+      <feColorMatrix
+         id="feColorMatrix2844"
+         result="bluralpha"
+         type="matrix"
+         values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0.600000 0 " />
+      <feOffset
+         id="feOffset2846"
+         in="bluralpha"
+         dx="-5.000000"
+         dy="5.000000"
+         result="offsetBlur" />
+      <feMerge
+         id="feMerge2848">
+        <feMergeNode
+           id="feMergeNode2850"
+           in="offsetBlur" />
+        <feMergeNode
+           id="feMergeNode2852"
+           in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <filter
+       id="filter2910"
+       inkscape:label="Drop shadow"
+       width="1.5"
+       height="1.5"
+       x="-.25"
+       y="-.25">
+      <feGaussianBlur
+         id="feGaussianBlur2912"
+         in="SourceAlpha"
+         stdDeviation="2.500000"
+         result="blur" />
+      <feColorMatrix
+         id="feColorMatrix2914"
+         result="bluralpha"
+         type="matrix"
+         values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0.600000 0 " />
+      <feOffset
+         id="feOffset2916"
+         in="bluralpha"
+         dx="-3.000000"
+         dy="3.000000"
+         result="offsetBlur" />
+      <feMerge
+         id="feMerge2918">
+        <feMergeNode
+           id="feMergeNode2920"
+           in="offsetBlur" />
+        <feMergeNode
+           id="feMergeNode2922"
+           in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
   <sodipodi:namedview
      id="base"
      pagecolor="#ffffff"
@@ -29,9 +96,9 @@
      inkscape:pageshadow="2"
      inkscape:zoom="2.1369427"
      inkscape:cx="130.27686"
-     inkscape:cy="78.032207"
+     inkscape:cy="77.09629"
      inkscape:document-units="px"
-     inkscape:current-layer="layer1"
+     inkscape:current-layer="header"
      showgrid="false"
      inkscape:window-width="1280"
      inkscape:window-height="942"
@@ -48,7 +115,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title />
+        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -65,7 +132,7 @@
        y="-8.7699928">The editor</text>
     <text
        xml:space="preserve"
-       style="font-size:40px;font-style:normal;font-weight:normal;line-height:100%;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
+       style="font-size:40px;font-style:normal;font-weight:normal;line-height:100%;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans;filter:url(#filter2910)"
        x="178.45901"
        y="988.47156"
        id="text3198"
@@ -81,7 +148,8 @@
          id="tspan3202"
          style="font-size:36px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:center;line-height:100%;writing-mode:lr-tb;text-anchor:middle;font-family:Courier New;-inkscape-font-specification:Courier New Bold">editor</tspan></text>
     <g
-       id="g2916">
+       id="g2916"
+       style="filter:url(#filter2840)">
       <path
          inkscape:connector-curvature="0"
          id="path2999"
