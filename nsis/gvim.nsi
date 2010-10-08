@@ -211,6 +211,12 @@ SilentInstall             normal
 # Show all languages, despite user's codepage:
 !define MUI_LANGDLL_ALLLANGUAGES
 
+!define MUI_WELCOMEFINISHPAGE_BITMAP       "icons\welcome.bmp"
+!define MUI_UNWELCOMEFINISHPAGE_BITMAP     "icons\uninstall.bmp"
+!define MUI_HEADERIMAGE
+!define MUI_HEADERIMAGE_BITMAP             "icons\header.bmp"
+!define MUI_HEADERIMAGE_UNBITMAP           "icons\un_header.bmp"
+
 !define MUI_COMPONENTSPAGE_SMALLDESC
 !define MUI_DIRECTORYPAGE_TEXT_DESTINATION $(str_dest_folder)
 !define MUI_LICENSEPAGE_CHECKBOX
