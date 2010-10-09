@@ -191,7 +191,7 @@ OutFile                   gvim${VER_SHORT_NDOT}.exe
 CRCCheck                  force
 SetCompressor             lzma
 SetDatablockOptimize      on
-BrandingText              " "
+BrandingText              "${VIM_PRODUCT_NAME}"
 RequestExecutionLevel     highest
 InstallDir                "$PROGRAMFILES\Vim"
 
