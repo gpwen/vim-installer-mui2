@@ -319,9 +319,7 @@ SRC_DOS =	\
 		nsis/data/cli_template.bat \
 		nsis/data/gui_template.bat \
 		nsis/data/mswin_vimrc.vim \
-		nsis/lang/english.nsi \
-		nsis/lang/simpchinese.nsi \
-		nsis/lang/tradchinese.nsi \
+		nsis/lang/*.nsi \
 		uninstal.txt \
 		src/VisVim/Commands.cpp \
 		src/VisVim/Commands.h \
