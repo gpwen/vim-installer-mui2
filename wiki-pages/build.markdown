@@ -28,16 +28,34 @@ git clone git://github.com/gpwen/vim-installer-mui2.git
 
 2.  Generate patch for Vim official code (the latest revision on the default
     branch of the [[official mercurial repository of
-    Vim|http://www.vim.org/mercurial.php]]):
+    Vim|http://www.vim.org/mercurial.php]]).  **Please note the changeset
+    contains some binary files (bitmaps), so the conventional patch won't
+    work.**  The binary diff format of `git` will be used here.
 ```ksh
 cd path/to/vim-installer-mui2
-git diff -p origin/vim-official origin/master > path/to/nsis.patch
+git diff -p --binary origin/vim-official origin/master > path/to/nsis.patch
 ```
 
-3.  Applies the patch to the official Vim code:
+3.  Applies the patch to the official Vim code.  Again, as binary files are
+    present in the changeset, we'll use the mercurial `import` command instead
+    of the conventional patch here.
 ```ksh
 cd path/to/vim
-patch -p1 < path/to/nsis.patch
+hg import --no-commit -f path/to/nsis.patch
 ```
 
-4.  You can now build the NSIS installer as normal.
+4.  As an **alternative** to the above two steps (steps 2 and 3), you can also
+    replace the following file/directory in `vim` repository with the same
+    file/directory from the `vim-installer-mui2` repository directly:
+    * `Filelist`
+    * `nsis`
+
+    Like this:
+```ksh
+cd path/to/vim
+rm -r Filelist nsis
+cp path/to/vim-installer-mui2/Filelist .
+cp -r path/to/vim-installer-mui2/nsis .
+```
+
+5.  You can now build the NSIS installer as normal.
