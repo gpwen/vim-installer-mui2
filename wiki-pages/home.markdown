@@ -72,10 +72,8 @@ the repacked installer on the [[download page |
 http://github.com/gpwen/vim-installer-mui2/downloads]], it has two difference
 flavors:
 
-* `gvim73-en.exe`: This is English only version.  It's a strict repacking of
-  the official installer, no file changed.
+* `gvim73-en-v#.#.exe`: This is English only version.  It's a strict repacking
+  of the official installer, no file changed.
 
-* `gvim73-int.exe`: International version.  Multiple language support has been
-  enabled in this version.  I also update some DLLs:
-  * `libintl.dll`/`iconv.dll` : Newer version of `gettext` DLL.
-  * `xpm4.dll` : XPM image support DLL.
+* `gvim73-int-v#.#.exe`: International version.  Same as above except multiple
+  language support has been enabled.
