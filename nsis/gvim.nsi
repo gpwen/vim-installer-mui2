@@ -80,16 +80,19 @@
 !include "simple_log.nsh"
 
 # Global variables:
-Var vim_install_root
-Var vim_bin_path
-Var vim_old_ver_keys
-Var vim_old_ver_count
-Var vim_has_console
-Var vim_batch_exe
-Var vim_batch_arg
-Var vim_batch_ver_found
-Var vim_last_copy
-Var vim_rm_common
+Var vim_cmd_params         # Command line parameters
+Var vim_allow_silent_rm    # Flag: Allow uninstall in silent mode
+Var vim_install_root       # Vim install root directory
+Var vim_bin_path           # Vim binary directory
+Var vim_old_ver_keys       # List of registry keys for old versions
+Var vim_old_ver_count      # Count of old versions
+Var vim_loud_ver_count     # Count of old versions without silent mode
+Var vim_has_console        # Flag: Console programs should be installed
+Var vim_batch_exe          # Working variable: target of batch wrapper
+Var vim_batch_arg          # Working variable: parameter for target
+Var vim_batch_ver_found    # Working variable: version found in batch file
+Var vim_last_copy          # Flag: Is this the last Vim on the system?
+Var vim_rm_common          # Flag: Should we remove common files?
 
 # List of alphanumeric:
 !define ALPHA_NUMERIC     "abcdefghijklmnopqrstuvwxyz0123456789"
@@ -106,7 +109,7 @@ Var vim_rm_common
 # fields can NOT be empty, you have to add some whitespaces there even if it's
 # empty, otherwise the field cannot be handled correctly.  It's the limitation
 # of the macro used to parse such specification.
-#    Title (no extension)        | Target   | Arg | Work-dir
+#    Title                           | Target   | Arg | Work-dir
 !define VIM_DESKTOP_SHORTCUTS \
     "gVim ${VER_SHORT}.lnk           | gvim.exe |     | $\n\
      gVim Easy ${VER_SHORT}.lnk      | gvim.exe | -y  | $\n\
@@ -175,9 +178,16 @@ Var vim_rm_common
      DW  | NoModify         | 1                                     $\n\
      DW  | NoRepair         | 1 "
 
+# List of install types:
+!define VIM_INSTALL_TYPES \
+    "TYPICAL | 0 $\n\
+     MIN     | 1 $\n\
+     FULL    | 2"
+
 # Registry keys:
 !define REG_KEY_WINDOWS   "software\Microsoft\Windows\CurrentVersion"
 !define REG_KEY_UNINSTALL "${REG_KEY_WINDOWS}\Uninstall"
+!define REG_KEY_SILENT    "AllowSilent"
 !define REG_KEY_SH_EXT    "${REG_KEY_WINDOWS}\Shell Extensions\Approved"
 !define REG_KEY_VIM       "Software\Vim"
 !define VIM_SH_EXT_NAME   "Vim Shell Extension"
@@ -195,7 +205,8 @@ BrandingText              "${VIM_PRODUCT_NAME}"
 RequestExecutionLevel     highest
 InstallDir                "$PROGRAMFILES\Vim"
 
-# Types of installs we can perform:
+# Types of installs we can perform.  Please also update install type list if
+# you have updated this:
 InstType                  $(str_type_typical)
 InstType                  $(str_type_minimal)
 InstType                  $(str_type_full)
@@ -301,8 +312,9 @@ SilentInstall             normal
 #   Returns    : None
 #   Globals    :
 #     The following globals will be changed by this functions:
-#     - $vim_old_ver_keys  : Concatenated of all uninstall keys found.
-#     - $vim_old_ver_count : Number of uninstall keys found.
+#     - $vim_old_ver_keys   : Concatenation of all uninstall keys found.
+#     - $vim_old_ver_count  : Number of uninstall keys found.
+#     - $vim_loud_ver_count : Count of old versions without silent mode.
 # ----------------------------------------------------------------------------
 !define VimLoadUninstallKeys "!insertmacro _VimLoadUninstallKeysCall"
 !macro _VimLoadUninstallKeysCall
@@ -362,7 +374,7 @@ SilentInstall             normal
         # version currently been installed, its key will always be put at
         # front to make sure it will be included in the uninstall list as the
         # first item:
-        IntOp  $vim_old_ver_count $vim_old_ver_count + 1
+        IntOp $vim_old_ver_count $vim_old_ver_count + 1
         ${If} $R1 S== "${VIM_PRODUCT_NAME}"
             StrCpy $vim_old_ver_keys "$R1$\r$\n$vim_old_ver_keys"
         ${Else}
@@ -370,10 +382,21 @@ SilentInstall             normal
         ${EndIf}
 
         ${Log} "Found Vim uninstall key No.$vim_old_ver_count: [$R1]"
+
+        # Detect whether the old version support silent mode or not:
+        ReadRegDWORD $R2 SHCTX "${REG_KEY_UNINSTALL}\$R1" "${REG_KEY_SILENT}"
+        ${If}   ${Errors}
+        ${OrIf} $R2 <> 1
+            ${Log} "WARNING: Old version [$R1] \
+                    does not support silent mode."
+            IntOp $vim_loud_ver_count $vim_loud_ver_count + 1
+        ${EndIf}
     ${Loop}
 
     ${Log} "Found $vim_old_ver_count uninstall keys:$\r$\n\
             $vim_old_ver_keys"
+    ${Log} "$vim_loud_ver_count of the above versions \
+            do not support silent uninstallation."
     ClearErrors
 
     Pop $R2
@@ -660,11 +683,24 @@ SilentInstall             normal
 # ----------------------------------------------------------------------------
 Section -log_status
     # Log install path etc.:
-    ${Log} "Final install path: $vim_install_root"
-    ${Log} "Final binary  path: $vim_bin_path"
+    ${Log} "Final install path : $vim_install_root"
+    ${Log} "Final binary  path : $vim_bin_path"
+    ${Log} "Language ID        : $LANGUAGE"
+
+    # Detect install mode:
+    Push $R0
+    StrCpy $R0 "Normal"
+    ${IfThen} ${Silent} ${|} StrCpy $R0 "Silent" ${|}
+    ${Log} "Install Mode       : $R0"
+    Pop $R0
+
+    ${Log} "Silent uninstall   : $vim_allow_silent_rm"
 
     # Log status for all sections:
     ${LogSectionStatus} 100
+
+    # ??? Debug:
+    ${IfThen} ${Silent} ${|} Abort ${|}
 SectionEnd
 
 # ----------------------------------------------------------------------------
@@ -1026,9 +1062,41 @@ Section -registry_update
 SectionEnd
 
 Section -post
-    BringToFront
+    ${IfNotThen} ${Silent} ${|} BringToFront ${|}
 SectionEnd
 
+##############################################################################
+# Section Dependent Settings                                              {{{1
+##############################################################################
+
+# List of all installer sections (for command line processing):
+!ifdef HAVE_VIS_VIM
+    !define VIM_INSTALL_SECS_VIS_VIM \
+        "$\n VISVIM | ${id_section_visvim}"
+!else
+    !define VIM_INSTALL_SECS_VIS_VIM ""
+!endif
+
+!ifdef HAVE_NLS
+    !define VIM_INSTALL_SECS_NLS \
+        "$\n NLS | ${id_section_nls}"
+!else
+    !define VIM_INSTALL_SECS_NLS ""
+!endif
+
+!define VIM_INSTALL_SECS \
+    "CONSOLE    | ${id_section_console}     $\n\
+     BATCH      | ${id_section_batch}       $\n\
+     DESKTOP    | ${id_section_desktop}     $\n\
+     STARTMENU  | ${id_section_startmenu}   $\n\
+     QLAUNCH    | ${id_section_quicklaunch} $\n\
+     SHEXT32    | ${id_section_editwith32}  $\n\
+     SHEXT64    | ${id_section_editwith64}  $\n\
+     VIMRC      | ${id_section_vimrc}       $\n\
+     PLUGINHOME | ${id_section_pluginhome}  $\n\
+     PLUGINCOM  | ${id_section_pluginvim}      \
+     ${VIM_INSTALL_SECS_VIS_VIM}               \
+     ${VIM_INSTALL_SECS_NLS}"
 
 ##############################################################################
 # Installer Functions                                                     {{{1
@@ -1046,10 +1114,13 @@ ${DECLARE_SimpleLogFunctions}  # Declare all functions for simple log
 # ----------------------------------------------------------------------------
 Function .onInit
     # Initialize all globals:
+    StrCpy $vim_cmd_params      ""
+    StrCpy $vim_allow_silent_rm 0
     StrCpy $vim_install_root    ""
     StrCpy $vim_bin_path        ""
     StrCpy $vim_old_ver_keys    ""
     StrCpy $vim_old_ver_count   0
+    StrCpy $vim_loud_ver_count  0
     StrCpy $vim_has_console     0
     StrCpy $vim_batch_exe       ""
     StrCpy $vim_batch_arg       ""
@@ -1061,6 +1132,9 @@ Function .onInit
     !ifdef VIM_LOG_FILE
         ${LogInit} "$TEMP\${VIM_LOG_FILE}" "Vim installer log"
     !endif
+
+    # Get command line parameters:
+    Call VimProcessCmdParams
 
     # Use shell folders for "all" user:
     ${Logged1} SetShellVarContext all
@@ -1083,6 +1157,28 @@ Function .onInit
     ${If} $vim_old_ver_count > ${VIM_MAX_OLD_VER}
         ${ShowErr} "$(str_msg_too_many_ver)"
         Abort
+    ${EndIf}
+
+    # Do not start uninstaller by default in silent mode:
+    ${If}    $vim_old_ver_count > 0
+    ${AndIf} ${Silent}
+        # Found old version(s) in silent mode, abort unless uninstallation has
+        # been enabled:
+        ${If} $vim_allow_silent_rm <> 1
+            ${ShowErr} "Previous installation(s) of Vim found, but$\r$\n\
+                        uninstallation has not been enabled in silent mode."
+            Abort
+        ${EndIf}
+
+        # Abort unless all of those old versions support silent
+        # uninstallation:
+        ${If} $vim_loud_ver_count > 0
+            ${ShowErr} \
+                "Some of the previous installation(s) of Vim on$\r$\n\
+                 the system do not support silent uninstallation!$\r$\n\
+                 Please remove all of them manually and try again."
+            Abort
+        ${EndIf}
     ${EndIf}
 
     # Determine default install path:
@@ -1134,6 +1230,128 @@ Function .onInstFailed
     !ifdef VIM_LOG_FILE
         ${LogClose}
     !endif
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function VimProcessCmdParams                                            {{{2
+#   Processing command line parameters.
+#
+#   Parameters : None
+#   Returns    : None
+# ----------------------------------------------------------------------------
+Function VimProcessCmdParams
+    # Get command line parameters:
+    ${GetParameters} $vim_cmd_params
+    ${Log} "Command line params: [$vim_cmd_params]"
+
+    # Bail out if no command line parameter specified:
+    ${IfThen} $vim_cmd_params S== "" ${|} Return ${|}
+
+    Push $R0
+    Push $R1
+
+    # This controls whether it is allowed to call uninstaller in silent mode
+    # or not:
+    ${GetOptions} $vim_cmd_params "/RM" $R0
+    ${IfNot} ${Errors}
+        ${Log} "Command line: Allow uninstallation in silent mode."
+        StrCpy $vim_allow_silent_rm 1
+    ${EndIf}
+
+    # Set install type:
+    ${GetOptions} $vim_cmd_params "/TYPE:" $R0
+    ${IfNot} ${Errors}
+        ${LoopMatrix} "${VIM_INSTALL_TYPES}" \
+            "_VimSetInstTypeFunc" "" "$R0" "" $R1
+        ${If} $R1 == ""
+            ${Log} "ERROR: Unknown install type [$R0]"
+            Pop $R1
+            Pop $R0
+            Abort
+        ${EndIf}
+    ${EndIf}
+
+    # Set language: This does not work!
+    # TODO: Need verification here!
+    #${GetOptions} $vim_cmd_params "/LANG:" $R0
+    #${IfNot} ${Errors}
+    #    ${Log} "Command line: Set language to [$R0]"
+    #    StrCpy $LANGUAGE $R0
+    #${EndIf}
+    #ReadRegStr $vim_old_language \
+    #    "${MUI_LANGDLL_REGISTRY_ROOT}" \
+    #    "${MUI_LANGDLL_REGISTRY_KEY}"  \
+    #    "${MUI_LANGDLL_REGISTRY_VALUENAME}"
+
+    # Process section select commands:
+    ${LoopMatrix} "${VIM_INSTALL_SECS}" "_VimSecSelectFunc" "" "" "" $R0
+
+    Pop $R1
+    Pop $R0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function _VimSetInstTypeFunc                                            {{{2
+#   Callback function for LoopMatrix to set install type (command line
+#   processing).
+# ----------------------------------------------------------------------------
+Function _VimSetInstTypeFunc
+    Exch      $3     # Arg 2: Ignored
+    ${ExchAt} 1 $2   # Arg 1: User specified install type.
+    ${ExchAt} 2 $1   # Col 2: Install type ID.
+    ${ExchAt} 3 $0   # Col 1: Install type name.
+
+    # Set install type if user specified the correct install type:
+    ${If} $0 == $2
+        ${Log} "Command line: Set install type to [$0], ID=$1"
+        SetCurInstType $1
+    ${Else}
+        StrCpy $0 ""
+    ${EndIf}
+
+    # Restore the stack:
+    Pop  $3
+    Pop  $2
+    Pop  $1
+    Exch $0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function _VimSecSelectFunc                                              {{{2
+#   Callback function for LoopMatrix to select sections (command line
+#   processing).
+# ----------------------------------------------------------------------------
+Function _VimSecSelectFunc
+    ${ExchAt} 2 $1   # Col 2: Current section ID
+    ${ExchAt} 3 $0   # Col 1: Current section name
+    Push $R0
+
+    # Get section select command from the command line:
+    ${GetOptions} $vim_cmd_params "/$0" $R0
+
+    # Select/unselect the section if we find the command:
+    ${IfNot} ${Errors}
+        ${If} $R0 == "+"
+            ${Log} "Command line: Select section [$0], ID=$1"
+            !insertmacro SelectSection   $1
+        ${ElseIf} $R0 == "-"
+            ${Log} "Command line: Unselect section [$0], ID=$1"
+            !insertmacro UnselectSection $1
+        ${Else}
+            ${Log} "WARNING: Ignore invalid selection command [$R0] \
+                    for section [$0]!"
+        ${EndIf}
+    ${EndIf}
+
+    # Exit value:
+    StrCpy $0 ""
+
+    # Restore the stack:
+    Pop  $R0
+    Pop  $1  # Ignored item callback arg 2
+    Pop  $1  # Ignored item callback arg 1
+    Pop  $1
+    Exch $0
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -1327,7 +1545,7 @@ FunctionEnd
 #     None
 # ----------------------------------------------------------------------------
 Function VimRmOldVer
-    Exch $R0  # ID of the Vim version to remove.
+    Exch $R0  # ID/key of the Vim version to remove.
 
     # Silently ignore out of bound IDs:
     ${If}   $R0 >= $vim_old_ver_count
@@ -1337,9 +1555,10 @@ Function VimRmOldVer
         Return
     ${EndIf}
 
-    Push $R1
-    Push $R2
-    Push $R3
+    Push $R1  # Full name of the uninstaller
+    Push $R2  # Path of the uninstaller
+    Push $R3  # Name of the uninstaller
+    Push $R4  # Silent flag of the uninstaller
 
     # Get (cached) registry key for the specified old version:
     ${VimGetOldVerKey} $R0 $R1
@@ -1350,6 +1569,20 @@ Function VimRmOldVer
 
     StrCpy $R0 $R1
     ${LogPrint} "$(str_msg_rm_start) $R0 ..."
+
+    # Determine whether the uninstaller support silent mode or not, run the
+    # uninstaller in silent mode if it supports that.
+    StrCpy $R4 ""
+    ReadRegDWORD $R1 SHCTX "${REG_KEY_UNINSTALL}\$R0" "${REG_KEY_SILENT}"
+    ${IfNot} ${Errors}
+    ${AndIf} $R1 = 1
+        StrCpy $R4 "/S"
+    ${ElseIf} ${Silent}
+        # This is not possible: We're in silent mode but the uninstaller does
+        # not support silent mode!
+        ${ShowErr} "Uninstaller for [$R0] does not support silent mode!"
+        Abort
+    ${EndIf}
 
     # Read path of the uninstaller from registry ($R1):
     ReadRegStr $R1 SHCTX "${REG_KEY_UNINSTALL}\$R0" "UninstallString"
@@ -1364,11 +1597,11 @@ Function VimRmOldVer
         Abort
     ${EndIf}
 
-    # Path of uninstaller ($R2) and name of uninstaller($R3):
+    # Path ($R2) and name ($R3) of the uninstaller:
     ${GetParent}   $R1 $R2
     ${GetFileName} $R1 $R3
 
-    # Copy unintall to temporary path:
+    # Copy uninstaller to the temporary path:
     ${Logged4} CopyFiles /SILENT /FILESONLY $R1 $TEMP
     ${If}      ${Errors}
     ${OrIfNot} ${FileExists} "$TEMP\$R3"
@@ -1379,7 +1612,7 @@ Function VimRmOldVer
     # Execute the uninstaller in TEMP, exit code stores in $R2.  Log is closed
     # before launch and reopened after that, so that uninstaller can write to
     # the same log file.
-    ${Logged2Reopen} ExecWait '"$TEMP\$R3" _?=$R2' $R2
+    ${Logged2Reopen} ExecWait '"$TEMP\$R3" $R4 _?=$R2' $R2
     ${If} ${Errors}
         ${Logged1} Delete "$TEMP\$R3"
         ${ShowErr} "$(str_msg_rm_fail) $R0$\r$\n$(str_msg_rm_run_fail)"
@@ -1399,8 +1632,9 @@ Function VimRmOldVer
     ${EndIf}
 
     # We may have been put to the background when uninstall did something:
-    BringToFront
+    ${IfNotThen} ${Silent} ${|} BringToFront ${|}
 
+    Pop $R4
     Pop $R3
     Pop $R2
     Pop $R1
@@ -1693,7 +1927,7 @@ Function _VimRegFileExtCallback
     ${Logged4} WriteRegStr HKCR "$0\OpenWithList\gvim.exe" "" ""
 
     Pop $0  # Ignored item callback arg 2
-    Pop $0  # Ignored item callback arg 2
+    Pop $0  # Ignored item callback arg 1
 
     # Empty return code:
     StrCpy $0 ""
@@ -1875,7 +2109,7 @@ Section "un.$(str_unsection_register)" id_unsection_register
         "${REG_KEY_UNINSTALL}\${VIM_PRODUCT_NAME}"
 
     # We may have been put to the background when uninstall did something.
-    BringToFront
+    ${IfNotThen} ${Silent} ${|} BringToFront ${|}
 
     ${LogSectionEnd}
 SectionEnd
@@ -2018,10 +2252,13 @@ Function un.onInit
     Push $R0
 
     # Initialize all globals:
+    StrCpy $vim_cmd_params      ""
+    StrCpy $vim_allow_silent_rm 0
     StrCpy $vim_install_root    ""
     StrCpy $vim_bin_path        ""
     StrCpy $vim_old_ver_keys    ""
     StrCpy $vim_old_ver_count   0
+    StrCpy $vim_loud_ver_count  0
     StrCpy $vim_has_console     0
     StrCpy $vim_batch_exe       ""
     StrCpy $vim_batch_arg       ""
