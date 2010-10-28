@@ -18,6 +18,9 @@ CMD=$(basename $0)
 # Name of the OS:
 SYSTEM_TYPE=$(uname -s)
 
+# Name of the latest official VIM installer:
+VIM_INSTALLER="gvim73_46.exe"
+
 # Command line options:
 OPT_DOWNLOAD=0
 OPT_NSIS_GIT=
@@ -96,17 +99,17 @@ fi
 
 # Download Vim PC installer if required:
 if [[ $OPT_DOWNLOAD -ne 0 ]]; then
-    wget -c ftp://ftp.vim.org/pub/vim/pc/gvim73.exe
+    wget -c ftp://ftp.vim.org/pub/vim/pc/$VIM_INSTALLER
 fi
 
-if [[ ! -r "gvim73.exe" ]]; then
+if [[ ! -r "$VIM_INSTALLER" ]]; then
     print -u2 "$CMD: ERROR : Cannot find official gvim installer to unpack!"
     return 1
 fi
 
 # Unpack the installer, auto-rename duplicated files:
 mkdir -v vim-repack  &&  cd vim-repack
-echo "u" | 7z x ../gvim73.exe
+echo "u" | 7z x ../$VIM_INSTALLER
 if [[ $? -ne 0 ]]; then
     print -u2 "$CMD: ERROR : Fail to unpack Vim installer!"
     exit 1
