@@ -81,6 +81,7 @@
 
 # Global variables:
 Var vim_cmd_params         # Command line parameters
+Var vim_allow_silent_root  # Flag: Install dir auto-detection in silent mode
 Var vim_allow_silent_rm    # Flag: Allow uninstall in silent mode
 Var vim_install_root       # Vim install root directory
 Var vim_bin_path           # Vim binary directory
@@ -203,7 +204,7 @@ SetCompressor             lzma
 SetDatablockOptimize      on
 BrandingText              "${VIM_PRODUCT_NAME}"
 RequestExecutionLevel     highest
-InstallDir                "$PROGRAMFILES\Vim"
+InstallDir                ""
 
 # Types of installs we can perform.  Please also update install type list if
 # you have updated this:
@@ -283,6 +284,71 @@ SilentInstall             normal
 ##############################################################################
 # Macros                                                                  {{{1
 ##############################################################################
+
+# ----------------------------------------------------------------------------
+# macro VimFetchCmdParam[S] $_PARAM_NAME $_FOUND $_VALUE                  {{{2
+#   Get command line parameter and remove it if found.
+#
+#   VimFetchCmdParam is the case-insensitive, VimFetchCmdParamS is the
+#   case-sensitive version.
+#
+#   The command line parameter found is removed so that we can detect
+#   erroneous command line options.
+#
+#   Globals:
+#       $vim_cmd_params : Global command line parameter.  It will be modified
+#                         directly when removing command line option.
+#   Parameters:
+#       $_PARAM_NAME    : Name of the parameter.
+#   Returns:
+#       $_FOUND         : 1 if the specified parameter found; 0 if not.
+#       $_VALUE         : Value of the parameter if found.
+# ----------------------------------------------------------------------------
+!define VimFetchCmdParam  "!insertmacro _VimFetchCmdParam 0"
+!define VimFetchCmdParamS "!insertmacro _VimFetchCmdParam 1"
+!macro _VimFetchCmdParam _CASE_SENSITIVE _PARAM_NAME _FOUND _VALUE
+    push $R0  # Found flag
+    push $R1  # Parameter value
+
+    !if ${_CASE_SENSITIVE}
+        # Handle case-sensitive command line parameters:
+        ${GetOptionsS} $vim_cmd_params "${_PARAM_NAME}" $R1
+    !else
+        # Handle case-insensitive command line parameters:
+        ${GetOptions}  $vim_cmd_params "${_PARAM_NAME}" $R1
+    !endif
+
+    ${If} ${Errors}
+        # Nothing found:
+        StrCpy $R0 0
+        StrCpy $R1 ""
+    ${Else}
+        # Found the required parameter:
+        StrCpy $R0 1
+
+        # Remove the parameter found.  Please note the parameter name and
+        # value could be specified as one or two DOS command line parameters,
+        # we should handle both cases:
+        !if ${_CASE_SENSITIVE}
+            # Case-sensitive command line parameters:
+            ${WordReplaceS} $vim_cmd_params "${_PARAM_NAME}$R1" \
+                "/@@" "+" $vim_cmd_params
+            ${WordReplaceS} $vim_cmd_params "${_PARAM_NAME} $R1" \
+                "/@@" "+" $vim_cmd_params
+        !else
+            # Case-insensitive command line parameters:
+            ${WordReplace} $vim_cmd_params "${_PARAM_NAME}$R1" \
+                "/@@" "+" $vim_cmd_params
+            ${WordReplace} $vim_cmd_params "${_PARAM_NAME} $R1" \
+                "/@@" "+" $vim_cmd_params
+        !endif
+    ${EndIf}
+
+    Exch        $R1
+    ${ExchAt} 1 $R0
+    Pop ${_VALUE}
+    Pop ${_FOUND}
+!macroend
 
 # ----------------------------------------------------------------------------
 # macro VimSelectRegView                                                  {{{2
@@ -424,7 +490,7 @@ SilentInstall             normal
         StrCpy $R0 1
     ${EndIf}
     Exch $R0
-    Pop ${_VALID}
+    Pop  ${_VALID}
 !macroend
 
 # ----------------------------------------------------------------------------
@@ -682,22 +748,28 @@ SilentInstall             normal
 # Section: Log status                                                     {{{2
 # ----------------------------------------------------------------------------
 Section -log_status
+    Push $R0
+
     # Log install path etc.:
     ${Log} "Final install path : $vim_install_root"
     ${Log} "Final binary  path : $vim_bin_path"
     ${Log} "Language ID        : $LANGUAGE"
 
+    GetCurInstType $R0
+    ${Log} "Install Type       : $R0"
+
     # Detect install mode:
-    Push $R0
     StrCpy $R0 "Normal"
     ${IfThen} ${Silent} ${|} StrCpy $R0 "Silent" ${|}
     ${Log} "Install Mode       : $R0"
-    Pop $R0
 
+    ${Log} "Silent install dir : $vim_allow_silent_root"
     ${Log} "Silent uninstall   : $vim_allow_silent_rm"
 
     # Log status for all sections:
     ${LogSectionStatus} 100
+
+    Pop $R0
 
     # ??? Debug:
     ${IfThen} ${Silent} ${|} Abort ${|}
@@ -1114,19 +1186,20 @@ ${DECLARE_SimpleLogFunctions}  # Declare all functions for simple log
 # ----------------------------------------------------------------------------
 Function .onInit
     # Initialize all globals:
-    StrCpy $vim_cmd_params      ""
-    StrCpy $vim_allow_silent_rm 0
-    StrCpy $vim_install_root    ""
-    StrCpy $vim_bin_path        ""
-    StrCpy $vim_old_ver_keys    ""
-    StrCpy $vim_old_ver_count   0
-    StrCpy $vim_loud_ver_count  0
-    StrCpy $vim_has_console     0
-    StrCpy $vim_batch_exe       ""
-    StrCpy $vim_batch_arg       ""
-    StrCpy $vim_batch_ver_found 0
-    StrCpy $vim_last_copy       0
-    StrCpy $vim_rm_common       0
+    StrCpy $vim_cmd_params        ""
+    StrCpy $vim_allow_silent_root 0
+    StrCpy $vim_allow_silent_rm   0
+    StrCpy $vim_install_root      ""
+    StrCpy $vim_bin_path          ""
+    StrCpy $vim_old_ver_keys      ""
+    StrCpy $vim_old_ver_count     0
+    StrCpy $vim_loud_ver_count    0
+    StrCpy $vim_has_console       0
+    StrCpy $vim_batch_exe         ""
+    StrCpy $vim_batch_arg         ""
+    StrCpy $vim_batch_ver_found   0
+    StrCpy $vim_last_copy         0
+    StrCpy $vim_rm_common         0
 
     # Initialize log:
     !ifdef VIM_LOG_FILE
@@ -1247,24 +1320,36 @@ Function VimProcessCmdParams
     # Bail out if no command line parameter specified:
     ${IfThen} $vim_cmd_params S== "" ${|} Return ${|}
 
-    Push $R0
-    Push $R1
+    Push $R0   # Parameter found flag
+    Push $R1   # Parameter value
 
-    # This controls whether it is allowed to call uninstaller in silent mode
-    # or not:
-    ${GetOptions} $vim_cmd_params "/RM" $R0
-    ${IfNot} ${Errors}
+    # Is it allowed to detect(determine) install directory automatically in
+    # silent mode?  Please note this can be dangerous as you might not know
+    # which directory will be used before installation.  Even if you set
+    # install path explicitly on command line, NSIS might ignore it SILENTLY
+    # if it's invalid.  This command line option make it a little bit safer to
+    # specify install directory on the command line.
+    ${VimFetchCmdParam} "/DD" $R0 $R1
+    ${If} $R0 <> 0
+        ${Log} "Command line: \
+                Allow install dir auto-detection in silent mode."
+        StrCpy $vim_allow_silent_root 1
+    ${EndIf}
+
+    # Is it allowed to call uninstaller in silent mode?
+    ${VimFetchCmdParam} "/RMOLD" $R0 $R1
+    ${If} $R0 <> 0
         ${Log} "Command line: Allow uninstallation in silent mode."
         StrCpy $vim_allow_silent_rm 1
     ${EndIf}
 
-    # Set install type:
-    ${GetOptions} $vim_cmd_params "/TYPE:" $R0
-    ${IfNot} ${Errors}
+    # Set install type: /TYPE={TYPICAL|MIN|FULL}
+    ${VimFetchCmdParam} "/TYPE=" $R0 $R1
+    ${If} $R0 <> 0
         ${LoopMatrix} "${VIM_INSTALL_TYPES}" \
-            "_VimSetInstTypeFunc" "" "$R0" "" $R1
-        ${If} $R1 == ""
-            ${Log} "ERROR: Unknown install type [$R0]"
+            "_VimSetInstTypeFunc" "" "$R1" "" $R0
+        ${If} $R0 == ""
+            ${Log} "ERROR: Unknown install type [$R1]"
             Pop $R1
             Pop $R0
             Abort
@@ -1273,18 +1358,36 @@ Function VimProcessCmdParams
 
     # Set language: This does not work!
     # TODO: Need verification here!
-    #${GetOptions} $vim_cmd_params "/LANG:" $R0
-    #${IfNot} ${Errors}
-    #    ${Log} "Command line: Set language to [$R0]"
-    #    StrCpy $LANGUAGE $R0
+    #${VimFetchCmdParam} "/LANG=" $R0 $R1
+    #${If} $R0 <> 0
+    #    ${Log} "Command line: Set language to [$R1]"
+    #    StrCpy $LANGUAGE $R1
     #${EndIf}
     #ReadRegStr $vim_old_language \
     #    "${MUI_LANGDLL_REGISTRY_ROOT}" \
     #    "${MUI_LANGDLL_REGISTRY_KEY}"  \
     #    "${MUI_LANGDLL_REGISTRY_VALUENAME}"
 
-    # Process section select commands:
+    # Process section select options (/<SECTON>{+/-}):
     ${LoopMatrix} "${VIM_INSTALL_SECS}" "_VimSecSelectFunc" "" "" "" $R0
+
+    # Remove those parameters that have been processed but not removed by NSIS
+    # (Note: /D=<install-dir> will be processed AND removed by NSIS).  Please
+    # note NSIS handle command line options are case-sensitive:
+    ${VimFetchCmdParamS} "/S"    $R0 $R1
+    ${VimFetchCmdParamS} "/NCRC" $R0 $R1
+
+    # Detect command line syntax errors:
+    ${WordReplace} $vim_cmd_params "/@@" " " "+"  $vim_cmd_params
+    ${WordReplace} $vim_cmd_params " "   " " "+*" $vim_cmd_params
+    ${If} $vim_cmd_params != " "
+        ${Log} "ERROR: Fail to parse the following \
+                part of the command line:$\r$\n\
+                [$vim_cmd_params]"
+        Pop $R1
+        Pop $R0
+        Abort
+    ${EndIf}
 
     Pop $R1
     Pop $R0
@@ -1325,20 +1428,21 @@ Function _VimSecSelectFunc
     ${ExchAt} 2 $1   # Col 2: Current section ID
     ${ExchAt} 3 $0   # Col 1: Current section name
     Push $R0
+    Push $R1
 
     # Get section select command from the command line:
-    ${GetOptions} $vim_cmd_params "/$0" $R0
+    ${VimFetchCmdParam} "/$0" $R0 $R1
 
     # Select/unselect the section if we find the command:
-    ${IfNot} ${Errors}
-        ${If} $R0 == "+"
+    ${If} $R0 <> 0
+        ${If} $R1 == "+"
             ${Log} "Command line: Select section [$0], ID=$1"
             !insertmacro SelectSection   $1
-        ${ElseIf} $R0 == "-"
+        ${ElseIf} $R1 == "-"
             ${Log} "Command line: Unselect section [$0], ID=$1"
             !insertmacro UnselectSection $1
         ${Else}
-            ${Log} "WARNING: Ignore invalid selection command [$R0] \
+            ${Log} "WARNING: Ignore invalid selection command [$R1] \
                     for section [$0]!"
         ${EndIf}
     ${EndIf}
@@ -1347,6 +1451,7 @@ Function _VimSecSelectFunc
     StrCpy $0 ""
 
     # Restore the stack:
+    Pop  $R1
     Pop  $R0
     Pop  $1  # Ignored item callback arg 2
     Pop  $1  # Ignored item callback arg 1
@@ -1473,15 +1578,55 @@ Function VimSetDefRootPath
     # Initialize to invalid:
     StrCpy $R2 0
 
-    # First try VIMRUNTIME environment string, use its parent directory as
-    # install path if valid.
-    ReadEnvStr $R0 "VIMRUNTIME"
-    ${IfThen} $R0 != "" ${|} ${GetParent} $R0 $R0 ${|}
-    ${If} $R0 != ""
-        ${VimVerifyRootDir} $R0 $R2
+    # Log initial install path for debug purpose:
+    ${Log} "Initial install path: [$INSTDIR]"
+
+    # First check the default install directory has been set or not.  The
+    # default install directory has been initialized to empty.  If it's
+    # non-empty now, user must have specified it explicitly on the command
+    # line, we should use that setting:
+    ${If} "$INSTDIR" != ""
+        ${VimVerifyRootDir} $INSTDIR $R2
         ${If} $R2 = 1
-            ${Log} "Set install path per VIMRUNTIME: $R0"
-            StrCpy $INSTDIR $R0
+            ${Log} "Set install path per command line: $INSTDIR"
+        ${ElseIf} ${Silent}
+            # Abort if user supplied install path is invalid and we're in
+            # silent mode.  Otherwise, give user a chance to fix the problem
+            # on the directory page:
+            ${Log} "ERROR: Invalid install path: $INSTDIR"
+            Pop $R2
+            Pop $R1
+            Pop $R0
+            Abort
+        ${EndIf}
+    ${ElseIf} ${Silent}
+    ${AndIf}  $vim_allow_silent_root = 0
+        # User has not specified install path in silent mode and has not allow
+        # auto-detection of install path explicitly.  Instead of making some
+        # stealthy change, we should simply abort:
+        ${Log} "ERROR: No install path specified in silent mode!"
+        ${Log} 'You should either specify the install path with the \
+                "/D=<path>" command line$\r$\n\
+                option directly, or allow auto-detection of install \
+                path explicitly with the$\r$\n\
+                "/DD" command line option.'
+        Pop $R2
+        Pop $R1
+        Pop $R0
+        Abort
+    ${EndIf}
+
+    # Then try VIMRUNTIME environment string, use its parent directory as
+    # install path if valid.
+    ${If} $R2 = 0
+        ReadEnvStr $R0 "VIMRUNTIME"
+        ${IfThen} $R0 != "" ${|} ${GetParent} $R0 $R0 ${|}
+        ${If} $R0 != ""
+            ${VimVerifyRootDir} $R0 $R2
+            ${If} $R2 = 1
+                ${Log} "Set install path per VIMRUNTIME: $R0"
+                StrCpy $INSTDIR $R0
+            ${EndIf}
         ${EndIf}
     ${EndIf}
 
@@ -2252,19 +2397,20 @@ Function un.onInit
     Push $R0
 
     # Initialize all globals:
-    StrCpy $vim_cmd_params      ""
-    StrCpy $vim_allow_silent_rm 0
-    StrCpy $vim_install_root    ""
-    StrCpy $vim_bin_path        ""
-    StrCpy $vim_old_ver_keys    ""
-    StrCpy $vim_old_ver_count   0
-    StrCpy $vim_loud_ver_count  0
-    StrCpy $vim_has_console     0
-    StrCpy $vim_batch_exe       ""
-    StrCpy $vim_batch_arg       ""
-    StrCpy $vim_batch_ver_found 0
-    StrCpy $vim_last_copy       0
-    StrCpy $vim_rm_common       0
+    StrCpy $vim_cmd_params        ""
+    StrCpy $vim_allow_silent_root 0
+    StrCpy $vim_allow_silent_rm   0
+    StrCpy $vim_install_root      ""
+    StrCpy $vim_bin_path          ""
+    StrCpy $vim_old_ver_keys      ""
+    StrCpy $vim_old_ver_count     0
+    StrCpy $vim_loud_ver_count    0
+    StrCpy $vim_has_console       0
+    StrCpy $vim_batch_exe         ""
+    StrCpy $vim_batch_arg         ""
+    StrCpy $vim_batch_ver_found   0
+    StrCpy $vim_last_copy         0
+    StrCpy $vim_rm_common         0
 
     # Initialize log:
     !ifdef VIM_LOG_FILE
