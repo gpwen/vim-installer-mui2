@@ -105,6 +105,15 @@ Var vim_rm_common          # Flag: Should we remove common files?
 !define VIM_BIN_DIR       "vim${VER_SHORT_NDOT}"
 !define VIM_LNK_NAME      "gVim ${VER_SHORT}"
 
+# Registry keys:
+!define REG_KEY_WINDOWS   "software\Microsoft\Windows\CurrentVersion"
+!define REG_KEY_UNINSTALL "${REG_KEY_WINDOWS}\Uninstall"
+!define REG_KEY_SILENT    "AllowSilent"
+!define REG_KEY_SH_EXT    "${REG_KEY_WINDOWS}\Shell Extensions\Approved"
+!define REG_KEY_VIM       "Software\Vim"
+!define VIM_SH_EXT_NAME   "Vim Shell Extension"
+!define VIM_SH_EXT_CLSID  "{51EEE242-AD87-11d3-9C1E-0090278BBD99}"
+
 # Specification for shortcuts on desktop.  Shortcuts are delimited with
 # newline (\n), fields in each shortcut are delimited with "|".  Please note
 # fields can NOT be empty, you have to add some whitespaces there even if it's
@@ -169,30 +178,22 @@ Var vim_rm_common          # Flag: Should we remove common files?
 # Uninstall info:
 #   Type | Registry Subkey  | Registry Value
 !define VIM_UNINSTALL_REG_INFO \
-    "STR | DisplayName      | ${VIM_PRODUCT_NAME} (self-installing) $\n\
-     STR | UninstallString  | $vim_bin_path\uninstall-gui.exe       $\n\
-     STR | InstallLocation  | $vim_bin_path                         $\n\
-     STR | DisplayIcon      | $vim_bin_path\gvim.exe,0              $\n\
-     STR | HelpLink         | ${VIM_ONLINE_URL}/                    $\n\
-     STR | URLUpdateInfo    | ${VIM_ONLINE_URL}/download.php#pc     $\n\
-     STR | DisplayVersion   | ${VER_SHORT}                          $\n\
-     DW  | NoModify         | 1                                     $\n\
-     DW  | NoRepair         | 1 "
+    "STR | DisplayName       | ${VIM_PRODUCT_NAME} (self-installing) $\n\
+     STR | UninstallString   | $vim_bin_path\uninstall-gui.exe       $\n\
+     STR | InstallLocation   | $vim_bin_path                         $\n\
+     STR | DisplayIcon       | $vim_bin_path\gvim.exe,0              $\n\
+     STR | HelpLink          | ${VIM_ONLINE_URL}/                    $\n\
+     STR | URLUpdateInfo     | ${VIM_ONLINE_URL}/download.php#pc     $\n\
+     STR | DisplayVersion    | ${VER_SHORT}                          $\n\
+     DW  | NoModify          | 1 $\n\
+     DW  | NoRepair          | 1 $\n\
+     DW  | ${REG_KEY_SILENT} | 1 "
 
 # List of install types:
 !define VIM_INSTALL_TYPES \
     "TYPICAL | 0 $\n\
      MIN     | 1 $\n\
      FULL    | 2"
-
-# Registry keys:
-!define REG_KEY_WINDOWS   "software\Microsoft\Windows\CurrentVersion"
-!define REG_KEY_UNINSTALL "${REG_KEY_WINDOWS}\Uninstall"
-!define REG_KEY_SILENT    "AllowSilent"
-!define REG_KEY_SH_EXT    "${REG_KEY_WINDOWS}\Shell Extensions\Approved"
-!define REG_KEY_VIM       "Software\Vim"
-!define VIM_SH_EXT_NAME   "Vim Shell Extension"
-!define VIM_SH_EXT_CLSID  "{51EEE242-AD87-11d3-9C1E-0090278BBD99}"
 
 # List of file extensions to be registered:
 !define VIM_FILE_EXT_LIST ".htm $\n .html $\n .vim $\n *"
@@ -2240,15 +2241,21 @@ FunctionEnd
 # Section: Log status                                                     {{{2
 # ----------------------------------------------------------------------------
 Section -un.log_status
+    Push $R0
+
     # Log install path etc.:
-    ${Log} "Vim install root: $vim_install_root"
-    ${Log} "Vim binary  path: $vim_bin_path"
+    ${Log} "Vim install root : $vim_install_root"
+    ${Log} "Vim binary  path : $vim_bin_path"
+
+    # Detect install mode:
+    StrCpy $R0 "Normal"
+    ${IfThen} ${Silent} ${|} StrCpy $R0 "Silent" ${|}
+    ${Log} "Uninstall Mode   : $R0"
 
     # Log status for all sections:
     ${LogSectionStatus} 100
 
-    # ??? TODO: Debug:
-    ${IfThen} ${Silent} ${|} Abort ${|}
+    Pop $R0
 SectionEnd
 
 # ----------------------------------------------------------------------------
