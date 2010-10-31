@@ -351,6 +351,118 @@ SilentInstall             normal
 !macroend
 
 # ----------------------------------------------------------------------------
+# macro VimCmdLineSelSec{W|E} _PARAM_NAME _SEC_NAME _SEC_ID               {{{2
+#   Process section selection options on command line.
+#
+#   VimCmdLineSelSecW only shows a warning message if syntax error found;
+#   VimCmdLineSelSecE will report error and abort if syntax error found.
+#   case-sensitive version.
+#
+#   Globals:
+#       $vim_cmd_params : Global command line parameter.  It will be modified
+#                         directly when removing the command line option
+#                         found.
+#   Parameters:
+#       $_PARAM_NAME    : Name of the parameter for section manipulation.
+#       $_SEC_NAME      : Name of the section to manipulate.
+#       $_SEC_ID        : ID of the section to manipulate.
+#   Returns:
+#       N/A
+# ----------------------------------------------------------------------------
+!define VimCmdLineSelSecW "!insertmacro _VimCmdLineSelSec 0"
+!define VimCmdLineSelSecE "!insertmacro _VimCmdLineSelSec 1"
+!macro _VimCmdLineSelSec _ABORT_IF_ERR _PARAM_NAME _SEC_NAME _SEC_ID
+    push $R0  # Parameter found flag/syntax error flag
+    push $R1  # Parameter value
+
+    # Get section select option from the command line:
+    #   /<SECTION>[{+|-}]
+    # + (select) is the default.
+    ${VimFetchCmdParam} ${_PARAM_NAME} $R0 $R1
+
+    # Select/unselect the section if we find the option:
+    ${If} $R0 <> 0
+        ${If}   $R1 == "+"
+        ${OrIf} $R1 == ""
+            # Select the section:
+            ${Log} "Command line: Select section [${_SEC_NAME}], \
+                    ID=${_SEC_ID}"
+            !insertmacro SelectSection ${_SEC_ID}
+
+            # Clear syntax error flag:
+            StrCpy $R0 0
+        ${ElseIf} $R1 == "-"
+            # Unselect the section:
+            ${Log} "Command line: Unselect section [${_SEC_NAME}], \
+                    ID=${_SEC_ID}"
+            !insertmacro UnselectSection ${_SEC_ID}
+
+            # Clear syntax error flag:
+            StrCpy $R0 0
+        ${Else}
+            # Syntax error found.  Log the error first:
+            !if ${_ABORT_IF_ERR}
+                StrCpy $R0 "ERROR: Invalid"
+            !else
+                StrCpy $R0 "WARNING: Ignore invalid"
+            !endif
+
+            ${Log} "$R0 selection command [$R1] for section [${_SEC_NAME}]!"
+
+            # Abort if required:
+            !if ${_ABORT_IF_ERR}
+                Abort
+            !endif
+        ${EndIf}
+    ${EndIf}
+
+    Pop $R1
+    Pop $R0
+!macroend
+
+# ----------------------------------------------------------------------------
+# macro VimCheckCmdLine $_SYNTAX_ERR                                      {{{2
+#   Check command line for syntax error.
+#
+#   This macro should be called after all valid command line options has
+#   already been fetched.  It will remove those command line options that will
+#   be processed (but not removed) by NSIS.  If there's still anything left,
+#   syntax error will be reported.
+#
+#   Globals:
+#       $vim_cmd_params : Global command line parameter.  It will be modified
+#                         directly when removing command line option.
+#   Parameters:
+#       N/A
+#   Returns:
+#       $_SYNTAX_ERR    : 0 if syntax OK; 1 if syntax error found.
+# ----------------------------------------------------------------------------
+!define VimCheckCmdLine "!insertmacro _VimCheckCmdLine"
+!macro _VimCheckCmdLine _SYNTAX_ERR
+    push $R0  # Syntax error flag (1 = error).
+
+    # Remove those parameters that have been processed but not removed by NSIS
+    # (Note: /D=<install-dir> will be processed AND removed by NSIS).  Please
+    # note NSIS handle command line options are case-sensitive:
+    ${VimFetchCmdParamS} "/S"    $R0 $R1
+    ${VimFetchCmdParamS} "/NCRC" $R0 $R1
+
+    # Detect command line syntax errors:
+    ${WordReplace} $vim_cmd_params "/@@" " " "+"  $vim_cmd_params
+    ${WordReplace} $vim_cmd_params " "   " " "+*" $vim_cmd_params
+    StrCpy $R0 0
+    ${If} $vim_cmd_params != " "
+        ${Log} "ERROR: Fail to parse the following \
+                part of the command line:$\r$\n\
+                [$vim_cmd_params]"
+        StrCpy $R0 1
+    ${EndIf}
+
+    Exch $R0
+    Pop  ${_SYNTAX_ERR}
+!macroend
+
+# ----------------------------------------------------------------------------
 # macro VimSelectRegView                                                  {{{2
 #   Select registry view.  Select 32-bit view on 32-bit systems, and 64-bit
 #   view on 64-bit systems.
@@ -771,7 +883,7 @@ Section -log_status
 
     Pop $R0
 
-    # ??? Debug:
+    # ??? TODO: Debug:
     ${IfThen} ${Silent} ${|} Abort ${|}
 SectionEnd
 
@@ -1206,7 +1318,7 @@ Function .onInit
         ${LogInit} "$TEMP\${VIM_LOG_FILE}" "Vim installer log"
     !endif
 
-    # Get command line parameters:
+    # Process command line parameters:
     Call VimProcessCmdParams
 
     # Use shell folders for "all" user:
@@ -1371,19 +1483,9 @@ Function VimProcessCmdParams
     # Process section select options (/<SECTON>{+/-}):
     ${LoopMatrix} "${VIM_INSTALL_SECS}" "_VimSecSelectFunc" "" "" "" $R0
 
-    # Remove those parameters that have been processed but not removed by NSIS
-    # (Note: /D=<install-dir> will be processed AND removed by NSIS).  Please
-    # note NSIS handle command line options are case-sensitive:
-    ${VimFetchCmdParamS} "/S"    $R0 $R1
-    ${VimFetchCmdParamS} "/NCRC" $R0 $R1
-
-    # Detect command line syntax errors:
-    ${WordReplace} $vim_cmd_params "/@@" " " "+"  $vim_cmd_params
-    ${WordReplace} $vim_cmd_params " "   " " "+*" $vim_cmd_params
-    ${If} $vim_cmd_params != " "
-        ${Log} "ERROR: Fail to parse the following \
-                part of the command line:$\r$\n\
-                [$vim_cmd_params]"
+    # Check command line syntax errors:
+    ${VimCheckCmdLine} $R0
+    ${If} $R0 <> 0
         Pop $R1
         Pop $R0
         Abort
@@ -1427,32 +1529,14 @@ FunctionEnd
 Function _VimSecSelectFunc
     ${ExchAt} 2 $1   # Col 2: Current section ID
     ${ExchAt} 3 $0   # Col 1: Current section name
-    Push $R0
-    Push $R1
 
-    # Get section select command from the command line:
-    ${VimFetchCmdParam} "/$0" $R0 $R1
-
-    # Select/unselect the section if we find the command:
-    ${If} $R0 <> 0
-        ${If} $R1 == "+"
-            ${Log} "Command line: Select section [$0], ID=$1"
-            !insertmacro SelectSection   $1
-        ${ElseIf} $R1 == "-"
-            ${Log} "Command line: Unselect section [$0], ID=$1"
-            !insertmacro UnselectSection $1
-        ${Else}
-            ${Log} "WARNING: Ignore invalid selection command [$R1] \
-                    for section [$0]!"
-        ${EndIf}
-    ${EndIf}
+    # Process section select/unselect option on the command line:
+    ${VimCmdLineSelSecE} "/$0" "$0" $1
 
     # Exit value:
     StrCpy $0 ""
 
     # Restore the stack:
-    Pop  $R1
-    Pop  $R0
     Pop  $1  # Ignored item callback arg 2
     Pop  $1  # Ignored item callback arg 1
     Pop  $1
@@ -2162,6 +2246,9 @@ Section -un.log_status
 
     # Log status for all sections:
     ${LogSectionStatus} 100
+
+    # ??? TODO: Debug:
+    ${IfThen} ${Silent} ${|} Abort ${|}
 SectionEnd
 
 # ----------------------------------------------------------------------------
@@ -2472,6 +2559,9 @@ Function un.onInit
         !insertmacro SetSectionFlag  ${id_unsection_rc} ${SF_RO}
     ${EndIf}
 
+    # Process command line parameters:
+    Call un.VimProcessCmdParams
+
     Pop $R0
 FunctionEnd
 
@@ -2495,6 +2585,41 @@ Function un.onSelChange
         # Config file should not be removed:
         !insertmacro UnSelectSection ${id_unsection_rc}
         !insertmacro SetSectionFlag  ${id_unsection_rc} ${SF_RO}
+    ${EndIf}
+
+    Pop $R0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function un.VimProcessCmdParams                                         {{{2
+#   Processing command line parameters for uninstaller.
+#
+#   Parameters : None
+#   Returns    : None
+# ----------------------------------------------------------------------------
+Function un.VimProcessCmdParams
+    # Get command line parameters:
+    ${GetParameters} $vim_cmd_params
+    ${Log} "Command line params: [$vim_cmd_params]"
+
+    # Bail out if no command line parameter specified:
+    ${IfThen} $vim_cmd_params S== "" ${|} Return ${|}
+
+    Push $R0
+
+    # Should we remove executables? (/RMEXE[{+/-}]
+    ${VimCmdLineSelSecE} "/RMEXE" "RMEXE" ${id_unsection_exe}
+    Call un.onSelChange
+
+    # Should we remove config files? (/RMRC[{+/-}]
+    ${VimCmdLineSelSecE} "/RMRC" "RMRC" ${id_unsection_rc}
+    Call un.onSelChange
+
+    # Check command line syntax errors:
+    ${VimCheckCmdLine} $R0
+    ${If} $R0 <> 0
+        Pop $R0
+        Abort
     ${EndIf}
 
     Pop $R0
