@@ -289,7 +289,7 @@ SilentInstall             normal
 ##############################################################################
 
 # ----------------------------------------------------------------------------
-# macro VimFetchCmdParam[S] $_PARAM_NAME $_FOUND $_VALUE                  {{{2
+# macro VimFetchCmdParam[S] $_SW_STR $_FOUND $_VALUE                      {{{2
 #   Get command line parameter and remove it if found.
 #
 #   VimFetchCmdParam is the case-insensitive, VimFetchCmdParamS is the
@@ -302,23 +302,23 @@ SilentInstall             normal
 #       $vim_cmd_params : Global command line parameter.  It will be modified
 #                         directly when removing command line option.
 #   Parameters:
-#       $_PARAM_NAME    : Name of the parameter.
+#       $_SW_STR        : Command line switch for the parameter.
 #   Returns:
 #       $_FOUND         : 1 if the specified parameter found; 0 if not.
 #       $_VALUE         : Value of the parameter if found.
 # ----------------------------------------------------------------------------
 !define VimFetchCmdParam  "!insertmacro _VimFetchCmdParam 0"
 !define VimFetchCmdParamS "!insertmacro _VimFetchCmdParam 1"
-!macro _VimFetchCmdParam _CASE_SENSITIVE _PARAM_NAME _FOUND _VALUE
+!macro _VimFetchCmdParam _CASE_SENSITIVE _SW_STR _FOUND _VALUE
     push $R0  # Found flag
     push $R1  # Parameter value
 
     !if ${_CASE_SENSITIVE}
-        # Handle case-sensitive command line parameters:
-        ${GetOptionsS} $vim_cmd_params "${_PARAM_NAME}" $R1
+        # Handle case-sensitive command line switch:
+        ${GetOptionsS} $vim_cmd_params "${_SW_STR}" $R1
     !else
-        # Handle case-insensitive command line parameters:
-        ${GetOptions}  $vim_cmd_params "${_PARAM_NAME}" $R1
+        # Handle case-insensitive command line switch:
+        ${GetOptions}  $vim_cmd_params "${_SW_STR}" $R1
     !endif
 
     ${If} ${Errors}
@@ -326,23 +326,23 @@ SilentInstall             normal
         StrCpy $R0 0
         StrCpy $R1 ""
     ${Else}
-        # Found the required parameter:
+        # Found the required command line switch:
         StrCpy $R0 1
 
-        # Remove the parameter found.  Please note the parameter name and
-        # value could be specified as one or two DOS command line parameters,
-        # we should handle both cases:
+        # Remove the command line switch found.  Please note the parameter
+        # name and value could be specified as one or two DOS command line
+        # switches, we should handle both cases:
         !if ${_CASE_SENSITIVE}
-            # Case-sensitive command line parameters:
-            ${WordReplaceS} $vim_cmd_params "${_PARAM_NAME}$R1" \
+            # Case-sensitive command line switch:
+            ${WordReplaceS} $vim_cmd_params "${_SW_STR}$R1" \
                 "/@@" "+" $vim_cmd_params
-            ${WordReplaceS} $vim_cmd_params "${_PARAM_NAME} $R1" \
+            ${WordReplaceS} $vim_cmd_params "${_SW_STR} $R1" \
                 "/@@" "+" $vim_cmd_params
         !else
-            # Case-insensitive command line parameters:
-            ${WordReplace} $vim_cmd_params "${_PARAM_NAME}$R1" \
+            # Case-insensitive command line switch:
+            ${WordReplace} $vim_cmd_params "${_SW_STR}$R1" \
                 "/@@" "+" $vim_cmd_params
-            ${WordReplace} $vim_cmd_params "${_PARAM_NAME} $R1" \
+            ${WordReplace} $vim_cmd_params "${_SW_STR} $R1" \
                 "/@@" "+" $vim_cmd_params
         !endif
     ${EndIf}
@@ -354,73 +354,120 @@ SilentInstall             normal
 !macroend
 
 # ----------------------------------------------------------------------------
-# macro VimCmdLineSelSec{W|E} _PARAM_NAME _SEC_NAME _SEC_ID               {{{2
-#   Process section selection options on command line.
+# macro _VimCmdLineParse _SW_STR _PARAM_NAME _SEC_ID_OR_FLAG              {{{2
+#   Parse command line option for section selection or option enable/disable.
 #
-#   VimCmdLineSelSecW only shows a warning message if syntax error found;
-#   VimCmdLineSelSecE will report error and abort if syntax error found.
-#   case-sensitive version.
+#   This macro can be used to parse the following type of command line switch:
+#     /<OPTION>[{+|-}]
+#   where + (set) is the default.  Such type of command line switch can be
+#   used for section selection or flag setting:
+#   - /<OPTION>+ or /<OPTION> to select a section or set a control flag to 1.
+#   - /<OPTION>- to unselect a section or set a control flag to 0.
+#
+#   Two categories of wrappers have been created for this macro:
+#   - VimCmdLineSelSec* are used for section manipulation.
+#   - VimCmdLineGetOpt* are used for setting control flag.
+#
+#   Each category has two different types of wrapper, which differs only in
+#   error handling:
+#   - *W only shows a warning message if syntax error found;
+#   - *E will report error and abort if syntax error found.
+#
+#   If the specified command line switch has not been found, no section will
+#   be touched, and the value of the control flag won't be changed.
 #
 #   Globals:
-#       $vim_cmd_params : Global command line parameter.  It will be modified
-#                         directly when removing the command line option
-#                         found.
+#       $vim_cmd_params  : Global command line parameter.  It will be modified
+#                          directly when removing the command line switch
+#                          found.
 #   Parameters:
-#       $_PARAM_NAME    : Name of the parameter for section manipulation.
-#       $_SEC_NAME      : Name of the section to manipulate.
-#       $_SEC_ID        : ID of the section to manipulate.
+#       $_ABORT_ON_ERR   : 1 to abort on syntax error.
+#       $_IS_SECTION     : 1 if the command line switch should be used to
+#                          control section selection; 0 if it should be used
+#                          to set a control flag to 0/1.
+#       $_SW_STR         : Command line switch for the parameter.
+#       $_PARAM_NAME     : Name of the section to manipulate or the option to
+#                          enable/disable.
+#       $_SEC_ID_OR_FLAG : ID of the section to manipulate (select/unselect),
+#                          or output variable to hold the control flag.
 #   Returns:
 #       N/A
 # ----------------------------------------------------------------------------
-!define VimCmdLineSelSecW "!insertmacro _VimCmdLineSelSec 0"
-!define VimCmdLineSelSecE "!insertmacro _VimCmdLineSelSec 1"
-!macro _VimCmdLineSelSec _ABORT_IF_ERR _PARAM_NAME _SEC_NAME _SEC_ID
-    push $R0  # Parameter found flag/syntax error flag
+!define VimCmdLineSelSecW "!insertmacro _VimCmdLineParse 0 1"
+!define VimCmdLineSelSecE "!insertmacro _VimCmdLineParse 1 1"
+!define VimCmdLineGetOptW "!insertmacro _VimCmdLineParse 0 0"
+!define VimCmdLineGetOptE "!insertmacro _VimCmdLineParse 1 0"
+
+!macro _VimCmdLineParse _ABORT_ON_ERR _IS_SECTION \
+                        _SW_STR _PARAM_NAME _SEC_ID_OR_FLAG
+    push $R0  # Parameter found flag/Control flag
     push $R1  # Parameter value
 
-    # Get section select option from the command line:
-    #   /<SECTION>[{+|-}]
-    # + (select) is the default.
-    ${VimFetchCmdParam} ${_PARAM_NAME} $R0 $R1
-
-    # Select/unselect the section if we find the option:
+    # Get command line option:
+    ${VimFetchCmdParam} ${_SW_STR} $R0 $R1
     ${If} $R0 <> 0
         ${If}   $R1 == "+"
         ${OrIf} $R1 == ""
-            # Select the section:
-            ${Log} "Command line: Select section [${_SEC_NAME}], \
-                    ID=${_SEC_ID}"
-            !insertmacro SelectSection ${_SEC_ID}
-
-            # Clear syntax error flag:
-            StrCpy $R0 0
+            !if ${_IS_SECTION}
+                # Select the section:
+                ${Log} "Command line: Select section [${_PARAM_NAME}], \
+                        ID=${_SEC_ID_OR_FLAG}"
+                !insertmacro SelectSection ${_SEC_ID_OR_FLAG}
+            !else
+                # Set the control flag:
+                ${Log} "Command line: Set flag [${_PARAM_NAME}]"
+                StrCpy $R0 1
+            !endif
         ${ElseIf} $R1 == "-"
-            # Unselect the section:
-            ${Log} "Command line: Unselect section [${_SEC_NAME}], \
-                    ID=${_SEC_ID}"
-            !insertmacro UnselectSection ${_SEC_ID}
-
-            # Clear syntax error flag:
-            StrCpy $R0 0
+            !if ${_IS_SECTION}
+                # Unselect the section:
+                ${Log} "Command line: Unselect section [${_PARAM_NAME}], \
+                        ID=${_SEC_ID_OR_FLAG}"
+                !insertmacro UnselectSection ${_SEC_ID_OR_FLAG}
+            !else
+                # Clear the control flag:
+                ${Log} "Command line: Clear flag [${_PARAM_NAME}]"
+                StrCpy $R0 0
+            !endif
         ${Else}
             # Syntax error found.  Log the error first:
-            !if ${_ABORT_IF_ERR}
+            !if ${_ABORT_ON_ERR}
                 StrCpy $R0 "ERROR: Invalid"
             !else
                 StrCpy $R0 "WARNING: Ignore invalid"
             !endif
 
-            ${Log} "$R0 selection command [$R1] for section [${_SEC_NAME}]!"
+            !if ${_IS_SECTION}
+                ${Log} "$R0 selection command [$R1] for section [${_PARAM_NAME}]!"
+            !else
+                ${Log} "$R0 set command [$R1] for flag [${_PARAM_NAME}]!"
+
+                # Don't change value of the control flag:
+                StrCpy $R0 ${_SEC_ID_OR_FLAG}
+            !endif
 
             # Abort if required:
-            !if ${_ABORT_IF_ERR}
+            !if ${_ABORT_ON_ERR}
                 Abort
             !endif
         ${EndIf}
+    ${Else}
+        !if ! ${_IS_SECTION}
+            # The specified option has not been found, so don't change the
+            # value of the control flag:
+            StrCpy $R0 ${_SEC_ID_OR_FLAG}
+        !endif
     ${EndIf}
 
+    # Restore stack and output result:
     Pop $R1
-    Pop $R0
+    !if ${_IS_SECTION}
+        Pop  $R0
+    !else
+        # We need to output control flag:
+        Exch $R0
+        Pop  ${_SEC_ID_OR_FLAG}
+    !endif
 !macroend
 
 # ----------------------------------------------------------------------------
@@ -860,24 +907,6 @@ SilentInstall             normal
 ##############################################################################
 
 # ----------------------------------------------------------------------------
-# Section: Set silent mode control flags that will be used after Init     {{{2
-# ----------------------------------------------------------------------------
-
-# Set $vim_silent_rm_exe flag, set by default, unset with the /RMEXE- command
-# line switch.  This flag determines whether executables should be removed or
-# not when unintall old versions silently (under both normal and silent mode).
-Section -set_vim_silent_rm_exe id_section_silent_rm_exe
-    StrCpy $vim_silent_rm_exe 1
-SectionEnd
-
-# Set $vim_silent_rm_rc flag, unset by default, set with the /RMRC command
-# line switch.  This flag determines whether executables should be removed or
-# not when unintall old versions silently (under both normal and silent mode).
-Section /o -set_vim_silent_rm_rc id_section_silent_rm_rc
-    StrCpy $vim_silent_rm_rc 1
-SectionEnd
-
-# ----------------------------------------------------------------------------
 # Section: Log status                                                     {{{2
 # ----------------------------------------------------------------------------
 Section -log_status
@@ -1292,17 +1321,15 @@ SectionEnd
 !endif
 
 !define VIM_INSTALL_SECS \
-    "RMEXE      | ${id_section_silent_rm_exe} $\n\
-     RMRC       | ${id_section_silent_rm_rc}  $\n\
-     CONSOLE    | ${id_section_console}       $\n\
-     BATCH      | ${id_section_batch}         $\n\
-     DESKTOP    | ${id_section_desktop}       $\n\
-     STARTMENU  | ${id_section_startmenu}     $\n\
-     QLAUNCH    | ${id_section_quicklaunch}   $\n\
-     SHEXT32    | ${id_section_editwith32}    $\n\
-     SHEXT64    | ${id_section_editwith64}    $\n\
-     VIMRC      | ${id_section_vimrc}         $\n\
-     PLUGINHOME | ${id_section_pluginhome}    $\n\
+    "CONSOLE    | ${id_section_console}     $\n\
+     BATCH      | ${id_section_batch}       $\n\
+     DESKTOP    | ${id_section_desktop}     $\n\
+     STARTMENU  | ${id_section_startmenu}   $\n\
+     QLAUNCH    | ${id_section_quicklaunch} $\n\
+     SHEXT32    | ${id_section_editwith32}  $\n\
+     SHEXT64    | ${id_section_editwith64}  $\n\
+     VIMRC      | ${id_section_vimrc}       $\n\
+     PLUGINHOME | ${id_section_pluginhome}  $\n\
      PLUGINCOM  | ${id_section_pluginvim} \
      ${VIM_INSTALL_SECS_VIS_VIM} \
      ${VIM_INSTALL_SECS_NLS}"
@@ -1326,7 +1353,7 @@ Function .onInit
     StrCpy $vim_cmd_params      ""
     StrCpy $vim_silent_auto_dir 0
     StrCpy $vim_silent_rm_old   0
-    StrCpy $vim_silent_rm_exe   0
+    StrCpy $vim_silent_rm_exe   1
     StrCpy $vim_silent_rm_rc    0
     StrCpy $vim_install_root    ""
     StrCpy $vim_bin_path        ""
@@ -1463,26 +1490,6 @@ Function VimProcessCmdParams
     Push $R0   # Parameter found flag
     Push $R1   # Parameter value
 
-    # Is it allowed to detect(determine) install directory automatically in
-    # silent mode?  Please note this can be dangerous as you might not know
-    # which directory will be used before installation.  Even if you set
-    # install path explicitly on command line, NSIS might ignore it SILENTLY
-    # if it's invalid.  This command line option make it a little bit safer to
-    # specify install directory on the command line.
-    ${VimFetchCmdParam} "/DD" $R0 $R1
-    ${If} $R0 <> 0
-        ${Log} "Command line: \
-                Allow install dir auto-detection in silent mode."
-        StrCpy $vim_silent_auto_dir 1
-    ${EndIf}
-
-    # Is it allowed to call uninstaller in silent mode?
-    ${VimFetchCmdParam} "/RMOLD" $R0 $R1
-    ${If} $R0 <> 0
-        ${Log} "Command line: Allow uninstallation in silent mode."
-        StrCpy $vim_silent_rm_old 1
-    ${EndIf}
-
     # Set install type: /TYPE={TYPICAL|MIN|FULL}
     ${VimFetchCmdParam} "/TYPE=" $R0 $R1
     ${If} $R0 <> 0
@@ -1495,6 +1502,28 @@ Function VimProcessCmdParams
             Abort
         ${EndIf}
     ${EndIf}
+
+    # Is it allowed to detect(determine) install directory automatically in
+    # silent mode?  Please note this can be dangerous as you might not know
+    # which directory will be used before installation.  Even if you set
+    # install path explicitly on command line, NSIS might ignore it SILENTLY
+    # if it's invalid.  This command line option make it a little bit safer to
+    # specify install directory on the command line.
+    ${VimCmdLineGetOptE} "/DD"    "AutoDir" $vim_silent_auto_dir
+
+    # Is it allowed to call uninstaller in silent mode?
+    ${VimCmdLineGetOptE} "/RMOLD" "RmOld" $vim_silent_rm_old
+
+    # Set $vim_silent_rm_exe flag, set by default, unset with the /RMEXE-
+    # command line switch.  It determines whether executables should be
+    # removed or not when uninstall old versions silently (in both normal and
+    # silent mode).
+    ${VimCmdLineGetOptE} "/RMEXE" "RmExe" $vim_silent_rm_exe
+
+    # Set $vim_silent_rm_rc flag, unset by default, set with the /RMRC command
+    # line switch.  It determines whether executables should be removed or not
+    # when uninstall old versions silently (in both normal and silent mode).
+    ${VimCmdLineGetOptE} "/RMRC"  "RmRc"  $vim_silent_rm_rc
 
     # Set language: This does not work!
     # TODO: Need verification here!
