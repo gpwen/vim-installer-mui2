@@ -80,20 +80,22 @@
 !include "simple_log.nsh"
 
 # Global variables:
-Var vim_cmd_params         # Command line parameters
-Var vim_allow_silent_root  # Flag: Install dir auto-detection in silent mode
-Var vim_allow_silent_rm    # Flag: Allow uninstall in silent mode
-Var vim_install_root       # Vim install root directory
-Var vim_bin_path           # Vim binary directory
-Var vim_old_ver_keys       # List of registry keys for old versions
-Var vim_old_ver_count      # Count of old versions
-Var vim_loud_ver_count     # Count of old versions without silent mode
-Var vim_has_console        # Flag: Console programs should be installed
-Var vim_batch_exe          # Working variable: target of batch wrapper
-Var vim_batch_arg          # Working variable: parameter for target
-Var vim_batch_ver_found    # Working variable: version found in batch file
-Var vim_last_copy          # Flag: Is this the last Vim on the system?
-Var vim_rm_common          # Flag: Should we remove common files?
+Var vim_cmd_params        # Command line parameters
+Var vim_silent_auto_dir   # Silent mode flag: Install dir auto-detection
+Var vim_silent_rm_old     # Silent mode flag: Allow uninstall
+Var vim_silent_rm_exe     # Silent mode flag: Uninstall executable
+Var vim_silent_rm_rc      # Silent mode flag: Uninstall config file
+Var vim_install_root      # Vim install root directory
+Var vim_bin_path          # Vim binary directory
+Var vim_old_ver_keys      # List of registry keys for old versions
+Var vim_old_ver_count     # Count of old versions
+Var vim_loud_ver_count    # Count of old versions without silent mode
+Var vim_has_console       # Flag: Console programs should be installed
+Var vim_batch_exe         # Working variable: target of batch wrapper
+Var vim_batch_arg         # Working variable: parameter for target
+Var vim_batch_ver_found   # Working variable: version found in batch file
+Var vim_last_copy         # Flag: Is this the last Vim on the system?
+Var vim_rm_common         # Flag: Should we remove common files?
 
 # List of alphanumeric:
 !define ALPHA_NUMERIC     "abcdefghijklmnopqrstuvwxyz0123456789"
@@ -858,6 +860,24 @@ SilentInstall             normal
 ##############################################################################
 
 # ----------------------------------------------------------------------------
+# Section: Set silent mode control flags that will be used after Init     {{{2
+# ----------------------------------------------------------------------------
+
+# Set $vim_silent_rm_exe flag, set by default, unset with the /RMEXE- command
+# line switch.  This flag determines whether executables should be removed or
+# not when unintall old versions silently (under both normal and silent mode).
+Section -set_vim_silent_rm_exe id_section_silent_rm_exe
+    StrCpy $vim_silent_rm_exe 1
+SectionEnd
+
+# Set $vim_silent_rm_rc flag, unset by default, set with the /RMRC command
+# line switch.  This flag determines whether executables should be removed or
+# not when unintall old versions silently (under both normal and silent mode).
+Section /o -set_vim_silent_rm_rc id_section_silent_rm_rc
+    StrCpy $vim_silent_rm_rc 1
+SectionEnd
+
+# ----------------------------------------------------------------------------
 # Section: Log status                                                     {{{2
 # ----------------------------------------------------------------------------
 Section -log_status
@@ -876,16 +896,15 @@ Section -log_status
     ${IfThen} ${Silent} ${|} StrCpy $R0 "Silent" ${|}
     ${Log} "Install Mode       : $R0"
 
-    ${Log} "Silent install dir : $vim_allow_silent_root"
-    ${Log} "Silent uninstall   : $vim_allow_silent_rm"
+    ${Log} "Silent install dir : $vim_silent_auto_dir"
+    ${Log} "Silent uninstall   : $vim_silent_rm_old"
+    ${Log} "Uninstall exe.     : $vim_silent_rm_exe"
+    ${Log} "Uninstall rc file  : $vim_silent_rm_rc"
 
     # Log status for all sections:
     ${LogSectionStatus} 100
 
     Pop $R0
-
-    # ??? TODO: Debug:
-    ${IfThen} ${Silent} ${|} Abort ${|}
 SectionEnd
 
 # ----------------------------------------------------------------------------
@@ -904,6 +923,9 @@ SectionGroupEnd
 # ----------------------------------------------------------------------------
 Section $(str_section_exe) id_section_exe
     SectionIn 1 2 3 RO
+
+    # ??? TODO: Debug:
+    ${IfThen} ${Silent} ${|} Abort ${|}
 
     ${LogSectionStart}
 
@@ -1270,17 +1292,19 @@ SectionEnd
 !endif
 
 !define VIM_INSTALL_SECS \
-    "CONSOLE    | ${id_section_console}     $\n\
-     BATCH      | ${id_section_batch}       $\n\
-     DESKTOP    | ${id_section_desktop}     $\n\
-     STARTMENU  | ${id_section_startmenu}   $\n\
-     QLAUNCH    | ${id_section_quicklaunch} $\n\
-     SHEXT32    | ${id_section_editwith32}  $\n\
-     SHEXT64    | ${id_section_editwith64}  $\n\
-     VIMRC      | ${id_section_vimrc}       $\n\
-     PLUGINHOME | ${id_section_pluginhome}  $\n\
-     PLUGINCOM  | ${id_section_pluginvim}      \
-     ${VIM_INSTALL_SECS_VIS_VIM}               \
+    "RMEXE      | ${id_section_silent_rm_exe} $\n\
+     RMRC       | ${id_section_silent_rm_rc}  $\n\
+     CONSOLE    | ${id_section_console}       $\n\
+     BATCH      | ${id_section_batch}         $\n\
+     DESKTOP    | ${id_section_desktop}       $\n\
+     STARTMENU  | ${id_section_startmenu}     $\n\
+     QLAUNCH    | ${id_section_quicklaunch}   $\n\
+     SHEXT32    | ${id_section_editwith32}    $\n\
+     SHEXT64    | ${id_section_editwith64}    $\n\
+     VIMRC      | ${id_section_vimrc}         $\n\
+     PLUGINHOME | ${id_section_pluginhome}    $\n\
+     PLUGINCOM  | ${id_section_pluginvim} \
+     ${VIM_INSTALL_SECS_VIS_VIM} \
      ${VIM_INSTALL_SECS_NLS}"
 
 ##############################################################################
@@ -1299,20 +1323,22 @@ ${DECLARE_SimpleLogFunctions}  # Declare all functions for simple log
 # ----------------------------------------------------------------------------
 Function .onInit
     # Initialize all globals:
-    StrCpy $vim_cmd_params        ""
-    StrCpy $vim_allow_silent_root 0
-    StrCpy $vim_allow_silent_rm   0
-    StrCpy $vim_install_root      ""
-    StrCpy $vim_bin_path          ""
-    StrCpy $vim_old_ver_keys      ""
-    StrCpy $vim_old_ver_count     0
-    StrCpy $vim_loud_ver_count    0
-    StrCpy $vim_has_console       0
-    StrCpy $vim_batch_exe         ""
-    StrCpy $vim_batch_arg         ""
-    StrCpy $vim_batch_ver_found   0
-    StrCpy $vim_last_copy         0
-    StrCpy $vim_rm_common         0
+    StrCpy $vim_cmd_params      ""
+    StrCpy $vim_silent_auto_dir 0
+    StrCpy $vim_silent_rm_old   0
+    StrCpy $vim_silent_rm_exe   0
+    StrCpy $vim_silent_rm_rc    0
+    StrCpy $vim_install_root    ""
+    StrCpy $vim_bin_path        ""
+    StrCpy $vim_old_ver_keys    ""
+    StrCpy $vim_old_ver_count   0
+    StrCpy $vim_loud_ver_count  0
+    StrCpy $vim_has_console     0
+    StrCpy $vim_batch_exe       ""
+    StrCpy $vim_batch_arg       ""
+    StrCpy $vim_batch_ver_found 0
+    StrCpy $vim_last_copy       0
+    StrCpy $vim_rm_common       0
 
     # Initialize log:
     !ifdef VIM_LOG_FILE
@@ -1350,19 +1376,20 @@ Function .onInit
     ${AndIf} ${Silent}
         # Found old version(s) in silent mode, abort unless uninstallation has
         # been enabled:
-        ${If} $vim_allow_silent_rm <> 1
-            ${ShowErr} "Previous installation(s) of Vim found, but$\r$\n\
-                        uninstallation has not been enabled in silent mode."
+        ${If} $vim_silent_rm_old <> 1
+            ${Log} "ERROR: Previous installation(s) of Vim found, but$\r$\n\
+                    uninstallation has not been enabled in silent mode."
+            ${Log} 'Uninstallation in silent mode could be enabled$\r$\n\
+                    with "/RMOLD" command line option.'
             Abort
         ${EndIf}
 
         # Abort unless all of those old versions support silent
         # uninstallation:
         ${If} $vim_loud_ver_count > 0
-            ${ShowErr} \
-                "Some of the previous installation(s) of Vim on$\r$\n\
-                 the system do not support silent uninstallation!$\r$\n\
-                 Please remove all of them manually and try again."
+            ${Log} "ERROR: Some of the previous installation(s) of Vim$\r$\n\
+                    on the system do not support silent uninstallation!$\r$\n\
+                    Please remove all of them manually and try again."
             Abort
         ${EndIf}
     ${EndIf}
@@ -1446,14 +1473,14 @@ Function VimProcessCmdParams
     ${If} $R0 <> 0
         ${Log} "Command line: \
                 Allow install dir auto-detection in silent mode."
-        StrCpy $vim_allow_silent_root 1
+        StrCpy $vim_silent_auto_dir 1
     ${EndIf}
 
     # Is it allowed to call uninstaller in silent mode?
     ${VimFetchCmdParam} "/RMOLD" $R0 $R1
     ${If} $R0 <> 0
         ${Log} "Command line: Allow uninstallation in silent mode."
-        StrCpy $vim_allow_silent_rm 1
+        StrCpy $vim_silent_rm_old 1
     ${EndIf}
 
     # Set install type: /TYPE={TYPICAL|MIN|FULL}
@@ -1685,7 +1712,7 @@ Function VimSetDefRootPath
             Abort
         ${EndIf}
     ${ElseIf} ${Silent}
-    ${AndIf}  $vim_allow_silent_root = 0
+    ${AndIf}  $vim_silent_auto_dir = 0
         # User has not specified install path in silent mode and has not allow
         # auto-detection of install path explicitly.  Instead of making some
         # stealthy change, we should simply abort:
@@ -1729,7 +1756,8 @@ Function VimSetDefRootPath
 
     # Next try previously installed versions if any.  The install path will be
     # derived from the un-install key of the last installed version:
-    ${If} $vim_old_ver_count > 0
+    ${If}    $R2 = 0
+    ${AndIf} $vim_old_ver_count > 0
         # Find the uninstall key for the last installed version ($R1):
         IntOp $R0 $vim_old_ver_count - 1
         ${VimGetOldVerKey} $R0 $R1
@@ -1806,7 +1834,14 @@ Function VimRmOldVer
     ReadRegDWORD $R1 SHCTX "${REG_KEY_UNINSTALL}\$R0" "${REG_KEY_SILENT}"
     ${IfNot} ${Errors}
     ${AndIf} $R1 = 1
-        StrCpy $R4 "/S"
+        # Construct command line switches for silent mode.  Should we remove
+        # executables when uninstall?
+        StrCpy $R4 "/S /RMEXE"
+        ${IfNotThen} $vim_silent_rm_exe <> 0 ${|} StrCpy $R4 "$R4-" ${|}
+
+        # Should we remove config files?
+        StrCpy $R4 "$R4 /RMRC"
+        ${IfNotThen} $vim_silent_rm_rc <> 0  ${|} StrCpy $R4 "$R4-" ${|}
     ${ElseIf} ${Silent}
         # This is not possible: We're in silent mode but the uninstaller does
         # not support silent mode!
@@ -2491,20 +2526,22 @@ Function un.onInit
     Push $R0
 
     # Initialize all globals:
-    StrCpy $vim_cmd_params        ""
-    StrCpy $vim_allow_silent_root 0
-    StrCpy $vim_allow_silent_rm   0
-    StrCpy $vim_install_root      ""
-    StrCpy $vim_bin_path          ""
-    StrCpy $vim_old_ver_keys      ""
-    StrCpy $vim_old_ver_count     0
-    StrCpy $vim_loud_ver_count    0
-    StrCpy $vim_has_console       0
-    StrCpy $vim_batch_exe         ""
-    StrCpy $vim_batch_arg         ""
-    StrCpy $vim_batch_ver_found   0
-    StrCpy $vim_last_copy         0
-    StrCpy $vim_rm_common         0
+    StrCpy $vim_cmd_params      ""
+    StrCpy $vim_silent_auto_dir 0
+    StrCpy $vim_silent_rm_old   0
+    StrCpy $vim_silent_rm_exe   0
+    StrCpy $vim_silent_rm_rc    0
+    StrCpy $vim_install_root    ""
+    StrCpy $vim_bin_path        ""
+    StrCpy $vim_old_ver_keys    ""
+    StrCpy $vim_old_ver_count   0
+    StrCpy $vim_loud_ver_count  0
+    StrCpy $vim_has_console     0
+    StrCpy $vim_batch_exe       ""
+    StrCpy $vim_batch_arg       ""
+    StrCpy $vim_batch_ver_found 0
+    StrCpy $vim_last_copy       0
+    StrCpy $vim_rm_common       0
 
     # Initialize log:
     !ifdef VIM_LOG_FILE
