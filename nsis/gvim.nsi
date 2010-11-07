@@ -1314,6 +1314,16 @@ Section -registry_update
         "VimRegUninstallInfoCallback" "" "" "" $R0
     Pop $R0
 
+    # Save user select language in silent mode.  The following registry write
+    # are performed by page callback of MUI2, so it won't be executed in
+    # silent mode.  We have to do it manually (it's an ugly hack).
+    ${If} ${Silent}
+        ${Logged4} WriteRegStr \
+            "${MUI_LANGDLL_REGISTRY_ROOT}" \
+            "${MUI_LANGDLL_REGISTRY_KEY}"  \
+            "${MUI_LANGDLL_REGISTRY_VALUENAME}" $LANGUAGE
+    ${EndIf}
+
     # Register Vim with OLE:
     ${LogPrint} "$(str_msg_register_ole)"
     ${Logged1} ExecWait '"$vim_bin_path\gvim.exe" -silent -register'
