@@ -289,6 +289,34 @@ SilentInstall             normal
 ##############################################################################
 
 # ----------------------------------------------------------------------------
+# macro VimInitGlobals                                                    {{{2
+#   Simple macro to initialize all global variables.
+#
+#   Parameters: N/A
+#   Returns:    N/A
+# ----------------------------------------------------------------------------
+!define VimInitGlobals  "!insertmacro _VimInitGlobals"
+!macro _VimInitGlobals
+    # Initialize all globals:
+    StrCpy $vim_cmd_params      ""
+    StrCpy $vim_silent_auto_dir 0
+    StrCpy $vim_silent_rm_old   0
+    StrCpy $vim_silent_rm_exe   1
+    StrCpy $vim_silent_rm_rc    0
+    StrCpy $vim_install_root    ""
+    StrCpy $vim_bin_path        ""
+    StrCpy $vim_old_ver_keys    ""
+    StrCpy $vim_old_ver_count   0
+    StrCpy $vim_loud_ver_count  0
+    StrCpy $vim_has_console     0
+    StrCpy $vim_batch_exe       ""
+    StrCpy $vim_batch_arg       ""
+    StrCpy $vim_batch_ver_found 0
+    StrCpy $vim_last_copy       0
+    StrCpy $vim_rm_common       0
+!macroend
+
+# ----------------------------------------------------------------------------
 # macro VimFetchCmdParam[S] $_SW_STR $_FOUND $_VALUE                      {{{2
 #   Get command line parameter and remove it if found.
 #
@@ -1343,22 +1371,7 @@ ${DECLARE_SimpleLogFunctions}  # Declare all functions for simple log
 # ----------------------------------------------------------------------------
 Function .onInit
     # Initialize all globals:
-    StrCpy $vim_cmd_params      ""
-    StrCpy $vim_silent_auto_dir 0
-    StrCpy $vim_silent_rm_old   0
-    StrCpy $vim_silent_rm_exe   1
-    StrCpy $vim_silent_rm_rc    0
-    StrCpy $vim_install_root    ""
-    StrCpy $vim_bin_path        ""
-    StrCpy $vim_old_ver_keys    ""
-    StrCpy $vim_old_ver_count   0
-    StrCpy $vim_loud_ver_count  0
-    StrCpy $vim_has_console     0
-    StrCpy $vim_batch_exe       ""
-    StrCpy $vim_batch_arg       ""
-    StrCpy $vim_batch_ver_found 0
-    StrCpy $vim_last_copy       0
-    StrCpy $vim_rm_common       0
+    ${VimInitGlobals}
 
     # Initialize log:
     !ifdef VIM_LOG_FILE
@@ -1438,6 +1451,11 @@ Function .onInit
     StrCpy $vim_bin_path      "$INSTDIR\${VIM_BIN_DIR}"
 
     ${Log} "Default install path: $vim_install_root"
+
+    # Final check before start silent installation.  In normal mode, such
+    # check will be performed in page callback function, which will not be
+    # invoked in silent mode.
+    ${IfThen} ${Silent} ${|} Call VimFinalCheck ${|}
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -2550,22 +2568,7 @@ Function un.onInit
     Push $R0
 
     # Initialize all globals:
-    StrCpy $vim_cmd_params      ""
-    StrCpy $vim_silent_auto_dir 0
-    StrCpy $vim_silent_rm_old   0
-    StrCpy $vim_silent_rm_exe   0
-    StrCpy $vim_silent_rm_rc    0
-    StrCpy $vim_install_root    ""
-    StrCpy $vim_bin_path        ""
-    StrCpy $vim_old_ver_keys    ""
-    StrCpy $vim_old_ver_count   0
-    StrCpy $vim_loud_ver_count  0
-    StrCpy $vim_has_console     0
-    StrCpy $vim_batch_exe       ""
-    StrCpy $vim_batch_arg       ""
-    StrCpy $vim_batch_ver_found 0
-    StrCpy $vim_last_copy       0
-    StrCpy $vim_rm_common       0
+    ${VimInitGlobals}
 
     # Initialize log:
     !ifdef VIM_LOG_FILE
@@ -2629,6 +2632,11 @@ Function un.onInit
 
     # Process command line parameters:
     Call un.VimProcessCmdParams
+
+    # Final check before start silent uninstallation.  In normal mode, such
+    # check will be performed in page callback function, which will not be
+    # invoked in silent mode.
+    ${IfThen} ${Silent} ${|} Call un.VimCheckRunning ${|}
 
     Pop $R0
 FunctionEnd
