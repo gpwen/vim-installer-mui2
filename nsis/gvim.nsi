@@ -431,16 +431,12 @@ SilentInstall             normal
             !endif
         ${Else}
             # Syntax error found.  Log the error first:
-            !if ${_ABORT_ON_ERR}
-                StrCpy $R0 "ERROR: Invalid"
-            !else
-                StrCpy $R0 "WARNING: Ignore invalid"
-            !endif
-
             !if ${_IS_SECTION}
-                ${Log} "$R0 selection command [$R1] for section [${_PARAM_NAME}]!"
+                ${ShowErr} "Invalid selection command [$R1] for \
+                            section [${_PARAM_NAME}]!"
             !else
-                ${Log} "$R0 set command [$R1] for flag [${_PARAM_NAME}]!"
+                ${ShowErr} "Invalie set command [$R1] for \
+                            flag [${_PARAM_NAME}]!"
 
                 # Don't change value of the control flag:
                 StrCpy $R0 ${_SEC_ID_OR_FLAG}
@@ -502,9 +498,9 @@ SilentInstall             normal
     ${WordReplace} $vim_cmd_params " "   " " "+*" $vim_cmd_params
     StrCpy $R0 0
     ${If} $vim_cmd_params != " "
-        ${Log} "ERROR: Fail to parse the following \
-                part of the command line:$\r$\n\
-                [$vim_cmd_params]"
+        ${ShowErr} "Fail to parse the following \
+                    part of the command line:$\r$\n\
+                    [$vim_cmd_params]"
         StrCpy $R0 1
     ${EndIf}
 
@@ -952,9 +948,6 @@ SectionGroupEnd
 # ----------------------------------------------------------------------------
 Section $(str_section_exe) id_section_exe
     SectionIn 1 2 3 RO
-
-    # ??? TODO: Debug:
-    ${IfThen} ${Silent} ${|} Abort ${|}
 
     ${LogSectionStart}
 
@@ -1404,8 +1397,9 @@ Function .onInit
         # Found old version(s) in silent mode, abort unless uninstallation has
         # been enabled:
         ${If} $vim_silent_rm_old <> 1
-            ${Log} "ERROR: Previous installation(s) of Vim found, but$\r$\n\
-                    uninstallation has not been enabled in silent mode."
+            ${ShowErr} \
+                "Previous installation(s) of Vim found, but$\r$\n\
+                 uninstallation has not been enabled in silent mode."
             ${Log} 'Uninstallation in silent mode could be enabled$\r$\n\
                     with "/RMOLD" command line option.'
             Abort
@@ -1414,9 +1408,10 @@ Function .onInit
         # Abort unless all of those old versions support silent
         # uninstallation:
         ${If} $vim_loud_ver_count > 0
-            ${Log} "ERROR: Some of the previous installation(s) of Vim$\r$\n\
-                    on the system do not support silent uninstallation!$\r$\n\
-                    Please remove all of them manually and try again."
+            ${ShowErr} \
+                "Some of the previous installation(s) of Vim$\r$\n\
+                 on the system do not support silent uninstallation!$\r$\n\
+                 Please remove all of them manually and try again."
             Abort
         ${EndIf}
     ${EndIf}
@@ -1496,7 +1491,7 @@ Function VimProcessCmdParams
         ${LoopMatrix} "${VIM_INSTALL_TYPES}" \
             "_VimSetInstTypeFunc" "" "$R1" "" $R0
         ${If} $R0 == ""
-            ${Log} "ERROR: Unknown install type [$R1]"
+            ${ShowErr} "Unknown install type [$R1]"
             Pop $R1
             Pop $R0
             Abort
@@ -1734,7 +1729,7 @@ Function VimSetDefRootPath
             # Abort if user supplied install path is invalid and we're in
             # silent mode.  Otherwise, give user a chance to fix the problem
             # on the directory page:
-            ${Log} "ERROR: Invalid install path: $INSTDIR"
+            ${ShowErr} "Invalid install path: $INSTDIR"
             Pop $R2
             Pop $R1
             Pop $R0
@@ -1745,7 +1740,7 @@ Function VimSetDefRootPath
         # User has not specified install path in silent mode and has not allow
         # auto-detection of install path explicitly.  Instead of making some
         # stealthy change, we should simply abort:
-        ${Log} "ERROR: No install path specified in silent mode!"
+        ${ShowErr} "No install path specified in silent mode!"
         ${Log} 'You should either specify the install path with the \
                 "/D=<path>" command line$\r$\n\
                 option directly, or allow auto-detection of install \
@@ -2248,7 +2243,7 @@ Function VimRegUninstallInfoCallback
     ${ElseIf} $0 S== "DW"
         ${Logged4} WriteRegDWORD SHCTX "$3" "$1" "$2"
     ${Else}
-        ${Log} "ERROR: Unknow subkey type : [$0]!"
+        ${Log} "WARNING: Unknow subkey type : [$0]!"
     ${EndIf}
 
     Pop $4
