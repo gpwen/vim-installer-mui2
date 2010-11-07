@@ -625,12 +625,14 @@ SilentInstall             normal
         # Store the sub-key found.  If the old version is the same as the
         # version currently been installed, its key will always be put at
         # front to make sure it will be included in the uninstall list as the
-        # first item:
+        # first item.  The following code also guaranteed that an extra
+        # delimiter will be appended to list if any sub-key found.  That's
+        # necessary to ensure WordFind works correctly.
         IntOp $vim_old_ver_count $vim_old_ver_count + 1
         ${If} $R1 S== "${VIM_PRODUCT_NAME}"
-            StrCpy $vim_old_ver_keys "$R1$\r$\n$vim_old_ver_keys"
+            StrCpy $vim_old_ver_keys "$R1|$vim_old_ver_keys"
         ${Else}
-            StrCpy $vim_old_ver_keys "$vim_old_ver_keys$R1$\r$\n"
+            StrCpy $vim_old_ver_keys "$vim_old_ver_keys$R1|"
         ${EndIf}
 
         ${Log} "Found Vim uninstall key No.$vim_old_ver_count: [$R1]"
@@ -645,8 +647,7 @@ SilentInstall             normal
         ${EndIf}
     ${Loop}
 
-    ${Log} "Found $vim_old_ver_count uninstall keys:$\r$\n\
-            $vim_old_ver_keys"
+    ${Log} "Found $vim_old_ver_count uninstall key(s): $vim_old_ver_keys"
     ${Log} "$vim_loud_ver_count of the above versions \
             do not support silent uninstallation."
     ClearErrors
@@ -2011,7 +2012,7 @@ Function _VimGetOldVerKeyFunc
     ${Else}
         # WordFindS uses 1 based index:
         IntOp $0 $0 + 1
-        ${WordFindS} $vim_old_ver_keys "$\r$\n" "+$0" $0
+        ${WordFindS} $vim_old_ver_keys "|" "+$0" $0
     ${EndIf}
 
     Exch $0
@@ -2608,14 +2609,23 @@ Function un.onInit
         Abort
     ${EndIf}
 
-    # Count all Vim version installed on this system.  If only one version
-    # found, and it's the version we are about to uninstall, we're free to
-    # remove common components:
+    # Verify that uninstall registry information exist for the version to be
+    # removed.  User may run the uninstaller directly, so we need some
+    # safeguard.  This also covers the case that no Vim uninstall registry key
+    # exist at all (which is very unlikely under normal circumstance).
     ${VimLoadUninstallKeys}
-    ${TrimString} "$vim_old_ver_keys" $vim_old_ver_keys
+    ${WordFindS} $vim_old_ver_keys "|" "/${VIM_PRODUCT_NAME}" $R0
+    ${If} $R0 S== $vim_old_ver_keys
+        ${ShowErr} "$(str_msg_rm_fail) ${VIM_PRODUCT_NAME}$\r$\n\
+                    $(str_msg_no_rm_reg)"
+        Pop $R0
+        Abort
+    ${EndIf}
 
-    ${If}    $vim_old_ver_count = 1
-    ${AndIf} $vim_old_ver_keys  S== "${VIM_PRODUCT_NAME}"
+    # If we found only one version of Vim on the system, it must be the one
+    # we're about to uninstall.  Therefore, we're free to remove common
+    # components:
+    ${If} $vim_old_ver_count = 1
         ${Log} "About to remove the last Vim version."
         StrCpy $vim_last_copy 1
 
