@@ -100,12 +100,14 @@ Var vim_rm_common         # Flag: Should we remove common files?
 # List of alphanumeric:
 !define ALPHA_NUMERIC     "abcdefghijklmnopqrstuvwxyz0123456789"
 
-# Version strings:
+# Version strings etc.:
 !define VER_SHORT         "${VER_MAJOR}.${VER_MINOR}"
 !define VER_SHORT_NDOT    "${VER_MAJOR}${VER_MINOR}"
 !define VIM_PRODUCT_NAME  "Vim ${VER_SHORT}"
 !define VIM_BIN_DIR       "vim${VER_SHORT_NDOT}"
 !define VIM_LNK_NAME      "gVim ${VER_SHORT}"
+!define VIM_INSTALLER     "gvim${VER_SHORT_NDOT}.exe"
+!define VIM_UNINSTALLER   "uninstall-gui.exe"
 
 # Registry keys:
 !define REG_KEY_WINDOWS   "software\Microsoft\Windows\CurrentVersion"
@@ -146,9 +148,9 @@ Var vim_rm_common         # Flag: Should we remove common files?
 
 # Specification for miscellaneous startmenu shortcuts:
 !define VIM_MISC_STARTMENU \
-    "Uninstall.lnk | uninstall-gui.exe |      | $vim_bin_path$\n\
-     Vim tutor.lnk | vimtutor.bat      |      | $vim_bin_path$\n\
-     Help.lnk      | gvim.exe          | -c h | "
+    "Uninstall.lnk | ${VIM_UNINSTALLER} |      | $vim_bin_path$\n\
+     Vim tutor.lnk | vimtutor.bat       |      | $vim_bin_path$\n\
+     Help.lnk      | gvim.exe           | -c h | "
 
 # Specification for batch wrapper of console version:
 #    Title    | Target       | Arg
@@ -181,7 +183,7 @@ Var vim_rm_common         # Flag: Should we remove common files?
 #   Type | Registry Subkey  | Registry Value
 !define VIM_UNINSTALL_REG_INFO \
     "STR | DisplayName       | ${VIM_PRODUCT_NAME} (self-installing) $\n\
-     STR | UninstallString   | $vim_bin_path\uninstall-gui.exe       $\n\
+     STR | UninstallString   | $vim_bin_path\${VIM_UNINSTALLER}      $\n\
      STR | InstallLocation   | $vim_bin_path                         $\n\
      STR | DisplayIcon       | $vim_bin_path\gvim.exe,0              $\n\
      STR | HelpLink          | ${VIM_ONLINE_URL}/                    $\n\
@@ -201,7 +203,7 @@ Var vim_rm_common         # Flag: Should we remove common files?
 !define VIM_FILE_EXT_LIST ".htm $\n .html $\n .vim $\n *"
 
 Name                      "${VIM_PRODUCT_NAME}"
-OutFile                   gvim${VER_SHORT_NDOT}.exe
+OutFile                   ${VIM_INSTALLER}
 CRCCheck                  force
 SetCompressor             lzma
 SetDatablockOptimize      on
@@ -697,7 +699,7 @@ SilentInstall             normal
         # Windows 95/98/ME
         ${Logged2} File /oname=vim.exe "${VIMSRC}\vimd32.exe"
     ${Else}
-        # Windows NT/2000/XT
+        # Windows NT/2000/XP
         ${Logged2} File /oname=vim.exe "${VIMSRC}\vimw32.exe"
     ${EndIf}
 !macroend
@@ -1473,7 +1475,7 @@ FunctionEnd
 # Function .onInstSuccess                                                 {{{2
 # ----------------------------------------------------------------------------
 Function .onInstSuccess
-    WriteUninstaller ${VIM_BIN_DIR}\uninstall-gui.exe
+    WriteUninstaller ${VIM_BIN_DIR}\${VIM_UNINSTALLER}
 
     # Close log:
     !ifdef VIM_LOG_FILE
@@ -1781,6 +1783,31 @@ Function VimSetDefRootPath
         Abort
     ${EndIf}
 
+    # Next try previously installed versions if any.  The install path will be
+    # derived from the un-install key of the last installed version:
+    ${If}    $R2 = 0
+    ${AndIf} $vim_old_ver_count > 0
+        # Find the uninstall key for the last installed version ($R1):
+        IntOp $R0 $vim_old_ver_count - 1
+        ${VimGetOldVerKey} $R0 $R1
+
+        # Read path of the un-installer for registry ($R0):
+        ${If} $R1 != ""
+            ReadRegStr $R0 SHCTX "${REG_KEY_UNINSTALL}\$R1" "UninstallString"
+        ${Else}
+            StrCpy $R0 ""
+        ${EndIf}
+
+        # Derive install path from uninstaller path name:
+        ${GetParent} $R0 $R0
+        ${GetParent} $R0 $R0
+        ${VimVerifyRootDir} $R0 $R2
+        ${If} $R2 = 1
+            ${Log} "Set install path per registry key [$R1]: $R0"
+            StrCpy $INSTDIR $R0
+        ${EndIf}
+    ${EndIf}
+
     # Then try VIMRUNTIME environment string, use its parent directory as
     # install path if valid.
     ${If} $R2 = 0
@@ -1804,31 +1831,6 @@ Function VimSetDefRootPath
                 ${Log} "Set install path per VIM env: $R0"
                 StrCpy $INSTDIR $R0
             ${EndIf}
-        ${EndIf}
-    ${EndIf}
-
-    # Next try previously installed versions if any.  The install path will be
-    # derived from the un-install key of the last installed version:
-    ${If}    $R2 = 0
-    ${AndIf} $vim_old_ver_count > 0
-        # Find the uninstall key for the last installed version ($R1):
-        IntOp $R0 $vim_old_ver_count - 1
-        ${VimGetOldVerKey} $R0 $R1
-
-        # Read path of the un-installer for registry ($R0):
-        ${If} $R1 != ""
-            ReadRegStr $R0 SHCTX "${REG_KEY_UNINSTALL}\$R1" "UninstallString"
-        ${Else}
-            StrCpy $R0 ""
-        ${EndIf}
-
-        # Derive install path from uninstaller path name:
-        ${GetParent} $R0 $R0
-        ${GetParent} $R0 $R0
-        ${VimVerifyRootDir} $R0 $R2
-        ${If} $R2 = 1
-            ${Log} "Set install path per registry key [$R1]: $R0"
-            StrCpy $INSTDIR $R0
         ${EndIf}
     ${EndIf}
 
