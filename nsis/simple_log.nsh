@@ -159,7 +159,10 @@ Var _simple_log_fh      # Log file handle
     ${LogInit} $_simple_log_fname $_simple_log_title
 !macroend
 
-# Close log.
+##############################################################################
+# LogClose                                                                {{{1
+#   Close the log.
+##############################################################################
 !define LogClose `!insertmacro _LogCloseCall`
 !macro _LogCloseCall
     ${CallArtificialFunction} _LogClose

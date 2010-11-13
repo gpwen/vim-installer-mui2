@@ -318,6 +318,7 @@ SRC_DOS =	\
 		nsis/README.txt \
 		nsis/data/cli_template.bat \
 		nsis/data/gui_template.bat \
+		nsis/data/install_manual.txt \
 		nsis/data/mswin_vimrc.vim \
 		nsis/lang/*.nsi \
 		uninstal.txt \

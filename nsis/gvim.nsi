@@ -108,6 +108,7 @@ Var vim_rm_common         # Flag: Should we remove common files?
 !define VIM_LNK_NAME      "gVim ${VER_SHORT}"
 !define VIM_INSTALLER     "gvim${VER_SHORT_NDOT}.exe"
 !define VIM_UNINSTALLER   "uninstall-gui.exe"
+!define VIM_USER_MANUAL   "install_manual.txt"
 
 # Registry keys:
 !define REG_KEY_WINDOWS   "software\Microsoft\Windows\CurrentVersion"
@@ -1210,7 +1211,7 @@ Section $(str_section_vim_rc) id_section_vimrc
 
     # Write default _vimrc only if the file does not exist.  We'll test for
     # .vimrc (and its short version) and _vimrc:
-    SetOutPath "$vim_install_root"
+    ${Logged1} SetOutPath "$vim_install_root"
     ${IfNot}    ${FileExists} "$vim_install_root\_vimrc"
     ${AndIfNot} ${FileExists} "$vim_install_root\.vimrc"
     ${AndIfNot} ${FileExists} "$vim_install_root\vimrc~1"
@@ -1282,15 +1283,15 @@ SectionGroupEnd
 
         ${LogSectionStart}
 
-        SetOutPath "$vim_bin_path\lang"
-        File /r "${VIMRT}\lang\*.*"
-        SetOutPath "$vim_bin_path\keymap"
-        File "${VIMRT}\keymap\README.txt"
-        File "${VIMRT}\keymap\*.vim"
+        ${Logged1} SetOutPath "$vim_bin_path\lang"
+        ${Logged2} File /r "${VIMRT}\lang\*.*"
+        ${Logged1} SetOutPath "$vim_bin_path\keymap"
+        ${Logged1} File "${VIMRT}\keymap\README.txt"
+        ${Logged1} File "${VIMRT}\keymap\*.vim"
 
         # Install NLS support DLLs:
         ${Log} "Install $vim_bin_path\libintl.dll"
-        SetOutPath "$vim_bin_path"
+        ${Logged1} SetOutPath "$vim_bin_path"
         !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
             "${VIMRT}\libintl.dll" \
             "$vim_bin_path\libintl.dll" "$vim_bin_path"
@@ -1516,6 +1517,15 @@ Function VimProcessCmdParams
     Push $R0   # Parameter found flag
     Push $R1   # Parameter value
 
+    # /HELP or /?: Dump user manual in the current working directory.
+    ${VimCmdLineGetOptE} "/HELP" "HELP" $R0
+    ${VimCmdLineGetOptE} "/?"    "HELP" $R1
+    ${If}   $R0 <> 0
+    ${OrIf} $R1 <> 0
+        Call VimShowHelp
+        Abort
+    ${EndIf}
+
     # Set install type: /TYPE={TYPICAL|MIN|FULL}
     ${VimFetchCmdParam} "/TYPE=" $R0 $R1
     ${If} $R0 <> 0
@@ -1622,6 +1632,69 @@ Function _VimSecSelectFunc
     # Restore the stack:
     Pop  $1  # Ignored item callback arg 2
     Pop  $1  # Ignored item callback arg 1
+    Pop  $1
+    Exch $0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function VimShowHelp                                                    {{{2
+#   Dump user manual in the current working directory.
+#
+#   Parameters : None
+#   Returns    : None
+# ----------------------------------------------------------------------------
+Function VimShowHelp
+    Push $R0  # cwd
+    Push $R1  # File handle of the user manual
+
+    # Find the current working directory:
+    System::Call "kernel32::GetCurrentDirectory(i ${NSIS_MAX_STRLEN}, t .r10)"
+
+    # Dump user manual template in the above directory:
+    ${Logged1} SetOutPath $R0
+    ${Logged1} File "data\${VIM_USER_MANUAL}"
+
+    # Append supported component list to the manual:
+    FileOpen $R1 "$R0\${VIM_USER_MANUAL}" a
+    ${IfNot} ${Errors}
+        FileSeek $R1 0 END
+        ${LoopMatrix} "${VIM_INSTALL_SECS}" "_VimAppendComponentList" \
+            "" "$R1" "" $R0
+        FileClose $R1
+    ${Else}
+        ${ShowErr} "Fail to open file: $R0\${VIM_USER_MANUAL}."
+    ${EndIf}
+
+    # Tell user we've created the user manual:
+    MessageBox MB_OK|MB_ICONINFORMATION \
+        "User manual for the installer has been saved to file:$\r$\n\
+         $R0\${VIM_USER_MANUAL}" \
+         /SD IDOK
+
+    Pop $R1
+    Pop $R0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function _VimAppendComponentList                                        {{{2
+#   Callback function for LoopMatrix to append supported component list to the
+#   end of the user manual.
+# ----------------------------------------------------------------------------
+Function _VimAppendComponentList
+    Exch      $3     # Arg 2: Ignored
+    ${ExchAt} 1 $2   # Arg 1: File handle of the user manual
+    ${ExchAt} 2 $1   # Col 2: Current section ID
+    ${ExchAt} 3 $0   # Col 1: Current section (component) name
+
+    # Output component list:
+    FileWrite $2 `    $0$\r$\n`
+
+    # Exit value:
+    StrCpy $0 ""
+
+    # Restore the stack:
+    Pop  $3
+    Pop  $2
     Pop  $1
     Exch $0
 FunctionEnd
@@ -1984,7 +2057,7 @@ Function VimFinalCheck
     ${EndIf}
 
     # Check running instances of Vim:
-    SetOutPath $TEMP
+    ${Logged1} SetOutPath $TEMP
     ${VimExtractConsoleExe}
     ${VimIsRuning} $TEMP $R0
     Delete "$TEMP\vim.exe"
@@ -2095,7 +2168,7 @@ Function _VimCreateShortcutsFunc
     StrCpy $1 "$vim_bin_path\$1"
 
     # Create the shortcut:
-    SetOutPath $3
+    ${Logged1} SetOutPath $3
     ${Logged5} CreateShortCut "$4\$0" "$1" "$2" "$1" 0
 
     # Restore the stack:
