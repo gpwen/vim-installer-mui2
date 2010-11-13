@@ -1,7 +1,40 @@
                         USER MANUAL FOR VIM INSTALLER
 
-Vim self-installing executable gvim##.exe is a Windows installer created using
-NSIS.  It installs the following components of Vim:
+------------------------------------------------------------------------------
+
+                           Summary for Command Line
+
+This section is a short summary of Vim installer command line for quick
+reference.  You should probably skip this when you read the manual for the
+first time.
+
+Vim installer command line syntax:
+
+    <<INSTALLER>> [/TYPE={FULL|TYPICAL|MIN}] [/<OPTION>[{+|-}]]
+               [/S] [/NCRC] [/D=<dir>]
+
+General purpose options are listed below:
+    ?
+    DD
+    HELP
+    RMEXE
+    RMOLD
+    RMRC
+
+All supported component selection options are listed below:
+<<COMPONENTS>>
+
+Please note the above list is a dynamically generated list of components
+supported by the installer you're using.  For a complete list of all
+components that Vim installer can support (but not necessarily compiled in),
+please read the following detailed manual.
+
+------------------------------------------------------------------------------
+
+                                 User Manual
+
+Vim self-installing executable <<INSTALLER>> is a Windows installer created
+using NSIS.  It installs the following components of Vim:
     - GUI version of Vim with many features and OLE support;
     - A console version of Vim;
     - All the runtime files;
@@ -45,11 +78,11 @@ installer/uninstaller in detail.
 
     If installation succeeded, that log file will be moved into the binary
     subdirectory under Vim installation directory:
-        <vim>\vim##
+        <vim>\<<VIM-BIN>>
 
     Exit code for uninstaller is a little bit complex as the uninstaller will
-    run itself automatically if it is started in default mode.  You can find
-    detailed information here:
+    make a copy of itself and run that copy automatically if it is started in
+    default mode.  You can find detailed information here:
         http://nsis.sourceforge.net/Docs/AppendixD.html#D.1
 
     Uninstaller will also create a log file with the same name under the
@@ -66,8 +99,8 @@ installer/uninstaller in detail.
     Once started, the installer will detect existing Vim versions on the
     system, and let user decide whether to keep them or not.  The installer
     can invoke appropriate uninstaller automatically once user decide to
-    remove a version.  One exception is: if the same version as the one to be
-    installed is detected on the system, it must be removed.
+    remove a version.  There is one exception: if the same version as the one
+    to be installed is detected on the system, it must be removed.
 
     However, automatic uninstallation could be complex in silent mode.  It's
     not easy to let user specify which version to keep since existing versions
@@ -76,36 +109,38 @@ installer/uninstaller in detail.
     version should be removed with the /RMOLD command line switch.
 
     Another catch is: all uninstaller invoked by a silent installer should
-    also run in silent mode.  Therefore, the installer will also check whether
-    all involved uninstallers support silent mode or not.  If not, the
-    installer will simply abort even if user allow uninstallation of those
-    versions.  If you really want to use silent mode, those Vim versions have
-    to be removed manually using GUI uninstaller first.
+    also run in silent mode.  Therefore, the installer also checks whether all
+    involved uninstallers support silent mode or not.  If not, the installer
+    will simply abort even if user allow uninstallation of those versions.  If
+    you really want to use silent mode, those Vim versions have to be removed
+    manually (for example, using GUI uninstaller) first.
+
+    Some command line switches, like /RMEXE and /RMRC, can be used to tune the
+    behavior of those invoked uninstallers.
 
 3.  Automatic Install Path Detection
 
     The installer determines install path with the following steps:
-    - Install path specifies on command line with "/D=<dir>" has the highest
-      priority.
-    - If no install path specifies on command line, or the specified install
-      path is invalid, the parent directory of the last installed Vim version,
-      if any, will be used as root directory to construct the install path;
+    - Install path specified on the command line with "/D=<dir>" has the
+      highest priority.
+    - If no install path specifies on command line, or the specified path is
+      invalid, the parent directory of the last installed Vim version, if any,
+      will be used as the root directory to construct the install path;
     - If that failed, the VIMRUNTIME environment string will be considered.
       The parent directory of the specified directory will be taken as root
       directory to construct install path if valid.
-    - If that failed, VIM environment string will be checked next, and the
+    - If that failed, the VIM environment string will be checked next, and the
       specified directory will be used as install path directly if valid.
-    - If that failed, the default instal path <program-files>\Vim will be
-      used.
+    - If all of the above failed, the default install path <program-files>\Vim
+      will be used.
 
     In silent mode, automatic install path detection is disabled by default.
     The installer assumes user will specify a install path on the command
     line.  It will abort unless user specifies install path explicitly or
-    enable automatic install path detection with "/DD" command line switch.
-    The reason is NSIS will silently ignore the specified install path if it's
-    invalid.  If automatic install path detection has been enabled, Vim will
-    be installed into a different directory silently.  That could be an
-    unpleasant surprise for the user.
+    enables automatic install path detection with the "/DD" command line
+    switch.  The reason is NSIS will silently ignore the specified install
+    path if it's invalid.  That could easily and silently land Vim in a
+    different directory if automatic install path detection has been enabled.
 
 4.  Components Selection from Command Line
 
@@ -125,7 +160,7 @@ installer/uninstaller in detail.
 
     All command line switches supported by the Vim installer are listed below:
 
-        gvim##.exe [/TYPE={FULL|TYPICAL|MIN}] [/<OPTION>[{+|-}]]
+        <<INSTALLER>> [/TYPE={FULL|TYPICAL|MIN}] [/<OPTION>[{+|-}]]
                    [/S] [/NCRC] [/D=<dir>]
 
     Please note all command line switches can only be specified once,
@@ -156,7 +191,9 @@ installer/uninstaller in detail.
         /<OPTION>+ or /<OPTION> to enable an option.
         /<OPTION>- to disable an option.
 
-    The following options are used to tune installer behavior:
+    The following general purpose options are used to tune installer behavior:
+        ?          Dump user manual of Vim installer in the current directory.
+        HELP       Same as ?.
         DD         Allow automatic install directory detection under silent
                    mode.
         RMOLD      Allow uninstallation of existing Vim under silent mode.
@@ -167,8 +204,9 @@ installer/uninstaller in detail.
     The following options are used to fine tune which component should be
     installed, after applying user specified installation type.  Please note
     the installer you're using might not support all of the following
-    components, please refer to the appendix at the end of this file for an
-    accurate list of supported components.
+    components (some of them might not be compiled in), please refer to the
+    command line summary at the beginning of this file for an accurate list of
+    supported components.
         CONSOLE    Install console version.
         BATCH      Install batch wrappers for Vim.
         DESKTOP    Add Vim shortcuts on the desktop.
@@ -195,7 +233,7 @@ installer/uninstaller in detail.
     Here's the list of all command line switches supported by the associated
     Vim uninstaller:
 
-        uninstall-gui.exe [/<OPTION>[{+|-}]] [/S] [/NCRC] [/D=<dir>]
+        <<UNINSTALLER>> [/<OPTION>[{+|-}]] [/S] [/NCRC] [/D=<dir>]
 
     Options /S, /NCRC and /D=<dir> is the same as the installer.  All of the
     command line switches specific to Vim un-installer follows the same syntax
@@ -222,26 +260,20 @@ installer/uninstaller in detail.
 
     - Typical install of Vim, detect install path automatically.  This command
       will succeed only if no Vim has been installed on the system:
-        gvim##.exe /S /DD
+        <<INSTALLER>> /S /DD
 
     - Typical install of Vim under "C"\Vim", uninstall all existing versions.
       Please note install path must be specified as the last command line
       switch.
-        gvim##.exe /S /RMOLD /D=C:\Vim
+        <<INSTALLER>> /S /RMOLD /D=C:\Vim
 
     - Full install of Vim under "C"\Vim", uninstall all existing versions:
-        gvim##.exe /S /RMOLD /TYPE=FULL /D=C:\Vim
+        <<INSTALLER>> /S /RMOLD /TYPE=FULL /D=C:\Vim
 
     - Full install of Vim under "C"\Vim", sans console version, and uninstall
       all existing versions:
-        gvim##.exe /S /RMOLD /CONSOLE- /TYPE=FULL /D=C:\Vim
+        <<INSTALLER>> /S /RMOLD /CONSOLE- /TYPE=FULL /D=C:\Vim
 
     - Typical install of Vim, don't care where it installed, and uninstall all
       existing versions as well as the config file:
-        gvim##.exe /S /RMOLD /RMRC /DD
-
-------------------------------------------------------------------------------
-
-                                   APPENDIX
-
-All components supported by this installer are listed below:
+        <<INSTALLER>> /S /RMOLD /RMRC /DD

@@ -1522,7 +1522,7 @@ Function VimProcessCmdParams
     ${VimCmdLineGetOptE} "/?"    "HELP" $R1
     ${If}   $R0 <> 0
     ${OrIf} $R1 <> 0
-        Call VimShowHelp
+        Call VimDumpManual
         Abort
     ${EndIf}
 
@@ -1637,42 +1637,88 @@ Function _VimSecSelectFunc
 FunctionEnd
 
 # ----------------------------------------------------------------------------
-# Function VimShowHelp                                                    {{{2
+# Function VimDumpManual                                                  {{{2
 #   Dump user manual in the current working directory.
 #
 #   Parameters : None
 #   Returns    : None
 # ----------------------------------------------------------------------------
-Function VimShowHelp
-    Push $R0  # cwd
-    Push $R1  # File handle of the user manual
+Function VimDumpManual
+    Push $R0  # Temporary file holds user manual template
+    Push $R1  # cwd
+
+    # Dump user manual template to a temporary file:
+    GetTempFileName $R0
+    ${Logged2} File "/oname=$R0" "data\${VIM_USER_MANUAL}"
 
     # Find the current working directory:
-    System::Call "kernel32::GetCurrentDirectory(i ${NSIS_MAX_STRLEN}, t .r10)"
+    System::Call \
+        "kernel32::GetCurrentDirectory(i ${NSIS_MAX_STRLEN}, t .r11)"
 
-    # Dump user manual template in the above directory:
-    ${Logged1} SetOutPath $R0
-    ${Logged1} File "data\${VIM_USER_MANUAL}"
+    # Replace place holders in the user manual:
+    ${LineFind} "$R0" "$R1\${VIM_USER_MANUAL}" "" \
+        "_VimDumpUserManualCallback"
 
-    # Append supported component list to the manual:
-    FileOpen $R1 "$R0\${VIM_USER_MANUAL}" a
-    ${IfNot} ${Errors}
-        FileSeek $R1 0 END
-        ${LoopMatrix} "${VIM_INSTALL_SECS}" "_VimAppendComponentList" \
-            "" "$R1" "" $R0
-        FileClose $R1
-    ${Else}
-        ${ShowErr} "Fail to open file: $R0\${VIM_USER_MANUAL}."
-    ${EndIf}
+    # Remove the temporary file:
+    ${Logged1} Delete "$R0"
 
     # Tell user we've created the user manual:
-    MessageBox MB_OK|MB_ICONINFORMATION \
-        "User manual for the installer has been saved to file:$\r$\n\
-         $R0\${VIM_USER_MANUAL}" \
-         /SD IDOK
+    ${IfNot} ${Errors}
+        MessageBox MB_OK|MB_ICONINFORMATION \
+            "User manual for the installer has been saved to file:$\r$\n\
+             $R1\${VIM_USER_MANUAL}" \
+             /SD IDOK
+    ${Else}
+        ${ShowErr} "Fail to write user manual to:$\r$\n\
+                    $R1\${VIM_USER_MANUAL}."
+    ${EndIf}
 
     Pop $R1
     Pop $R0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function _VimDumpUserManualCallback                                     {{{2
+#   Callback function for LineFind to manipulate user manual template.
+#
+#   LineFind will set the following registers upon entrance:
+#     $R9 - current line
+#     $R8 - current line number
+#     $R7 - current line negative number
+#     $R6 - current range of lines
+#     $R5 - handle of a file opened to read
+#     $R4 - handle of a file opened to write ($R4="" if "/NUL")
+#
+#     you can use any string functions
+#     $R0-$R3  are not used (save data in them).
+#     ...
+#
+#   This function should returns one of the following strings on the top of
+#   the stack:
+#     "StopLineFind" : Exit from function
+#     "SkipWrite"    : Skip current line (ignored if "/NUL")
+#     Otherwise      : Write the content of $R9 to the output file.
+# ----------------------------------------------------------------------------
+Function _VimDumpUserManualCallback
+    # Remove CR and/or LF.  This can also convert the input file to DOS format
+    # (the input file could be UNIX format if compiled from source directly):
+    ${TrimNewLines} "$R9" $R9
+
+    ${If} "$R9" S== "<<COMPONENTS>>"
+        # Add supported component list to the manual:
+        ${LoopMatrix} "${VIM_INSTALL_SECS}" "_VimAppendComponentList" \
+            "" "$R4" "" $R0
+        Push "SkipWrite"
+    ${Else}
+        # Replace place holders:
+        ${WordReplace} $R9 "<<INSTALLER>>"   "${VIM_INSTALLER}"   "+" $R9
+        ${WordReplace} $R9 "<<VIM-BIN>>"     "${VIM_BIN_DIR}"     "+" $R9
+        ${WordReplace} $R9 "<<UNINSTALLER>>" "${VIM_UNINSTALLER}" "+" $R9
+
+        # Write the line with DOS style EOL:
+        StrCpy $R9 "$R9$\r$\n"
+        Push ""
+    ${EndIf}
 FunctionEnd
 
 # ----------------------------------------------------------------------------
