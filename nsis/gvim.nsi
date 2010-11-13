@@ -1645,19 +1645,19 @@ FunctionEnd
 # ----------------------------------------------------------------------------
 Function VimDumpManual
     Push $R0  # Temporary file holds user manual template
-    Push $R1  # cwd
+    Push $R1  # Output file name
 
     # Dump user manual template to a temporary file:
     GetTempFileName $R0
     ${Logged2} File "/oname=$R0" "data\${VIM_USER_MANUAL}"
 
-    # Find the current working directory:
+    # Find the current working directory and construct output file name:
     System::Call \
         "kernel32::GetCurrentDirectory(i ${NSIS_MAX_STRLEN}, t .r11)"
+    StrCpy $R1 "$R1\${VIM_BIN_DIR}_${VIM_USER_MANUAL}"
 
     # Replace place holders in the user manual:
-    ${LineFind} "$R0" "$R1\${VIM_USER_MANUAL}" "" \
-        "_VimDumpUserManualCallback"
+    ${LineFind} "$R0" "$R1" "" "_VimDumpUserManualCallback"
 
     # Remove the temporary file:
     ${Logged1} Delete "$R0"
@@ -1666,11 +1666,9 @@ Function VimDumpManual
     ${IfNot} ${Errors}
         MessageBox MB_OK|MB_ICONINFORMATION \
             "User manual for the installer has been saved to file:$\r$\n\
-             $R1\${VIM_USER_MANUAL}" \
-             /SD IDOK
+             $R1" /SD IDOK
     ${Else}
-        ${ShowErr} "Fail to write user manual to:$\r$\n\
-                    $R1\${VIM_USER_MANUAL}."
+        ${ShowErr} "Fail to write user manual to:$\r$\n$R1"
     ${EndIf}
 
     Pop $R1

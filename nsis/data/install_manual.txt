@@ -2,7 +2,7 @@
 
 ------------------------------------------------------------------------------
 
-                           Summary for Command Line
+                             Command Line Summary 
 
 This section is a short summary of Vim installer command line for quick
 reference.  You should probably skip this when you read the manual for the
