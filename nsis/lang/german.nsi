@@ -6,7 +6,8 @@
 # fileencoding : cp1252
 # Author       : Christian Brabandt, tux
 
-!insertmacro MUI_LANGUAGE "German"
+!include "helper_util.nsh"
+${VimAddLanguage} "German" "de"
 
 
 ##############################################################################

@@ -2,7 +2,7 @@
 
 ------------------------------------------------------------------------------
 
-                             Command Line Summary 
+                             Command Line Summary
 
 This section is a short summary of Vim installer command line for quick
 reference.  You should probably skip this when you read the manual for the
@@ -10,8 +10,12 @@ first time.
 
 Vim installer command line syntax:
 
-    <<INSTALLER>> [/TYPE={FULL|TYPICAL|MIN}] [/<OPTION>[{+|-}]]
-               [/S] [/NCRC] [/D=<dir>]
+    <<INSTALLER>> [/LANG=<lang>] [/TYPE={FULL|TYPICAL|MIN}]
+               [/<OPTION>[{+|-}]] [/S] [/NCRC] [/D=<dir>]
+
+The /LANG=<lang> switch sets UI language.  <lang> can be set to one of the
+following value (you can use either locale name or LCID):
+<<LANG-LIST>>
 
 General purpose options are listed below:
     ?
@@ -23,11 +27,6 @@ General purpose options are listed below:
 
 All supported component selection options are listed below:
 <<COMPONENTS>>
-
-Please note the above list is a dynamically generated list of components
-supported by the installer you're using.  For a complete list of all
-components that Vim installer can support (but not necessarily compiled in),
-please read the following detailed manual.
 
 ------------------------------------------------------------------------------
 
@@ -160,8 +159,8 @@ installer/uninstaller in detail.
 
     All command line switches supported by the Vim installer are listed below:
 
-        <<INSTALLER>> [/TYPE={FULL|TYPICAL|MIN}] [/<OPTION>[{+|-}]]
-                   [/S] [/NCRC] [/D=<dir>]
+        <<INSTALLER>> [/LANG=<lang>] [/TYPE={FULL|TYPICAL|MIN}]
+                   [/<OPTION>[{+|-}]] [/S] [/NCRC] [/D=<dir>]
 
     Please note all command line switches can only be specified once,
     duplicated command line switches are considered as syntax error.
@@ -178,6 +177,13 @@ installer/uninstaller in detail.
                  contain any quotes, even if the path contains spaces.  Only
                  absolute paths are supported.  Invalid path name will be ignored
                  silently!
+
+    UI language can be specified with the following command line switch:
+        /LANG=<lang>
+    where <lang> can be locale name or LCID of the selected language.  Please
+    refer to the summary section above for a list of supported languages.  The
+    default language is determined by the current UI language of the system.
+    If that language is not supported by the installer, English will be used.
 
     Install type can be selected with the following command line switch:
         /TYPE={FULL|TYPICAL|MIN}

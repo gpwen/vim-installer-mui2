@@ -7,7 +7,8 @@
 # fileencoding : cp936
 # Author       : Guopeng Wen
 
-!insertmacro MUI_LANGUAGE "SimpChinese"
+!include "helper_util.nsh"
+${VimAddLanguage} "SimpChinese" "zh_CN"
 
 
 ##############################################################################

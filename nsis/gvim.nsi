@@ -85,6 +85,7 @@ Var vim_silent_auto_dir   # Silent mode flag: Install dir auto-detection
 Var vim_silent_rm_old     # Silent mode flag: Allow uninstall
 Var vim_silent_rm_exe     # Silent mode flag: Uninstall executable
 Var vim_silent_rm_rc      # Silent mode flag: Uninstall config file
+Var vim_usr_locale        # Locale name set by user from command line
 Var vim_install_root      # Vim install root directory
 Var vim_bin_path          # Vim binary directory
 Var vim_old_ver_keys      # List of registry keys for old versions
@@ -306,6 +307,7 @@ SilentInstall             normal
     StrCpy $vim_silent_rm_old   0
     StrCpy $vim_silent_rm_exe   1
     StrCpy $vim_silent_rm_rc    0
+    StrCpy $vim_usr_locale      ""
     StrCpy $vim_install_root    ""
     StrCpy $vim_bin_path        ""
     StrCpy $vim_old_ver_keys    ""
@@ -943,6 +945,7 @@ Section -log_status
     # Log install path etc.:
     ${Log} "Final install path : $vim_install_root"
     ${Log} "Final binary  path : $vim_bin_path"
+    ${Log} "User set locale    : $vim_usr_locale"
     ${Log} "Language ID        : $LANGUAGE"
 
     GetCurInstType $R0
@@ -1401,13 +1404,16 @@ Function .onInit
     # Set correct registry view:
     ${VimSelectRegView}
 
-    # Show language selection dialog:  User selected language will be
-    # represented by Local ID (LCID) and assigned to $LANGUAGE.  If registry
-    # key defined, the LCID will also be stored in Windows registry.  For list
-    # of LCID, check "Locale IDs Assigned by Microsoft":
+    # Show language selection dialog if no language has been set on command
+    # line.  User selected language will be represented by Local ID (LCID) and
+    # assigned to $LANGUAGE.  If registry key defined, the LCID will also be
+    # stored in Windows registry.  For list of LCID, check "Locale IDs
+    # Assigned by Microsoft":
     #   http://msdn.microsoft.com/en-us/goglobal/bb964664.aspx
     !ifdef HAVE_MULTI_LANG
-        !insertmacro MUI_LANGDLL_DISPLAY
+        ${If} $vim_usr_locale == ""
+            !insertmacro MUI_LANGDLL_DISPLAY
+        ${EndIf}
     !endif
 
     # Read all Vim uninstall keys from registry.  Please note we only support
@@ -1517,6 +1523,22 @@ Function VimProcessCmdParams
     Push $R0   # Parameter found flag
     Push $R1   # Parameter value
 
+    # Set language: /LANG=<locale-or-LCID>
+    ${VimFetchCmdParam} "/LANG=" $R0 $R1
+    ${If} $R0 <> 0
+        # Loop through the language mapping table (build with VimAddLanguage
+        # macro in the language files), check if user specified locale
+        # name/LCID matches any of the language in the mapping table or not:
+        ${LoopMatrix} "${VIM_LANG_MAPPING}" \
+            "_VimSetLangFunc" "" "$R1" "" $R0
+        ${If} $R0 == ""
+            ${ShowErr} "Unrecognized language [$R1]"
+            Pop $R1
+            Pop $R0
+            Abort
+        ${EndIf}
+    ${EndIf}
+
     # /HELP or /?: Dump user manual in the current working directory.
     ${VimCmdLineGetOptE} "/HELP" "HELP" $R0
     ${VimCmdLineGetOptE} "/?"    "HELP" $R1
@@ -1561,18 +1583,6 @@ Function VimProcessCmdParams
     # when uninstall old versions silently (in both normal and silent mode).
     ${VimCmdLineGetOptE} "/RMRC"  "RmRc"  $vim_silent_rm_rc
 
-    # Set language: This does not work!
-    # TODO: Need verification here!
-    #${VimFetchCmdParam} "/LANG=" $R0 $R1
-    #${If} $R0 <> 0
-    #    ${Log} "Command line: Set language to [$R1]"
-    #    StrCpy $LANGUAGE $R1
-    #${EndIf}
-    #ReadRegStr $vim_old_language \
-    #    "${MUI_LANGDLL_REGISTRY_ROOT}" \
-    #    "${MUI_LANGDLL_REGISTRY_KEY}"  \
-    #    "${MUI_LANGDLL_REGISTRY_VALUENAME}"
-
     # Process section select options (/<SECTON>{+/-}):
     ${LoopMatrix} "${VIM_INSTALL_SECS}" "_VimSecSelectFunc" "" "" "" $R0
 
@@ -1586,6 +1596,36 @@ Function VimProcessCmdParams
 
     Pop $R1
     Pop $R0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function _VimSetLangFunc                                                {{{2
+#   Callback function for LoopMatrix to set UI language.
+# ----------------------------------------------------------------------------
+Function _VimSetLangFunc
+    Exch      $4     # Arg 2: Ignored
+    ${ExchAt} 1 $3   # Arg 1: User specified locale name or language ID
+    ${ExchAt} 2 $2   # Col 3: Language Name
+    ${ExchAt} 3 $1   # Col 2: Locale name
+    ${ExchAt} 4 $0   # Col 1: Language ID
+
+    # Set UI language if the locale or language ID specified by is in the
+    # language mapping table:
+    ${If}   $0 == $3
+    ${OrIf} $1 == $3
+        ${Log} "Command line: Set language to $1 ($2, LCID=$0)"
+        StrCpy $vim_usr_locale $1
+        StrCpy $LANGUAGE       $0
+    ${Else}
+        StrCpy $0 ""
+    ${EndIf}
+
+    # Restore the stack:
+    Pop  $4
+    Pop  $3
+    Pop  $2
+    Pop  $1
+    Exch $0
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -1702,9 +1742,14 @@ Function _VimDumpUserManualCallback
     # (the input file could be UNIX format if compiled from source directly):
     ${TrimNewLines} "$R9" $R9
 
-    ${If} "$R9" S== "<<COMPONENTS>>"
-        # Add supported component list to the manual:
-        ${LoopMatrix} "${VIM_INSTALL_SECS}" "_VimAppendComponentList" \
+    ${If} "$R9" S== "<<LANG-LIST>>"
+        # Insert supported language list to the manual:
+        ${LoopMatrix} "${VIM_LANG_MAPPING}" "_VimInsertLangList" \
+            "" "$R4" "" $R0
+        Push "SkipWrite"
+    ${ElseIf} "$R9" S== "<<COMPONENTS>>"
+        # Insert supported component list to the manual:
+        ${LoopMatrix} "${VIM_INSTALL_SECS}" "_VimInsertComponents" \
             "" "$R4" "" $R0
         Push "SkipWrite"
     ${Else}
@@ -1720,11 +1765,42 @@ Function _VimDumpUserManualCallback
 FunctionEnd
 
 # ----------------------------------------------------------------------------
-# Function _VimAppendComponentList                                        {{{2
-#   Callback function for LoopMatrix to append supported component list to the
-#   end of the user manual.
+# Function _VimInsertLangList                                             {{{2
+#   Callback function for LoopMatrix to insert language list in user manual.
 # ----------------------------------------------------------------------------
-Function _VimAppendComponentList
+Function _VimInsertLangList
+    Exch      $4     # Arg 2: Ignored
+    ${ExchAt} 1 $3   # Arg 1: File handle of the user manual
+    ${ExchAt} 2 $2   # Col 3: Language Name
+    ${ExchAt} 3 $1   # Col 2: Locale name
+    ${ExchAt} 4 $0   # Col 1: Language ID
+    Push      $R0
+
+    # Align locale name to 5 characters (ll_CC):
+    StrLen $R0 $1
+    StrCpy $R0 '     ' "" $R0
+    StrCpy $R0 "$1$R0"
+
+    # Output component list:
+    FileWrite $3 `    $R0 : $2, LCID=$0$\r$\n`
+
+    # Exit value:
+    StrCpy $0 ""
+
+    # Restore the stack:
+    Pop  $R0
+    Pop  $4
+    Pop  $3
+    Pop  $2
+    Pop  $1
+    Exch $0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function _VimInsertComponents                                           {{{2
+#   Callback function for LoopMatrix to insert component list in user manual.
+# ----------------------------------------------------------------------------
+Function _VimInsertComponents
     Exch      $3     # Arg 2: Ignored
     ${ExchAt} 1 $2   # Arg 1: File handle of the user manual
     ${ExchAt} 2 $1   # Col 2: Current section ID

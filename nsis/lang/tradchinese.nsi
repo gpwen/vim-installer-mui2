@@ -7,7 +7,8 @@
 # fileencoding : big5
 # Author       : Guopeng Wen
 
-!insertmacro MUI_LANGUAGE "TradChinese"
+!include "helper_util.nsh"
+${VimAddLanguage} "TradChinese" "zh_TW"
 
 
 ##############################################################################

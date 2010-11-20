@@ -10,6 +10,7 @@
 !include "LogicLib.nsh"
 !include "Util.nsh"
 !include "WordFunc.nsh"
+!include "MUI2.nsh"
 
 ##############################################################################
 # macro ExchAt $_OFFSET $_VAR                                             {{{1
@@ -104,6 +105,55 @@
     Pop  $R1
     Pop  $R0
     Exch $0
+!macroend
+
+##############################################################################
+# macro VimAddLanguage $_LANGUAGE $_LOCALE_NAME                           {{{1
+#   This macro is used to include the language file and generate a mapping
+#   table to associate LCID, locale name, and language name.  LCID and Locale
+#   name will used to make it simpler to specify language on command line.
+#
+#   Parameters:
+#     $_LANGUAGE    : Name of the language to add.  This should be the
+#                     language name assigned by NSIS.  For detail, check:
+#                       <nsis>/Contrib/Language files
+#     $_LOCALE_NAME : GNU gettext locale name for the language.  Detail can be
+#                     found on the following webpage:
+#                       http://www.gnu.org/software/gettext/
+#                       manual/gettext.html#Locale-Names
+#   Returns:
+#     N/A
+##############################################################################
+!define VimAddLanguage "!insertmacro _VimAddLanguage"
+!macro _VimAddLanguage _LANGUAGE _LOCALE_NAME
+    # MUI2 macro to include language file:
+    !insertmacro MUI_LANGUAGE "${_LANGUAGE}"
+
+    # Item in language mapping table:
+    #   LCID | Locale Name | Language Name
+    !ifdef _VIM_LANG_MAPPING_ITEM
+        !undef _VIM_LANG_MAPPING_ITEM
+    !endif
+
+    !define _VIM_LANG_MAPPING_ITEM \
+        "${LANG_${_LANGUAGE}} | ${_LOCALE_NAME} | \
+         ${LANGFILE_${_LANGUAGE}_NAME}"
+
+    # Define language mapping table:
+    !ifndef VIM_LANG_MAPPING
+        !define VIM_LANG_MAPPING "${_VIM_LANG_MAPPING_ITEM}"
+    !else
+        !ifdef _VIM_LANG_MAPPING_TEMP
+            !undef _VIM_LANG_MAPPING_TEMP
+        !endif
+
+        !define _VIM_LANG_MAPPING_TEMP "${VIM_LANG_MAPPING}"
+
+        !undef  VIM_LANG_MAPPING
+        !define VIM_LANG_MAPPING \
+            "${_VIM_LANG_MAPPING_TEMP}$\n${_VIM_LANG_MAPPING_ITEM}"
+    !endif
+    
 !macroend
 
 ##############################################################################
