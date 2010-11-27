@@ -3,10 +3,12 @@
 # croatian.nsi : Croatian language strings for gvim NSIS installer.
 #
 # Locale ID    : 1050
+# Locale Name  : hr
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Croatian"
+!include "helper_util.nsh"
+${VimAddLanguage} "Croatian" "hr"
 
 
 ##############################################################################

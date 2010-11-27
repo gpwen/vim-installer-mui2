@@ -3,10 +3,12 @@
 # belarusian.nsi : Belarusian language strings for gvim NSIS installer.
 #
 # Locale ID    : 1059
+# Locale Name  : be
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Belarusian"
+!include "helper_util.nsh"
+${VimAddLanguage} "Belarusian" "be"
 
 
 ##############################################################################

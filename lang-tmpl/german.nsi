@@ -3,10 +3,12 @@
 # german.nsi : German language strings for gvim NSIS installer.
 #
 # Locale ID    : 1031
+# Locale Name  : de
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "German"
+!include "helper_util.nsh"
+${VimAddLanguage} "German" "de"
 
 
 ##############################################################################

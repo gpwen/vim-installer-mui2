@@ -3,10 +3,12 @@
 # slovak.nsi : Slovak language strings for gvim NSIS installer.
 #
 # Locale ID    : 1051
+# Locale Name  : sk
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Slovak"
+!include "helper_util.nsh"
+${VimAddLanguage} "Slovak" "sk"
 
 
 ##############################################################################

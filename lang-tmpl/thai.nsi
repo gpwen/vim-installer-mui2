@@ -3,10 +3,12 @@
 # thai.nsi : Thai language strings for gvim NSIS installer.
 #
 # Locale ID    : 1054
+# Locale Name  : th
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Thai"
+!include "helper_util.nsh"
+${VimAddLanguage} "Thai" "th"
 
 
 ##############################################################################

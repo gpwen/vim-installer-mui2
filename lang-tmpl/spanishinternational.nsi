@@ -3,10 +3,12 @@
 # spanishinternational.nsi : SpanishInternational language strings for gvim NSIS installer.
 #
 # Locale ID    : 3082
+# Locale Name  : es
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "SpanishInternational"
+!include "helper_util.nsh"
+${VimAddLanguage} "SpanishInternational" "es"
 
 
 ##############################################################################

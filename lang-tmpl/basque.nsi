@@ -3,10 +3,12 @@
 # basque.nsi : Basque language strings for gvim NSIS installer.
 #
 # Locale ID    : 1069
+# Locale Name  : eu
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Basque"
+!include "helper_util.nsh"
+${VimAddLanguage} "Basque" "eu"
 
 
 ##############################################################################

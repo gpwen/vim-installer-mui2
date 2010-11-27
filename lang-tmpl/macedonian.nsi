@@ -3,10 +3,12 @@
 # macedonian.nsi : Macedonian language strings for gvim NSIS installer.
 #
 # Locale ID    : 1071
+# Locale Name  : mk
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Macedonian"
+!include "helper_util.nsh"
+${VimAddLanguage} "Macedonian" "mk"
 
 
 ##############################################################################

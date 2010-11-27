@@ -3,10 +3,12 @@
 # icelandic.nsi : Icelandic language strings for gvim NSIS installer.
 #
 # Locale ID    : 15
+# Locale Name  : is
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Icelandic"
+!include "helper_util.nsh"
+${VimAddLanguage} "Icelandic" "is"
 
 
 ##############################################################################

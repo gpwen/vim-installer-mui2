@@ -3,10 +3,12 @@
 # japanese.nsi : Japanese language strings for gvim NSIS installer.
 #
 # Locale ID    : 1041
+# Locale Name  : ja
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Japanese"
+!include "helper_util.nsh"
+${VimAddLanguage} "Japanese" "ja"
 
 
 ##############################################################################

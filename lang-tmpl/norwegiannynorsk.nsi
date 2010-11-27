@@ -3,10 +3,12 @@
 # norwegiannynorsk.nsi : NorwegianNynorsk language strings for gvim NSIS installer.
 #
 # Locale ID    : 2068
+# Locale Name  : nn
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "NorwegianNynorsk"
+!include "helper_util.nsh"
+${VimAddLanguage} "NorwegianNynorsk" "nn"
 
 
 ##############################################################################

@@ -3,10 +3,12 @@
 # turkish.nsi : Turkish language strings for gvim NSIS installer.
 #
 # Locale ID    : 1055
+# Locale Name  : tr
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Turkish"
+!include "helper_util.nsh"
+${VimAddLanguage} "Turkish" "tr"
 
 
 ##############################################################################

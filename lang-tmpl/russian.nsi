@@ -3,10 +3,12 @@
 # russian.nsi : Russian language strings for gvim NSIS installer.
 #
 # Locale ID    : 1049
+# Locale Name  : ru
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Russian"
+!include "helper_util.nsh"
+${VimAddLanguage} "Russian" "ru"
 
 
 ##############################################################################

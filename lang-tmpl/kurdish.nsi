@@ -3,10 +3,12 @@
 # kurdish.nsi : Kurdish language strings for gvim NSIS installer.
 #
 # Locale ID    : 9999
+# Locale Name  : ku
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Kurdish"
+!include "helper_util.nsh"
+${VimAddLanguage} "Kurdish" "ku"
 
 
 ##############################################################################

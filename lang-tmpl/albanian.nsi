@@ -3,10 +3,12 @@
 # albanian.nsi : Albanian language strings for gvim NSIS installer.
 #
 # Locale ID    : 1052
+# Locale Name  : sq
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Albanian"
+!include "helper_util.nsh"
+${VimAddLanguage} "Albanian" "sq"
 
 
 ##############################################################################

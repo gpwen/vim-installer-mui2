@@ -3,10 +3,12 @@
 # romanian.nsi : Romanian language strings for gvim NSIS installer.
 #
 # Locale ID    : 1048
+# Locale Name  : ro
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Romanian"
+!include "helper_util.nsh"
+${VimAddLanguage} "Romanian" "ro"
 
 
 ##############################################################################

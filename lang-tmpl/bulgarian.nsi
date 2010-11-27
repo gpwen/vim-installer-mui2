@@ -3,10 +3,12 @@
 # bulgarian.nsi : Bulgarian language strings for gvim NSIS installer.
 #
 # Locale ID    : 1026
+# Locale Name  : bg
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Bulgarian"
+!include "helper_util.nsh"
+${VimAddLanguage} "Bulgarian" "bg"
 
 
 ##############################################################################

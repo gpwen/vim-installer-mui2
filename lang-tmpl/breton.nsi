@@ -3,10 +3,12 @@
 # breton.nsi : Breton language strings for gvim NSIS installer.
 #
 # Locale ID    : 1150
+# Locale Name  : br
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Breton"
+!include "helper_util.nsh"
+${VimAddLanguage} "Breton" "br"
 
 
 ##############################################################################

@@ -3,10 +3,12 @@
 # irish.nsi : Irish language strings for gvim NSIS installer.
 #
 # Locale ID    : 2108
+# Locale Name  : ga
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Irish"
+!include "helper_util.nsh"
+${VimAddLanguage} "Irish" "ga"
 
 
 ##############################################################################

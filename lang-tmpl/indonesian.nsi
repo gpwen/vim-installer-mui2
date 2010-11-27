@@ -3,10 +3,12 @@
 # indonesian.nsi : Indonesian language strings for gvim NSIS installer.
 #
 # Locale ID    : 1057
+# Locale Name  : id
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Indonesian"
+!include "helper_util.nsh"
+${VimAddLanguage} "Indonesian" "id"
 
 
 ##############################################################################

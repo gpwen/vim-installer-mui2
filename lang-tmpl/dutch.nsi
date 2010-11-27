@@ -3,10 +3,12 @@
 # dutch.nsi : Dutch language strings for gvim NSIS installer.
 #
 # Locale ID    : 1043
+# Locale Name  : nl
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Dutch"
+!include "helper_util.nsh"
+${VimAddLanguage} "Dutch" "nl"
 
 
 ##############################################################################

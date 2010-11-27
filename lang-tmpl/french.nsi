@@ -3,10 +3,12 @@
 # french.nsi : French language strings for gvim NSIS installer.
 #
 # Locale ID    : 1036
+# Locale Name  : fr
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "French"
+!include "helper_util.nsh"
+${VimAddLanguage} "French" "fr"
 
 
 ##############################################################################

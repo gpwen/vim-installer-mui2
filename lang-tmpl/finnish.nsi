@@ -3,10 +3,12 @@
 # finnish.nsi : Finnish language strings for gvim NSIS installer.
 #
 # Locale ID    : 1035
+# Locale Name  : fi
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Finnish"
+!include "helper_util.nsh"
+${VimAddLanguage} "Finnish" "fi"
 
 
 ##############################################################################

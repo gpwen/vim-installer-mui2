@@ -3,10 +3,12 @@
 # greek.nsi : Greek language strings for gvim NSIS installer.
 #
 # Locale ID    : 1032
+# Locale Name  : el
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Greek"
+!include "helper_util.nsh"
+${VimAddLanguage} "Greek" "el"
 
 
 ##############################################################################

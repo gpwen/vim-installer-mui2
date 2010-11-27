@@ -3,10 +3,12 @@
 # afrikaans.nsi : Afrikaans language strings for gvim NSIS installer.
 #
 # Locale ID    : 1078
+# Locale Name  : af
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Afrikaans"
+!include "helper_util.nsh"
+${VimAddLanguage} "Afrikaans" "af"
 
 
 ##############################################################################

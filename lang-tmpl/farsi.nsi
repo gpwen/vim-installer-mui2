@@ -3,10 +3,12 @@
 # farsi.nsi : Farsi language strings for gvim NSIS installer.
 #
 # Locale ID    : 1065
+# Locale Name  : fa
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Farsi"
+!include "helper_util.nsh"
+${VimAddLanguage} "Farsi" "fa"
 
 
 ##############################################################################

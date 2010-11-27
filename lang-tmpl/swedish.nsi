@@ -3,10 +3,12 @@
 # swedish.nsi : Swedish language strings for gvim NSIS installer.
 #
 # Locale ID    : 1053
+# Locale Name  : sv
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Swedish"
+!include "helper_util.nsh"
+${VimAddLanguage} "Swedish" "sv"
 
 
 ##############################################################################

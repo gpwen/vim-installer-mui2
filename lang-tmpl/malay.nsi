@@ -3,10 +3,12 @@
 # malay.nsi : Malay language strings for gvim NSIS installer.
 #
 # Locale ID    : 1086
+# Locale Name  : ms
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Malay"
+!include "helper_util.nsh"
+${VimAddLanguage} "Malay" "ms"
 
 
 ##############################################################################

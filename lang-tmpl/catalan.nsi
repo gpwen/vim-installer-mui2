@@ -3,10 +3,12 @@
 # catalan.nsi : Catalan language strings for gvim NSIS installer.
 #
 # Locale ID    : 1027
+# Locale Name  : ca
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Catalan"
+!include "helper_util.nsh"
+${VimAddLanguage} "Catalan" "ca"
 
 
 ##############################################################################

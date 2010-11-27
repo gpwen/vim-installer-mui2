@@ -3,10 +3,12 @@
 # tradchinese.nsi : TradChinese language strings for gvim NSIS installer.
 #
 # Locale ID    : 1028
+# Locale Name  : zh_TW
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "TradChinese"
+!include "helper_util.nsh"
+${VimAddLanguage} "TradChinese" "zh_TW"
 
 
 ##############################################################################

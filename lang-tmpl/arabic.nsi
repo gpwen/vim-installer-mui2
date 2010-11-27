@@ -3,10 +3,12 @@
 # arabic.nsi : Arabic language strings for gvim NSIS installer.
 #
 # Locale ID    : 1025
+# Locale Name  : ar
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Arabic"
+!include "helper_util.nsh"
+${VimAddLanguage} "Arabic" "ar"
 
 
 ##############################################################################

@@ -3,10 +3,12 @@
 # mongolian.nsi : Mongolian language strings for gvim NSIS installer.
 #
 # Locale ID    : 1104
+# Locale Name  : mn
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Mongolian"
+!include "helper_util.nsh"
+${VimAddLanguage} "Mongolian" "mn"
 
 
 ##############################################################################

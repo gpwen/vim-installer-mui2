@@ -3,10 +3,12 @@
 # serbianlatin.nsi : SerbianLatin language strings for gvim NSIS installer.
 #
 # Locale ID    : 2074
+# Locale Name  : sr@latin
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "SerbianLatin"
+!include "helper_util.nsh"
+${VimAddLanguage} "SerbianLatin" "sr@latin"
 
 
 ##############################################################################

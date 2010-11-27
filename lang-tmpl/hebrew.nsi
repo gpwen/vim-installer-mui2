@@ -3,10 +3,12 @@
 # hebrew.nsi : Hebrew language strings for gvim NSIS installer.
 #
 # Locale ID    : 1037
+# Locale Name  : he
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Hebrew"
+!include "helper_util.nsh"
+${VimAddLanguage} "Hebrew" "he"
 
 
 ##############################################################################

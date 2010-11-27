@@ -3,10 +3,12 @@
 # slovenian.nsi : Slovenian language strings for gvim NSIS installer.
 #
 # Locale ID    : 1060
+# Locale Name  : sl
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Slovenian"
+!include "helper_util.nsh"
+${VimAddLanguage} "Slovenian" "sl"
 
 
 ##############################################################################

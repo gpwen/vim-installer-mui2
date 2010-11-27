@@ -3,10 +3,12 @@
 # bosnian.nsi : Bosnian language strings for gvim NSIS installer.
 #
 # Locale ID    : 5146
+# Locale Name  : bs
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Bosnian"
+!include "helper_util.nsh"
+${VimAddLanguage} "Bosnian" "bs"
 
 
 ##############################################################################

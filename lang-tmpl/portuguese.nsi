@@ -3,10 +3,12 @@
 # portuguese.nsi : Portuguese language strings for gvim NSIS installer.
 #
 # Locale ID    : 2070
+# Locale Name  : pt
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Portuguese"
+!include "helper_util.nsh"
+${VimAddLanguage} "Portuguese" "pt"
 
 
 ##############################################################################

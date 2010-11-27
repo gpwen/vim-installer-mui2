@@ -3,10 +3,12 @@
 # estonian.nsi : Estonian language strings for gvim NSIS installer.
 #
 # Locale ID    : 1061
+# Locale Name  : et
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Estonian"
+!include "helper_util.nsh"
+${VimAddLanguage} "Estonian" "et"
 
 
 ##############################################################################

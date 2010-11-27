@@ -3,10 +3,12 @@
 # ukrainian.nsi : Ukrainian language strings for gvim NSIS installer.
 #
 # Locale ID    : 1058
+# Locale Name  : uk
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Ukrainian"
+!include "helper_util.nsh"
+${VimAddLanguage} "Ukrainian" "uk"
 
 
 ##############################################################################

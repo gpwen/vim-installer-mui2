@@ -3,10 +3,12 @@
 # lithuanian.nsi : Lithuanian language strings for gvim NSIS installer.
 #
 # Locale ID    : 1063
+# Locale Name  : lt
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Lithuanian"
+!include "helper_util.nsh"
+${VimAddLanguage} "Lithuanian" "lt"
 
 
 ##############################################################################

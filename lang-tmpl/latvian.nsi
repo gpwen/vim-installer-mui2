@@ -3,10 +3,12 @@
 # latvian.nsi : Latvian language strings for gvim NSIS installer.
 #
 # Locale ID    : 1062
+# Locale Name  : lv
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Latvian"
+!include "helper_util.nsh"
+${VimAddLanguage} "Latvian" "lv"
 
 
 ##############################################################################

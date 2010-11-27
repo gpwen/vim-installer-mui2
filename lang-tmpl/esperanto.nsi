@@ -3,10 +3,12 @@
 # esperanto.nsi : Esperanto language strings for gvim NSIS installer.
 #
 # Locale ID    : 9998
+# Locale Name  : eo
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Esperanto"
+!include "helper_util.nsh"
+${VimAddLanguage} "Esperanto" "eo"
 
 
 ##############################################################################

@@ -3,10 +3,12 @@
 # polish.nsi : Polish language strings for gvim NSIS installer.
 #
 # Locale ID    : 1045
+# Locale Name  : pl
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Polish"
+!include "helper_util.nsh"
+${VimAddLanguage} "Polish" "pl"
 
 
 ##############################################################################

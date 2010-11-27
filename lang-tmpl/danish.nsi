@@ -3,10 +3,12 @@
 # danish.nsi : Danish language strings for gvim NSIS installer.
 #
 # Locale ID    : 1030
+# Locale Name  : da
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Danish"
+!include "helper_util.nsh"
+${VimAddLanguage} "Danish" "da"
 
 
 ##############################################################################

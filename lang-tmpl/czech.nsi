@@ -3,10 +3,12 @@
 # czech.nsi : Czech language strings for gvim NSIS installer.
 #
 # Locale ID    : 1029
+# Locale Name  : cs
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Czech"
+!include "helper_util.nsh"
+${VimAddLanguage} "Czech" "cs"
 
 
 ##############################################################################

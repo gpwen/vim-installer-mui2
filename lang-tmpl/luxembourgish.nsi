@@ -3,10 +3,12 @@
 # luxembourgish.nsi : Luxembourgish language strings for gvim NSIS installer.
 #
 # Locale ID    : 4103
+# Locale Name  : lb
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Luxembourgish"
+!include "helper_util.nsh"
+${VimAddLanguage} "Luxembourgish" "lb"
 
 
 ##############################################################################

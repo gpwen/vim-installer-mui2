@@ -3,10 +3,12 @@
 # norwegian.nsi : Norwegian language strings for gvim NSIS installer.
 #
 # Locale ID    : 1044
+# Locale Name  : nb
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Norwegian"
+!include "helper_util.nsh"
+${VimAddLanguage} "Norwegian" "nb"
 
 
 ##############################################################################

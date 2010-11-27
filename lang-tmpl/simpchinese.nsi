@@ -3,10 +3,12 @@
 # simpchinese.nsi : SimpChinese language strings for gvim NSIS installer.
 #
 # Locale ID    : 2052
+# Locale Name  : zh_CN
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "SimpChinese"
+!include "helper_util.nsh"
+${VimAddLanguage} "SimpChinese" "zh_CN"
 
 
 ##############################################################################

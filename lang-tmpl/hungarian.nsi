@@ -3,10 +3,12 @@
 # hungarian.nsi : Hungarian language strings for gvim NSIS installer.
 #
 # Locale ID    : 1038
+# Locale Name  : hu
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Hungarian"
+!include "helper_util.nsh"
+${VimAddLanguage} "Hungarian" "hu"
 
 
 ##############################################################################

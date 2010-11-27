@@ -3,10 +3,12 @@
 # welsh.nsi : Welsh language strings for gvim NSIS installer.
 #
 # Locale ID    : 1160
+# Locale Name  : cy
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Welsh"
+!include "helper_util.nsh"
+${VimAddLanguage} "Welsh" "cy"
 
 
 ##############################################################################

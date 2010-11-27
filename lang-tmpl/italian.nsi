@@ -3,10 +3,12 @@
 # italian.nsi : Italian language strings for gvim NSIS installer.
 #
 # Locale ID    : 1040
+# Locale Name  : it
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Italian"
+!include "helper_util.nsh"
+${VimAddLanguage} "Italian" "it"
 
 
 ##############################################################################

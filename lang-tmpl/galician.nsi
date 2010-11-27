@@ -3,10 +3,12 @@
 # galician.nsi : Galician language strings for gvim NSIS installer.
 #
 # Locale ID    : 1110
+# Locale Name  : gl
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Galician"
+!include "helper_util.nsh"
+${VimAddLanguage} "Galician" "gl"
 
 
 ##############################################################################

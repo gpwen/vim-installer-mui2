@@ -3,10 +3,12 @@
 # uzbek.nsi : Uzbek language strings for gvim NSIS installer.
 #
 # Locale ID    : 1091
+# Locale Name  : uz
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Uzbek"
+!include "helper_util.nsh"
+${VimAddLanguage} "Uzbek" "uz"
 
 
 ##############################################################################

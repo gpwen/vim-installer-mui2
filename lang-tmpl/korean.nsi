@@ -3,10 +3,12 @@
 # korean.nsi : Korean language strings for gvim NSIS installer.
 #
 # Locale ID    : 1042
+# Locale Name  : ko
 # fileencoding :
 # Author       :
 
-!insertmacro MUI_LANGUAGE "Korean"
+!include "helper_util.nsh"
+${VimAddLanguage} "Korean" "ko"
 
 
 ##############################################################################
