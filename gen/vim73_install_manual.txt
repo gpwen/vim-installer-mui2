@@ -211,7 +211,11 @@ installer/uninstaller in detail.
         /<OPTION>- to disable an option.
 
     The following general purpose options are used to tune installer behavior:
-        ?          Dump user manual of Vim installer in the current directory.
+        ?          Dump user manual for Vim installer in the current working
+                   directory.  File name of the manual is:
+                     vim##_install_manual.txt
+                   Please note if you has a file with that name in the current
+                   working directory, it will be overwritten without warning.
         HELP       Same as ?.
         DD         Allow automatic install directory detection under silent
                    mode.
