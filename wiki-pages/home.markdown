@@ -32,6 +32,17 @@ language support status on the [[language page | language]].  You can help to
 add more languages to the installer by translating the language file, please
 find instruction on that page.  Your help are highly appreciated.
 
+## Silent Mode Support
+
+The new installer has full support for [[silent mode|
+http://nsis.sourceforge.net/Docs/Chapter4.html#4.12]].  When run in such
+mode, no user interface will be shown.  It's useful for unattended
+installation/uninstallation over large number of computers.  Please refer
+to dynamically generated [[user manual |
+http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/gen/vim73_install_manual.txt]]
+for detail.  In order to support such mode, all install options have been
+made available on command line.
+
 ## Branches
 
 All branches in this repository are listed below:
