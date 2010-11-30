@@ -1696,20 +1696,30 @@ Function VimDumpManual
         "kernel32::GetCurrentDirectory(i ${NSIS_MAX_STRLEN}, t .r11)"
     StrCpy $R1 "$R1\${VIM_BIN_DIR}_${VIM_USER_MANUAL}"
 
+    # Make sure the output file does not exist:
+    ${If} ${FileExists} $R1
+        ${ShowErr} "Fail to write user manual to:$\r$\n$R1$\r$\n$\r$\n\
+                    The file already exist! \
+                    Please remove it and try again."
+        Pop $R1
+        Pop $R0
+        Return
+    ${EndIf}
+
     # Replace place holders in the user manual:
     ${LineFind} "$R0" "$R1" "" "_VimDumpUserManualCallback"
 
-    # Remove the temporary file:
-    ${Logged1} Delete "$R0"
-
     # Tell user we've created the user manual:
     ${IfNot} ${Errors}
-        MessageBox MB_OK|MB_ICONINFORMATION \
+        ${ShowMsg} \
             "User manual for the installer has been saved to file:$\r$\n\
-             $R1" /SD IDOK
+             $R1"
     ${Else}
         ${ShowErr} "Fail to write user manual to:$\r$\n$R1"
     ${EndIf}
+
+    # Remove the temporary file:
+    ${Logged1} Delete "$R0"
 
     Pop $R1
     Pop $R0
@@ -1738,6 +1748,8 @@ FunctionEnd
 #     Otherwise      : Write the content of $R9 to the output file.
 # ----------------------------------------------------------------------------
 Function _VimDumpUserManualCallback
+    Push $R0
+
     # Remove CR and/or LF.  This can also convert the input file to DOS format
     # (the input file could be UNIX format if compiled from source directly):
     ${TrimNewLines} "$R9" $R9
@@ -1746,12 +1758,12 @@ Function _VimDumpUserManualCallback
         # Insert supported language list to the manual:
         ${LoopMatrix} "${VIM_LANG_MAPPING}" "_VimInsertLangList" \
             "" "$R4" "" $R0
-        Push "SkipWrite"
+        StrCpy $R0 "SkipWrite"
     ${ElseIf} "$R9" S== "<<COMPONENTS>>"
         # Insert supported component list to the manual:
         ${LoopMatrix} "${VIM_INSTALL_SECS}" "_VimInsertComponents" \
             "" "$R4" "" $R0
-        Push "SkipWrite"
+        StrCpy $R0 "SkipWrite"
     ${Else}
         # Replace place holders:
         ${WordReplace} $R9 "<<INSTALLER>>"   "${VIM_INSTALLER}"   "+" $R9
@@ -1760,8 +1772,10 @@ Function _VimDumpUserManualCallback
 
         # Write the line with DOS style EOL:
         StrCpy $R9 "$R9$\r$\n"
-        Push ""
+        StrCpy $R0 ""
     ${EndIf}
+
+    Exch $R0
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -3115,7 +3129,6 @@ FunctionEnd
 # ----------------------------------------------------------------------------
 Function un._VimVerifyBatchCallback
     Push $R0
-    Push $R1
 
     # Search for version string on the current line, in reverse order.  The
     # search is case-insensitive:
@@ -3123,10 +3136,9 @@ Function un._VimVerifyBatchCallback
 
     # If we found the version string, test the character after
     ${If} $R0 != ""
-        IntOp $R0 0 - $R0
-
         # Check the first character after the version string, make sure it is
         # not alphanumeric:
+        IntOp  $R0 0 - $R0
         StrCpy $R0 $R9 1 $R0
         ${If} $R0 != ""
             ${UnStrLoc} $R0 "${ALPHA_NUMERIC}" $R0 >
@@ -3140,7 +3152,6 @@ Function un._VimVerifyBatchCallback
         StrCpy $R0 "StopLineFind"
     ${EndIf}
 
-    Pop  $R1
     Exch $R0
 FunctionEnd
 

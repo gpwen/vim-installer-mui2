@@ -487,6 +487,42 @@ Var _simple_log_fh      # Log file handle
 !macroend
 
 ##############################################################################
+# ShowMsg $_MSG                                                       {{{1
+#   Show general message.
+#
+#   The specified message will be written to log file, show in NSIS detailed
+#   log window, and show in a popup dialog box unless the silent mode has been
+#   enabled.
+#
+#   Parameters:
+#     $_MSG : The message to show.
+##############################################################################
+!define ShowMsg `!insertmacro _ShowMsgCall`
+!macro _ShowMsgCall _MSG
+    Push `${_MSG}`
+    ${CallArtificialFunction} _ShowMsg
+!macroend
+!macro _ShowMsg
+    # Incoming parameters has been put on the stack:
+    Exch $0
+
+    # Write message to debug log:
+    ${Log} `$0`
+
+    # Also show message in NSIS detailed log window.  This might not work if
+    # the detailed log window has not been created yet.
+    DetailPrint `$0`
+
+    # Show message box only if we're not in silent install mode:
+    ${IfNot} ${Silent}
+        MessageBox MB_OK|MB_ICONINFORMATION `$0` /SD IDOK
+    ${EndIf}
+
+    # Restore the stack:
+    Pop $0
+!macroend
+
+##############################################################################
 # ShowErr $_ERR_MSG                                                       {{{1
 #   Show error message.
 #
