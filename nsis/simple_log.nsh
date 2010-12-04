@@ -487,7 +487,71 @@ Var _simple_log_fh      # Log file handle
 !macroend
 
 ##############################################################################
-# ShowMsg $_MSG                                                       {{{1
+# LogStack                                                                {{{1
+#   Debug macro to log stack status, needs System plugin.
+#
+#   Please note if the NSIS has N items, this macro needs to use as many as
+#   (20N + 1) items on the private stack of the System plugin to dump them.
+#   Use with caution.
+#
+#   Parameters: None
+#   Returns:    None
+##############################################################################
+!define LogStack `!insertmacro _LogStackCall`
+!macro _LogStackCall
+    ${CallArtificialFunction} _LogStack
+!macroend
+
+!macro _LogStack
+    System::Store "s"  # Save all registers
+
+    ${Log} "=== Begin Stack Dump (Top) ==="
+
+    # Move content of NSIS stack to the private stack of the System plugin,
+    # and show content of stack during the process:
+    #   $R0 : Stack content
+    #   $R1 : Item counter
+    # Please note we HAVE TO save all registers (20 of them) for each item on
+    # NSIS stack, that will bloat content saved on the private stack 20x!  I
+    # really wish I have a better way to enumerate stack content from script
+    # without destroy the stack.
+    StrCpy $R1 0
+    ${Do}
+        # Pop NSIS stack, until it's empty:
+        Pop $R0
+        ${If} ${Errors}
+            ${ExitDo}
+        ${EndIf}
+
+        # Save ALL registers to the private stack of the System plugin.  This
+        # seems to be the only way to use that private stack.
+        System::Store "s"
+
+        # Show stack content:
+        ${Log} "  Stack Item #$R1: $R0"
+
+        # Count number of items found on the stack:
+        IntOp $R1 $R1 + 1
+    ${LoopUntil} ${Errors}
+
+    # Clear error:
+    ClearErrors
+
+    ${Log} "=== End Stack Dump (Bottom) ==="
+
+    # Restore NSIS stack from private stack of the System plugin:
+    ${While} $R1 > 0
+        # Restore all registers.  As a side effect, our item counter are also
+        # restored, that makes it easier to determine the end of loop:
+        System::Store "l"
+        Push $R0
+    ${EndWhile}
+
+    System::Store "l"  # Restore all registers
+!macroend
+
+##############################################################################
+# ShowMsg $_MSG                                                           {{{1
 #   Show general message.
 #
 #   The specified message will be written to log file, show in NSIS detailed
