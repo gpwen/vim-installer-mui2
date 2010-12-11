@@ -43,7 +43,7 @@ REM Unpack the installer, auto-rename duplicated files:
 MKDIR vim-repack
 CD vim-repack
 @ECHO u | 7z x ..\%VIM_INSTALLER%
-IF %ERRORLEVEL% LEQ 1 GOTO do_rename
+IF NOT ERRORLEVEL 1 GOTO do_rename
 CD ..
 @echo ERROR : Fail to unpack vim installer!
 GOTO eof
@@ -108,7 +108,7 @@ MKDIR nsis
 XCOPY /E /H "%1\nsis\*" nsis
 CD nsis
 makensis gvim.nsi
-IF %ERRORLEVEL% LEQ 1 GOTO make_nsis_ok
+IF NOT ERRORLEVEL 1 GOTO make_nsis_ok
 @ECHO ERROR: Fail to run makensis!
 
 :make_nsis_ok
