@@ -101,13 +101,20 @@ Var vim_rm_common         # Flag: Should we remove common files?
 # List of alphanumeric:
 !define ALPHA_NUMERIC     "abcdefghijklmnopqrstuvwxyz0123456789"
 
+# List of exit code:
+!define VIM_QUIT_NORMAL   3  # Expected quit
+!define VIM_QUIT_SYNTAX   4  # Quit on command line syntax errors
+!define VIM_QUIT_PARAM    5  # Quit on invalid parameters
+!define VIM_QUIT_REG      6  # Quit on Windows registry related errors
+!define VIM_QUIT_MISC     7  # Quit on miscellaneous errors
+
 # Version strings etc.:
-!define VER_SHORT         "${VER_MAJOR}.${VER_MINOR}"
-!define VER_SHORT_NDOT    "${VER_MAJOR}${VER_MINOR}"
-!define VIM_PRODUCT_NAME  "Vim ${VER_SHORT}"
-!define VIM_BIN_DIR       "vim${VER_SHORT_NDOT}"
-!define VIM_LNK_NAME      "gVim ${VER_SHORT}"
-!define VIM_INSTALLER     "gvim${VER_SHORT_NDOT}.exe"
+!define VIM_VER_SHORT     "${VER_MAJOR}.${VER_MINOR}"
+!define VIM_VER_NDOT      "${VER_MAJOR}${VER_MINOR}"
+!define VIM_PRODUCT_NAME  "Vim ${VIM_VER_SHORT}"
+!define VIM_BIN_DIR       "vim${VIM_VER_NDOT}"
+!define VIM_LNK_NAME      "gVim ${VIM_VER_SHORT}"
+!define VIM_INSTALLER     "gvim${VIM_VER_NDOT}.exe"
 !define VIM_UNINSTALLER   "uninstall-gui.exe"
 !define VIM_USER_MANUAL   "install_manual.txt"
 
@@ -125,15 +132,15 @@ Var vim_rm_common         # Flag: Should we remove common files?
 # fields can NOT be empty, you have to add some whitespaces there even if it's
 # empty, otherwise the field cannot be handled correctly.  It's the limitation
 # of the macro used to parse such specification.
-#    Title                           | Target   | Arg | Work-dir
+#    Title                               | Target   | Arg | Work-dir
 !define VIM_DESKTOP_SHORTCUTS \
-    "gVim ${VER_SHORT}.lnk           | gvim.exe |     | $\n\
-     gVim Easy ${VER_SHORT}.lnk      | gvim.exe | -y  | $\n\
-     gVim Read only ${VER_SHORT}.lnk | gvim.exe | -R  | "
+    "gVim ${VIM_VER_SHORT}.lnk           | gvim.exe |     | $\n\
+     gVim Easy ${VIM_VER_SHORT}.lnk      | gvim.exe | -y  | $\n\
+     gVim Read only ${VIM_VER_SHORT}.lnk | gvim.exe | -R  | "
 
 # Specification for quick launch shortcuts:
 !define VIM_LAUNCH_SHORTCUTS \
-    "gVim ${VER_SHORT}.lnk | gvim.exe | | "
+    "gVim ${VIM_VER_SHORT}.lnk | gvim.exe | | "
 
 # Specification for console version startmenu shortcuts:
 !define VIM_CONSOLE_STARTMENU \
@@ -155,7 +162,7 @@ Var vim_rm_common         # Flag: Should we remove common files?
      Help.lnk      | gvim.exe           | -c h | "
 
 # Specification for batch wrapper of console version:
-#    Title    | Target       | Arg
+#    Title        | Target       | Arg
 !define VIM_CONSOLE_BATCH \
     "vim.bat      | vim.exe      |   $\n\
      view.bat     | vim.exe      | -R$\n\
@@ -182,7 +189,7 @@ Var vim_rm_common         # Flag: Should we remove common files?
      syntax"
 
 # Uninstall info:
-#   Type | Registry Subkey  | Registry Value
+#   Type | Registry Subkey   | Registry Value
 !define VIM_UNINSTALL_REG_INFO \
     "STR | DisplayName       | ${VIM_PRODUCT_NAME} (self-installing) $\n\
      STR | UninstallString   | $vim_bin_path\${VIM_UNINSTALLER}      $\n\
@@ -190,7 +197,7 @@ Var vim_rm_common         # Flag: Should we remove common files?
      STR | DisplayIcon       | $vim_bin_path\gvim.exe,0              $\n\
      STR | HelpLink          | ${VIM_ONLINE_URL}/                    $\n\
      STR | URLUpdateInfo     | ${VIM_ONLINE_URL}/download.php#pc     $\n\
-     STR | DisplayVersion    | ${VER_SHORT}                          $\n\
+     STR | DisplayVersion    | ${VIM_VER_SHORT}                      $\n\
      DW  | NoModify          | 1 $\n\
      DW  | NoRepair          | 1 $\n\
      DW  | ${REG_KEY_SILENT} | 1 "
@@ -254,6 +261,10 @@ SilentInstall             normal
     !define MUI_LANGDLL_REGISTRY_KEY       "${REG_KEY_VIM}"
     !define MUI_LANGDLL_REGISTRY_VALUENAME "Installer Language"
 !endif
+
+# General custom functions for MUI2:
+!define MUI_CUSTOMFUNCTION_ABORT   VimOnUserAbort
+!define MUI_CUSTOMFUNCTION_UNABORT un.VimOnUserAbort
 
 # Installer pages
 !insertmacro MUI_PAGE_WELCOME
@@ -404,7 +415,7 @@ SilentInstall             normal
 #   Each category has two different types of wrapper, which differs only in
 #   error handling:
 #   - *W only shows a warning message if syntax error found;
-#   - *E will report error and abort if syntax error found.
+#   - *E will report error and quit if syntax error found.
 #
 #   If the specified command line switch has not been found, no section will
 #   be touched, and the value of the control flag won't be changed.
@@ -414,7 +425,7 @@ SilentInstall             normal
 #                          directly when removing the command line switch
 #                          found.
 #   Parameters:
-#       $_ABORT_ON_ERR   : 1 to abort on syntax error.
+#       $_QUIT_ON_ERR    : 1 to quit on syntax error.
 #       $_IS_SECTION     : 1 if the command line switch should be used to
 #                          control section selection; 0 if it should be used
 #                          to set a control flag to 0/1.
@@ -431,7 +442,7 @@ SilentInstall             normal
 !define VimCmdLineGetOptW "!insertmacro _VimCmdLineParse 0 0"
 !define VimCmdLineGetOptE "!insertmacro _VimCmdLineParse 1 0"
 
-!macro _VimCmdLineParse _ABORT_ON_ERR _IS_SECTION \
+!macro _VimCmdLineParse _QUIT_ON_ERR _IS_SECTION \
                         _SW_STR _PARAM_NAME _SEC_ID_OR_FLAG
     push $R0  # Parameter found flag/Control flag
     push $R1  # Parameter value
@@ -475,9 +486,9 @@ SilentInstall             normal
                 StrCpy $R0 ${_SEC_ID_OR_FLAG}
             !endif
 
-            # Abort if required:
-            !if ${_ABORT_ON_ERR}
-                Abort
+            # Quit if required:
+            !if ${_QUIT_ON_ERR}
+                ${LoggedQuit} ${VIM_QUIT_SYNTAX}
             !endif
         ${EndIf}
     ${Else}
@@ -1421,31 +1432,30 @@ Function .onInit
     ${VimLoadUninstallKeys}
     ${If} $vim_old_ver_count > ${VIM_MAX_OLD_VER}
         ${ShowErr} "$(str_msg_too_many_ver)"
-        Abort
+        ${LoggedQuit} ${VIM_QUIT_PARAM}
     ${EndIf}
 
     # Do not start uninstaller by default in silent mode:
     ${If}    $vim_old_ver_count > 0
     ${AndIf} ${Silent}
-        # Found old version(s) in silent mode, abort unless uninstallation has
-        # been enabled:
+        # Found old version(s) in silent mode, quit unless silent
+        # uninstallation has been enabled:
         ${If} $vim_silent_rm_old <> 1
             ${ShowErr} \
                 "Previous installation(s) of Vim found, but$\r$\n\
                  uninstallation has not been enabled in silent mode."
             ${Log} 'Uninstallation in silent mode could be enabled$\r$\n\
                     with "/RMOLD" command line option.'
-            Abort
+            ${LoggedQuit} ${VIM_QUIT_PARAM}
         ${EndIf}
 
-        # Abort unless all of those old versions support silent
-        # uninstallation:
+        # Quit unless all of those old versions support silent uninstallation:
         ${If} $vim_loud_ver_count > 0
             ${ShowErr} \
                 "Some of the previous installation(s) of Vim$\r$\n\
                  on the system do not support silent uninstallation!$\r$\n\
                  Please remove all of them manually and try again."
-            Abort
+            ${LoggedQuit} ${VIM_QUIT_PARAM}
         ${EndIf}
     ${EndIf}
 
@@ -1494,6 +1504,19 @@ Function .onInstSuccess
 FunctionEnd
 
 # ----------------------------------------------------------------------------
+# Function VimOnUserAbort                                                 {{{2
+#   This is the NSIS .onUserAbort callback function.  As MUI2 has already
+#   defined this function we have to use mechanism provided by MUI2 instead.
+# ----------------------------------------------------------------------------
+Function VimOnUserAbort
+    # Close log:
+    !ifdef VIM_LOG_FILE
+        ${Log} "Installation cancelled by user."
+        ${LogClose}
+    !endif
+FunctionEnd
+
+# ----------------------------------------------------------------------------
 # Function .onInstFailed                                                  {{{2
 # ----------------------------------------------------------------------------
 Function .onInstFailed
@@ -1535,7 +1558,7 @@ Function VimProcessCmdParams
             ${ShowErr} "Unrecognized language [$R1]"
             Pop $R1
             Pop $R0
-            Abort
+            ${LoggedQuit} ${VIM_QUIT_SYNTAX}
         ${EndIf}
     ${EndIf}
 
@@ -1545,7 +1568,7 @@ Function VimProcessCmdParams
     ${If}   $R0 <> 0
     ${OrIf} $R1 <> 0
         Call VimDumpManual
-        Abort
+        ${LoggedQuit} ${VIM_QUIT_NORMAL}
     ${EndIf}
 
     # Set install type: /TYPE={TYPICAL|MIN|FULL}
@@ -1557,7 +1580,7 @@ Function VimProcessCmdParams
             ${ShowErr} "Unknown install type [$R1]"
             Pop $R1
             Pop $R0
-            Abort
+            ${LoggedQuit} ${VIM_QUIT_SYNTAX}
         ${EndIf}
     ${EndIf}
 
@@ -1591,7 +1614,7 @@ Function VimProcessCmdParams
     ${If} $R0 <> 0
         Pop $R1
         Pop $R0
-        Abort
+        ${LoggedQuit} ${VIM_QUIT_SYNTAX}
     ${EndIf}
 
     Pop $R1
@@ -1964,20 +1987,20 @@ Function VimSetDefRootPath
         ${If} $R2 = 1
             ${Log} "Set install path per command line: $INSTDIR"
         ${ElseIf} ${Silent}
-            # Abort if user supplied install path is invalid and we're in
+            # Quit if user supplied install path is invalid and we're in
             # silent mode.  Otherwise, give user a chance to fix the problem
             # on the directory page:
             ${ShowErr} "Invalid install path: $INSTDIR"
             Pop $R2
             Pop $R1
             Pop $R0
-            Abort
+            ${LoggedQuit} ${VIM_QUIT_PARAM}
         ${EndIf}
     ${ElseIf} ${Silent}
     ${AndIf}  $vim_silent_auto_dir = 0
         # User has not specified install path in silent mode and has not allow
         # auto-detection of install path explicitly.  Instead of making some
-        # stealthy change, we should simply abort:
+        # stealthy change, we should simply quit:
         ${ShowErr} "No install path specified in silent mode!"
         ${Log} 'You should either specify the install path with the \
                 "/D=<path>" command line$\r$\n\
@@ -1987,7 +2010,7 @@ Function VimSetDefRootPath
         Pop $R2
         Pop $R1
         Pop $R0
-        Abort
+        ${LoggedQuit} ${VIM_QUIT_PARAM}
     ${EndIf}
 
     # Next try previously installed versions if any.  The install path will be
@@ -2057,7 +2080,7 @@ FunctionEnd
 #   Unintalls the n-th old Vim version found on the system.
 #
 #   This function will be called by dynamic "old version" sections to remove
-#   the specified old vim version found on the system.  Abort on error.
+#   the specified old vim version found on the system.  Quit on error.
 #   Parameters:
 #     The index (ID) of the old vim version will be put on the top of the
 #     stack.
@@ -2084,7 +2107,7 @@ Function VimRmOldVer
     ${VimGetOldVerKey} $R0 $R1
     ${If} $R1 == ""
         ${ShowErr} "$(str_msg_rm_fail) $R0$\r$\n$(str_msg_no_rm_key)"
-        Abort
+        ${LoggedQuit} ${VIM_QUIT_REG}
     ${EndIf}
 
     StrCpy $R0 $R1
@@ -2108,7 +2131,7 @@ Function VimRmOldVer
         # This is not possible: We're in silent mode but the uninstaller does
         # not support silent mode!
         ${ShowErr} "Uninstaller for [$R0] does not support silent mode!"
-        Abort
+        ${LoggedQuit} ${VIM_QUIT_MISC}
     ${EndIf}
 
     # Read path of the uninstaller from registry ($R1):
@@ -2116,12 +2139,12 @@ Function VimRmOldVer
     ${If}   ${Errors}
     ${OrIf} $R1 == ""
         ${ShowErr} "$(str_msg_rm_fail) $R0$\r$\n$(str_msg_no_rm_reg)"
-        Abort
+        ${LoggedQuit} ${VIM_QUIT_REG}
     ${EndIf}
 
     ${IfNot} ${FileExists} $R1
         ${ShowErr} "$(str_msg_rm_fail) $R0$\r$\n$(str_msg_no_rm_exe)"
-        Abort
+        ${LoggedQuit} ${VIM_QUIT_REG}
     ${EndIf}
 
     # Path ($R2) and name ($R3) of the uninstaller:
@@ -2133,7 +2156,7 @@ Function VimRmOldVer
     ${If}      ${Errors}
     ${OrIfNot} ${FileExists} "$TEMP\$R3"
         ${ShowErr} "$(str_msg_rm_fail) $R0$\r$\n$(str_msg_rm_copy_fail)"
-        Abort
+        ${LoggedQuit} ${VIM_QUIT_MISC}
     ${EndIf}
 
     # Execute the uninstaller in TEMP, exit code stores in $R2.  Log is closed
@@ -2143,7 +2166,7 @@ Function VimRmOldVer
     ${If} ${Errors}
         ${Logged1} Delete "$TEMP\$R3"
         ${ShowErr} "$(str_msg_rm_fail) $R0$\r$\n$(str_msg_rm_run_fail)"
-        Abort
+        ${LoggedQuit} ${VIM_QUIT_MISC}
     ${EndIf}
 
     ${Logged1} Delete "$TEMP\$R3"
@@ -2151,11 +2174,11 @@ Function VimRmOldVer
     ${Log} "Uninstaller exit code: $R2"
 
     # If this is the uninstaller for the same version we're trying to
-    # installer, it's not possible to continue with installation:
+    # install, it's not possible to continue with installation:
     ${If}    $R2 <> 0
     ${AndIf} $R0 S== "${VIM_PRODUCT_NAME}"
         ${ShowErr} "$(str_msg_rm_fail) $R0$\r$\n$(str_msg_abort_install)"
-        Abort
+        ${LoggedQuit} ${VIM_QUIT_MISC}
     ${EndIf}
 
     # We may have been put to the background when uninstall did something:
@@ -2187,7 +2210,9 @@ Function VimFinalCheck
     ${If} $R0 = 0
         ${ShowErr} $(str_msg_invalid_root)
         Pop $R0
-        Abort
+
+        # Quit in silent mode, let user try again in GUI mode:
+        ${LoggedAbort} ${VIM_QUIT_PARAM}
     ${EndIf}
 
     # Check running instances of Vim:
@@ -2198,7 +2223,9 @@ Function VimFinalCheck
     ${If} $R0 <> 0
         ${ShowErr} $(str_msg_vim_running)
         Pop $R0
-        Abort
+
+        # Quit in silent mode, let user try again in GUI mode:
+        ${LoggedAbort} ${VIM_QUIT_MISC}
     ${EndIf}
 
     # Update other path:
@@ -2816,7 +2843,7 @@ Function un.onInit
     ${If} $R0 = 0
         ${ShowErr} $(str_msg_invalid_root)
         Pop $R0
-        Abort
+        ${LoggedQuit} ${VIM_QUIT_PARAM}
     ${EndIf}
 
     # Construct and check the binary path.  It must be the same as the
@@ -2825,7 +2852,7 @@ Function un.onInit
     ${If} "$vim_bin_path" S!= "$INSTDIR"
         ${ShowErr} "$(str_msg_bin_mismatch)"
         Pop $R0
-        Abort
+        ${LoggedQuit} ${VIM_QUIT_PARAM}
     ${EndIf}
 
     # Verify that uninstall registry information exist for the version to be
@@ -2838,7 +2865,7 @@ Function un.onInit
         ${ShowErr} "$(str_msg_rm_fail) ${VIM_PRODUCT_NAME}$\r$\n\
                     $(str_msg_no_rm_reg)"
         Pop $R0
-        Abort
+        ${LoggedQuit} ${VIM_QUIT_REG}
     ${EndIf}
 
     # If we found only one version of Vim on the system, it must be the one
@@ -2896,6 +2923,19 @@ Function un.onSelChange
 FunctionEnd
 
 # ----------------------------------------------------------------------------
+# Function un.VimOnUserAbort                                              {{{2
+#   This is the NSIS un.onUserAbort callback function.  As MUI2 has already
+#   defined this function we have to use mechanism provided by MUI2 instead.
+# ----------------------------------------------------------------------------
+Function un.VimOnUserAbort
+    # Close log:
+    !ifdef VIM_LOG_FILE
+        ${Log} "Uninstallation cancelled by user."
+        ${LogClose}
+    !endif
+FunctionEnd
+
+# ----------------------------------------------------------------------------
 # Function un.VimProcessCmdParams                                         {{{2
 #   Processing command line parameters for uninstaller.
 #
@@ -2924,7 +2964,7 @@ Function un.VimProcessCmdParams
     ${VimCheckCmdLine} $R0
     ${If} $R0 <> 0
         Pop $R0
-        Abort
+        ${LoggedQuit} ${VIM_QUIT_SYNTAX}
     ${EndIf}
 
     Pop $R0
@@ -2942,7 +2982,9 @@ Function un.VimCheckRunning
     ${If} $R0 <> 0
         ${ShowErr} $(str_msg_vim_running)
         Pop $R0
-        Abort
+
+        # Quit in silent mode, let user try again in GUI mode:
+        ${LoggedAbort} ${VIM_QUIT_MISC}
     ${EndIf}
 
     Pop $R0

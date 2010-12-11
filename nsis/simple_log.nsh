@@ -367,6 +367,50 @@ Var _simple_log_fh      # Log file handle
 !macroend
 
 ##############################################################################
+# LoggedQuit $_EXIT_CODE                                                  {{{1
+#   Close log and exit the installer with Quit.
+#
+#   Parameters:
+#     $_EXIT_CODE : Exit code to set before quit.
+#   Returns:
+#     None.
+##############################################################################
+!define LoggedQuit `!insertmacro _LoggedQuit`
+!macro _LoggedQuit _EXIT_CODE
+    # Write final log and close the log:
+    ${Log} "About to quit with exit code ${_EXIT_CODE}."
+    ${LogClose}
+
+    # Set exit code:
+    SetErrorLevel ${_EXIT_CODE}
+
+    # Quit:
+    Quit
+!macroend
+
+##############################################################################
+# LoggedAbort $_EXIT_CODE                                                 {{{1
+#   Quit the installer (logged quit) in silent mode; Abort otherwise.
+#
+#   This should be used in callback function to give user a second chance to
+#   make correction in the GUI mode.
+#
+#   Parameters:
+#     $_EXIT_CODE : Exit code to set if quit.
+#   Returns:
+#     None.
+##############################################################################
+!define LoggedAbort `!insertmacro _LoggedAbort`
+!macro _LoggedAbort _EXIT_CODE
+    # Quit in silent mode, let user try again in GUI mode:
+    ${If} ${Silent}
+        ${LoggedQuit} ${VIM_QUIT_PARAM}
+    ${Else}
+        Abort
+    ${EndIf}
+!macroend
+
+##############################################################################
 # LogSectionStart                                                         {{{1
 #   Log start of a section.
 #   This macro should be inserted at the beginning of a section.
