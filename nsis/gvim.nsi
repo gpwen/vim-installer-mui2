@@ -36,8 +36,8 @@
 !define HAVE_VIS_VIM
 
 # Uncomment the following line if you have built support for XPM and need to
-# include XPM DLL in the installer.  XPM is ibrary for X PixMap images, it can
-# be downloaded from:
+# include XPM DLL in the installer.  XPM is a library for X PixMap images, it
+# can be downloaded from:
 #   http://gnuwin32.sourceforge.net/packages/xpm.htm
 #!define HAVE_XPM
 
@@ -50,7 +50,7 @@
 #!define MUI_FINISHPAGE_NOAUTOCLOSE
 #!define MUI_UNFINISHPAGE_NOAUTOCLOSE
 
-# Uncomment the following line to enable debug log:
+# Comment the next line to disable debug log:
 !define VIM_LOG_FILE "vim-install.log"
 
 # Maximum number of old Vim versions to support on GUI:
@@ -1334,12 +1334,14 @@ Section -registry_update
     # Save user select language in silent mode.  The following registry write
     # are performed by page callback of MUI2, so it won't be executed in
     # silent mode.  We have to do it manually (it's an ugly hack).
-    ${If} ${Silent}
-        ${Logged4} WriteRegStr \
-            "${MUI_LANGDLL_REGISTRY_ROOT}" \
-            "${MUI_LANGDLL_REGISTRY_KEY}"  \
-            "${MUI_LANGDLL_REGISTRY_VALUENAME}" $LANGUAGE
-    ${EndIf}
+    !ifdef HAVE_MULTI_LANG
+        ${If} ${Silent}
+            ${Logged4} WriteRegStr \
+                "${MUI_LANGDLL_REGISTRY_ROOT}" \
+                "${MUI_LANGDLL_REGISTRY_KEY}"  \
+                "${MUI_LANGDLL_REGISTRY_VALUENAME}" $LANGUAGE
+        ${EndIf}
+    !endif
 
     # Register Vim with OLE:
     ${LogPrint} "$(str_msg_register_ole)"
