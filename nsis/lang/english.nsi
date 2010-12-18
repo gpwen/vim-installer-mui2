@@ -147,12 +147,6 @@ LangString str_unsection_exe        ${LANG_ENGLISH} \
 LangString str_desc_rm_exe          ${LANG_ENGLISH} \
     "Remove all Vim executables and runtime files."
 
-LangString str_unsection_rc         ${LANG_ENGLISH} \
-    "Remove Vim Config File"
-LangString str_desc_rm_rc           ${LANG_ENGLISH} \
-    "Remove Vim configuration file $vim_install_root\_vimrc. \
-     Skip this if you have modified the configuration file."
-
 
 ##############################################################################
 # Messages                                                                {{{1

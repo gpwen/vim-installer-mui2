@@ -135,12 +135,6 @@ LangString str_unsection_exe        ${LANG_SIMPCHINESE} \
 LangString str_desc_rm_exe          ${LANG_SIMPCHINESE} \
     "删除 Vim 的所有执行文件及脚本。"
 
-LangString str_unsection_rc         ${LANG_SIMPCHINESE} \
-    "删除 Vim 配置文件"
-LangString str_desc_rm_rc           ${LANG_SIMPCHINESE} \
-    "删除 Vim 配置文件“$vim_install_root\_vimrc”。\
-     如果您修改过该配置文件，请勿选择此项。"
-
 
 ##############################################################################
 # Messages                                                                {{{1

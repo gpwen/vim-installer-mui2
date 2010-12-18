@@ -136,11 +136,6 @@ LangString str_unsection_exe        ${LANG_TRADCHINESE} \
 LangString str_desc_rm_exe          ${LANG_TRADCHINESE} \
     "移除所有的 Vim 程式及腳本。"
 
-LangString str_unsection_rc         ${LANG_TRADCHINESE} \
-    "移除 Vim 設定檔"
-LangString str_desc_rm_rc           ${LANG_TRADCHINESE} \
-    "移除 Vim 設定檔「$vim_install_root\_vimrc」。\
-     若閣下修訂過此設定檔，切勿勾選該項。"
 
 ##############################################################################
 # Messages                                                                {{{1

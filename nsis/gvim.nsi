@@ -84,7 +84,6 @@ Var vim_cmd_params        # Command line parameters
 Var vim_silent_auto_dir   # Silent mode flag: Install dir auto-detection
 Var vim_silent_rm_old     # Silent mode flag: Allow uninstall
 Var vim_silent_rm_exe     # Silent mode flag: Uninstall executable
-Var vim_silent_rm_rc      # Silent mode flag: Uninstall config file
 Var vim_usr_locale        # Locale name set by user from command line
 Var vim_install_root      # Vim install root directory
 Var vim_bin_path          # Vim binary directory
@@ -95,6 +94,7 @@ Var vim_has_console       # Flag: Console programs should be installed
 Var vim_batch_exe         # Working variable: target of batch wrapper
 Var vim_batch_arg         # Working variable: parameter for target
 Var vim_batch_ver_found   # Working variable: version found in batch file
+Var vim_rc_changed        # Working variable: 1 if RC file changed.
 Var vim_last_copy         # Flag: Is this the last Vim on the system?
 Var vim_rm_common         # Flag: Should we remove common files?
 
@@ -175,6 +175,10 @@ Var vim_rm_common         # Flag: Should we remove common files?
      evim.bat     | gvim.exe     | -y$\n\
      gview.bat    | gvim.exe     | -R$\n\
      gvimdiff.bat | gvim.exe     | -d"
+
+# All possible names of vim config file:
+!define VIM_RC_VARIANTS \
+    "_vimrc $\n .vimrc $\n vimrc~1"
 
 # Subdirectories of VIMFILES, delimited by \n:
 !define VIM_PLUGIN_SUBDIR \
@@ -317,7 +321,6 @@ SilentInstall             normal
     StrCpy $vim_silent_auto_dir 0
     StrCpy $vim_silent_rm_old   0
     StrCpy $vim_silent_rm_exe   1
-    StrCpy $vim_silent_rm_rc    0
     StrCpy $vim_usr_locale      ""
     StrCpy $vim_install_root    ""
     StrCpy $vim_bin_path        ""
@@ -328,6 +331,7 @@ SilentInstall             normal
     StrCpy $vim_batch_exe       ""
     StrCpy $vim_batch_arg       ""
     StrCpy $vim_batch_ver_found 0
+    StrCpy $vim_rc_changed      0
     StrCpy $vim_last_copy       0
     StrCpy $vim_rm_common       0
 !macroend
@@ -970,7 +974,6 @@ Section -log_status
     ${Log} "Silent install dir : $vim_silent_auto_dir"
     ${Log} "Silent uninstall   : $vim_silent_rm_old"
     ${Log} "Uninstall exe.     : $vim_silent_rm_exe"
-    ${Log} "Uninstall rc file  : $vim_silent_rm_rc"
 
     # Log status for all sections:
     ${LogSectionStatus} 100
@@ -1603,11 +1606,6 @@ Function VimProcessCmdParams
     # silent mode).
     ${VimCmdLineGetOptE} "/RMEXE" "RmExe" $vim_silent_rm_exe
 
-    # Set $vim_silent_rm_rc flag, unset by default, set with the /RMRC command
-    # line switch.  It determines whether executables should be removed or not
-    # when uninstall old versions silently (in both normal and silent mode).
-    ${VimCmdLineGetOptE} "/RMRC"  "RmRc"  $vim_silent_rm_rc
-
     # Process section select options (/<SECTON>{+/-}):
     ${LoopMatrix} "${VIM_INSTALL_SECS}" "_VimSecSelectFunc" "" "" "" $R0
 
@@ -2125,10 +2123,6 @@ Function VimRmOldVer
         # executables when uninstall?
         StrCpy $R4 "/S /RMEXE"
         ${IfNotThen} $vim_silent_rm_exe <> 0 ${|} StrCpy $R4 "$R4-" ${|}
-
-        # Should we remove config files?
-        StrCpy $R4 "$R4 /RMRC"
-        ${IfNotThen} $vim_silent_rm_rc <> 0  ${|} StrCpy $R4 "$R4-" ${|}
     ${ElseIf} ${Silent}
         # This is not possible: We're in silent mode but the uninstaller does
         # not support silent mode!
@@ -2743,30 +2737,14 @@ Section "un.$(str_unsection_exe)" id_unsection_exe
 SectionEnd
 
 # ----------------------------------------------------------------------------
-# Section: Remove $VIM/_vimrc                                             {{{2
-# ----------------------------------------------------------------------------
-Section /o "un.$(str_unsection_rc)" id_unsection_rc
-    # Do not allow user to remove this section initially:
-    SectionIn RO
-
-    ${LogSectionStart}
-
-    # Remove all possible config file(s) if this is the last Vim:
-    ${If} $vim_rm_common = 1
-        ${Logged1} Delete "$vim_install_root\_vimrc"
-        ${Logged1} Delete "$vim_install_root\.vimrc"
-        ${Logged1} Delete "$vim_install_root\vimrc~1"
-    ${EndIf}
-
-    ${LogSectionEnd}
-SectionEnd
-
-# ----------------------------------------------------------------------------
 # Section: Final touch                                                    {{{2
 # ----------------------------------------------------------------------------
 Section -un.post
     # Remove unchanged common components when remove the last Vim:
     ${If} $vim_rm_common = 1
+        # Remove RC files if they have not been changed:
+        Call un.VimRmConfig
+
         # Remove empty plugin directory hierarchy under $HOME:
         Push "HOME"
         Call un.VimRmPluginDir
@@ -2795,7 +2773,6 @@ SectionEnd
 !insertmacro MUI_UNFUNCTION_DESCRIPTION_BEGIN
     !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_register} $(str_desc_unregister)
     !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_exe}      $(str_desc_rm_exe)
-    !insertmacro MUI_DESCRIPTION_TEXT ${id_unsection_rc}       $(str_desc_rm_rc)
 !insertmacro MUI_UNFUNCTION_DESCRIPTION_END
 
 
@@ -2876,16 +2853,9 @@ Function un.onInit
     ${If} $vim_old_ver_count = 1
         ${Log} "About to remove the last Vim version."
         StrCpy $vim_last_copy 1
-
-        # Allow user to remove config file:
-        !insertmacro ClearSectionFlag ${id_unsection_rc} ${SF_RO}
     ${Else}
         ${Log} "This is not the last Vim version."
         StrCpy $vim_last_copy 0
-
-        # Config file should not be removed:
-        !insertmacro UnSelectSection ${id_unsection_rc}
-        !insertmacro SetSectionFlag  ${id_unsection_rc} ${SF_RO}
     ${EndIf}
 
     # Process command line parameters:
@@ -2895,31 +2865,6 @@ Function un.onInit
     # check will be performed in page callback function, which will not be
     # invoked in silent mode.
     ${IfThen} ${Silent} ${|} Call un.VimCheckRunning ${|}
-
-    Pop $R0
-FunctionEnd
-
-# ----------------------------------------------------------------------------
-# Function un.onSelChange                                                 {{{2
-# ----------------------------------------------------------------------------
-Function un.onSelChange
-    Push $R0
-
-    # Get selection status of the exe removal section:
-    SectionGetFlags ${id_unsection_exe} $R0
-
-    # Config file should not be removed unless executables will be removed,
-    # and this is the last Vim on the system.
-    IntOp $R0 $R0 & ${SF_SELECTED}
-    ${If}    $R0 = ${SF_SELECTED}
-    ${AndIf} $vim_last_copy = 1
-        # Allow user to remove config file:
-        !insertmacro ClearSectionFlag ${id_unsection_rc} ${SF_RO}
-    ${Else}
-        # Config file should not be removed:
-        !insertmacro UnSelectSection ${id_unsection_rc}
-        !insertmacro SetSectionFlag  ${id_unsection_rc} ${SF_RO}
-    ${EndIf}
 
     Pop $R0
 FunctionEnd
@@ -2956,11 +2901,6 @@ Function un.VimProcessCmdParams
 
     # Should we remove executables? (/RMEXE[{+/-}]
     ${VimCmdLineSelSecE} "/RMEXE" "RMEXE" ${id_unsection_exe}
-    Call un.onSelChange
-
-    # Should we remove config files? (/RMRC[{+/-}]
-    ${VimCmdLineSelSecE} "/RMRC" "RMRC" ${id_unsection_rc}
-    Call un.onSelChange
 
     # Check command line syntax errors:
     ${VimCheckCmdLine} $R0
@@ -2990,6 +2930,85 @@ Function un.VimCheckRunning
     ${EndIf}
 
     Pop $R0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function un.VimRmConfig                                                 {{{2
+#   Remove vim rc files if they have not been changed.
+#
+#   Parameters: N/A
+#   Returns:    N/A
+# ----------------------------------------------------------------------------
+Function un.VimRmConfig
+    Push $R0  # Name of temporary file to store original vimrc.
+    Push $R1  # Return code from LoopArray, ignored
+
+    # Write the original _vimrc to a temporary file:
+    GetTempFileName $R0
+    ${Logged2} File "/oname=$R0" "data\mswin_vimrc.vim"
+
+    # Remove all possible variants that's identical to the original RC file:
+    ${LoopArray} "${VIM_RC_VARIANTS}" "un._VimRmConfigCallback" \
+        "$R0" "" $R1
+
+    # Remove the temporary file:
+    ${Logged1} Delete "$R0"
+
+    Pop $R1
+    Pop $R0
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function un._VimRmConfigCallback                                        {{{2
+#   Callback function for LoopArray.  It's used to remove the specified Vim RC
+#   file if it has not been changed.
+# ----------------------------------------------------------------------------
+Function un._VimRmConfigCallback
+    Exch      $2    # Item callback arg 2: Ignored
+    ${ExchAt} 1 $1  # Item callback arg 1: Reference RC file
+    ${ExchAt} 2 $0  # Name of the RC file to check
+
+    # Add full path name to the specified RC file:
+    StrCpy $0 "$vim_install_root\$0"
+
+    # Skip if the specified RC file does not exist:
+    ${If} ${FileExists} "$0"
+        # Compare the specified RC file with the one we installed:
+        StrCpy $vim_rc_changed 0
+        ${TextCompareS} "$0" "$1" "FastDiff" "un._VimRCDiffCallback"
+
+        ${If} ${Errors}
+            # Error happened:
+            ${ShowErr} "Error encountered when removing RC file:$\r$\n$0"
+        ${ElseIf} $vim_rc_changed <> 0
+            # RC file changed, don't remove it:
+            ${Log} "WARNING: Cannot remove RC file $0, it has been changed!"
+        ${Else}
+            # The RC file has not been touched, it's safe to remove:
+            ${Logged1} Delete "$0"
+        ${EndIf}
+    ${EndIf}
+
+    # Return code:
+    StrCpy $0 ""
+
+    Pop  $2  # Ignored item callback arg 2
+    Pop  $1
+    Exch $0  # Return code
+FunctionEnd
+
+# ----------------------------------------------------------------------------
+# Function un._VimRCDiffCallback                                          {{{2
+#   Callback function for TextCompareS to compare two RC files.  This function
+#   will be called if difference found in those two files.  A global flag will
+#   be set in such case.
+# ----------------------------------------------------------------------------
+Function un._VimRCDiffCallback
+    # Flag file difference:
+    StrCpy $vim_rc_changed 1
+
+    # And stop comparison:
+    Push "StopTextCompare"
 FunctionEnd
 
 # ----------------------------------------------------------------------------
@@ -3039,7 +3058,7 @@ FunctionEnd
 #   the subdirectory is not empty.
 # ----------------------------------------------------------------------------
 Function un._VimCheckPluginDirCallback
-    Exch      $2    # Item callback arg 1: Ignored
+    Exch      $2    # Item callback arg 2: Ignored
     ${ExchAt} 1 $1  # Item callback arg 1: Plugin root
     ${ExchAt} 2 $0  # Array item.
 

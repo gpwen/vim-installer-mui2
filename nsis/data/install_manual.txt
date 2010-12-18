@@ -23,7 +23,6 @@ General purpose options are listed below:
     HELP
     RMEXE
     RMOLD
-    RMRC
 
 All supported component selection options are listed below:
 <<COMPONENTS>>
@@ -114,8 +113,8 @@ installer/uninstaller in detail.
     you really want to use silent mode, those Vim versions have to be removed
     manually (for example, using GUI uninstaller) first.
 
-    Some command line switches, like /RMEXE and /RMRC, can be used to tune the
-    behavior of those invoked uninstallers.
+    Some command line switches, like /RMEXE, can be used to tune the behavior
+    of those invoked uninstallers.
 
 3.  Automatic Install Path Detection
 
@@ -207,7 +206,6 @@ installer/uninstaller in detail.
         RMOLD      Allow uninstallation of existing Vim under silent mode.
         RMEXE      Remove executables when uninstall existing Vim.  This
                    option is enabled by default.
-        RMRC       Remove config file when uninstall existing Vim.
 
     The following options are used to fine tune which component should be
     installed, after applying user specified installation type.  Please note
@@ -251,7 +249,6 @@ installer/uninstaller in detail.
     The following options are supported:
         RMEXE Remove executables when uninstall Vim.  This option is enabled
               by default.
-        RMRC  Remove config file when uninstall Vim.
 
 7.  Caveats
 
@@ -283,5 +280,5 @@ installer/uninstaller in detail.
         <<INSTALLER>> /S /RMOLD /CONSOLE- /TYPE=FULL /D=C:\Vim
 
     - Typical install of Vim, don't care where it installed, and uninstall all
-      existing versions as well as the config file:
-        <<INSTALLER>> /S /RMOLD /RMRC /DD
+      existing versions:
+        <<INSTALLER>> /S /RMOLD /DD

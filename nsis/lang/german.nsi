@@ -138,12 +138,6 @@ LangString str_unsection_exe        ${LANG_GERMAN} \
 LangString str_desc_rm_exe          ${LANG_GERMAN} \
     "Alle Vim-Anwendungen und Laufzeitdateien von diesem System entfernen."
 
-LangString str_unsection_rc         ${LANG_GERMAN} \
-    "Vim-Konfigurationsdatei entfernen"
-LangString str_desc_rm_rc           ${LANG_GERMAN} \
-    "Vim-Konfiguration $vim_install_root\_vimrc entfernen. \
-     Überspringen, um die Konfigurationsdatei zu behalten."
-
 
 ##############################################################################
 # Messages                                                                {{{1
