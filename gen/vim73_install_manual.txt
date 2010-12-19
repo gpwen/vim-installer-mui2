@@ -13,8 +13,8 @@ Vim installer command line syntax:
     gvim73.exe [/LANG=<lang>] [/TYPE={FULL|TYPICAL|MIN}]
                [/<OPTION>[{+|-}]] [/S] [/NCRC] [/D=<dir>]
 
-The /LANG=<lang> switch sets UI language.  <lang> can be set to one of the
-following value (you can use either locale name or LCID):
+The /LANG=<lang> switch sets UI language of the installer.  <lang> can be set
+to one of the following value (you can use either locale name or LCID):
     en    : English, LCID=1033
     de    : Deutsch, LCID=1031
     zh_CN : Chinese (Simplified), LCID=2052
@@ -26,7 +26,6 @@ General purpose options are listed below:
     HELP
     RMEXE
     RMOLD
-    RMRC
 
 All supported component selection options are listed below:
     CONSOLE
@@ -39,6 +38,7 @@ All supported component selection options are listed below:
     VIMRC
     PLUGINHOME
     PLUGINCOM
+    VISVIM
     NLS
 
 ------------------------------------------------------------------------------
@@ -127,8 +127,8 @@ installer/uninstaller in detail.
     you really want to use silent mode, those Vim versions have to be removed
     manually (for example, using GUI uninstaller) first.
 
-    Some command line switches, like /RMEXE and /RMRC, can be used to tune the
-    behavior of those invoked uninstallers.
+    Some command line switches, like /RMEXE, can be used to tune the behavior
+    of those invoked uninstallers.
 
 3.  Automatic Install Path Detection
 
@@ -191,7 +191,8 @@ installer/uninstaller in detail.
                  absolute paths are supported.  Invalid path name will be ignored
                  silently!
 
-    UI language can be specified with the following command line switch:
+    UI language of the installer can be specified with the following command
+    line switch:
         /LANG=<lang>
     where <lang> can be locale name or LCID of the selected language.  Please
     refer to the summary section above for a list of supported languages.  The
@@ -214,15 +215,12 @@ installer/uninstaller in detail.
         ?          Dump user manual for Vim installer in the current working
                    directory.  File name of the manual is:
                      vim##_install_manual.txt
-                   Please note if you has a file with that name in the current
-                   working directory, it will be overwritten without warning.
         HELP       Same as ?.
         DD         Allow automatic install directory detection under silent
                    mode.
         RMOLD      Allow uninstallation of existing Vim under silent mode.
         RMEXE      Remove executables when uninstall existing Vim.  This
                    option is enabled by default.
-        RMRC       Remove config file when uninstall existing Vim.
 
     The following options are used to fine tune which component should be
     installed, after applying user specified installation type.  Please note
@@ -266,7 +264,6 @@ installer/uninstaller in detail.
     The following options are supported:
         RMEXE Remove executables when uninstall Vim.  This option is enabled
               by default.
-        RMRC  Remove config file when uninstall Vim.
 
 7.  Caveats
 
@@ -298,5 +295,5 @@ installer/uninstaller in detail.
         gvim73.exe /S /RMOLD /CONSOLE- /TYPE=FULL /D=C:\Vim
 
     - Typical install of Vim, don't care where it installed, and uninstall all
-      existing versions as well as the config file:
-        gvim73.exe /S /RMOLD /RMRC /DD
+      existing versions:
+        gvim73.exe /S /RMOLD /DD
