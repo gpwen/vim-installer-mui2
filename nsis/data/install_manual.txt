@@ -13,8 +13,8 @@ Vim installer command line syntax:
     <<INSTALLER>> [/LANG=<lang>] [/TYPE={FULL|TYPICAL|MIN}]
                [/<OPTION>[{+|-}]] [/S] [/NCRC] [/D=<dir>]
 
-The /LANG=<lang> switch sets UI language.  <lang> can be set to one of the
-following value (you can use either locale name or LCID):
+The /LANG=<lang> switch sets UI language of the installer.  <lang> can be set
+to one of the following value (you can use either locale name or LCID):
 <<LANG-LIST>>
 
 General purpose options are listed below:
@@ -177,7 +177,8 @@ installer/uninstaller in detail.
                  absolute paths are supported.  Invalid path name will be ignored
                  silently!
 
-    UI language can be specified with the following command line switch:
+    UI language of the installer can be specified with the following command
+    line switch:
         /LANG=<lang>
     where <lang> can be locale name or LCID of the selected language.  Please
     refer to the summary section above for a list of supported languages.  The
