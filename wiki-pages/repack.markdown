@@ -58,7 +58,7 @@ cp scripts/repack-vim.sh path/to/repack
 ```
 
     You may also download the batch file directly from [[ here |
-    http://github.com/gpwen/vim-installer-mui2/raw/misc/scripts/repack-vim.sh]]
+    https://github.com/gpwen/vim-installer-mui2/raw/misc/scripts/repack-vim.sh]]
     and put it in the `repack` directory.
 
 4.  Repack Vim installer with the following command:
@@ -94,7 +94,7 @@ using DOS batch file, which could be tedious.
     directory.
 
     You may also download the batch file directly from [[ here |
-    http://github.com/gpwen/vim-installer-mui2/raw/misc/batch/repack-vim.bat]]
+    https://github.com/gpwen/vim-installer-mui2/raw/misc/batch/repack-vim.bat]]
     and put it in the `repack` directory.
 
 3.  Download [[Vim self-installing executables |

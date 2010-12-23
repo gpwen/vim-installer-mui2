@@ -39,7 +39,7 @@ http://nsis.sourceforge.net/Docs/Chapter4.html#4.12]].  When run in such
 mode, no user interface will be shown.  It's useful for unattended
 installation/uninstallation over large number of computers.  Please refer
 to dynamically generated [[user manual |
-http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/gen/vim73_install_manual.txt]]
+https://github.com/gpwen/vim-installer-mui2/raw/wiki-files/gen/vim73_install_manual.txt]]
 for detail.  In order to support such mode, all install options have been
 made available on command line.
 
@@ -47,21 +47,21 @@ made available on command line.
 
 All branches in this repository are listed below:
 
-* [[master|http://github.com/gpwen/vim-installer-mui2]]:
+* [[master|https://github.com/gpwen/vim-installer-mui2]]:
   NSIS scripts for the new installer.
 
-* [[vim-official|http://github.com/gpwen/vim-installer-mui2/tree/vim-official]]:
+* [[vim-official|https://github.com/gpwen/vim-installer-mui2/tree/vim-official]]:
   NSIS scripts from the [[official mercurial repository of
   Vim|http://www.vim.org/mercurial.php]].  It's used to track the official
   code (manually).
 
-* [[misc|http://github.com/gpwen/vim-installer-mui2/tree/misc]]:
+* [[misc|https://github.com/gpwen/vim-installer-mui2/tree/misc]]:
   This branch contains some files to support the NSIS installer, but not
   necessarily part of the installer.  It's used as a catchall place for
   miscellaneous files to avoid cluttering of the
-  [[master|http://github.com/gpwen/vim-installer-mui2]] branch.
+  [[master|https://github.com/gpwen/vim-installer-mui2]] branch.
 
-* [[wiki-files|http://github.com/gpwen/vim-installer-mui2/tree/wiki-files]]:
+* [[wiki-files|https://github.com/gpwen/vim-installer-mui2/tree/wiki-files]]:
   Files to be used on Wiki pages.  It used to make it easier to upload images
   to github.  You should ignore this branch.
 
@@ -80,7 +80,7 @@ There are two possible ways to build the new NSIS installer:
 
 I have repacked Vim official installer using the new NSIS script, you can find
 the repacked installer on the [[download page |
-http://github.com/gpwen/vim-installer-mui2/downloads]], it has two difference
+https://github.com/gpwen/vim-installer-mui2/downloads]], it has two difference
 flavors:
 
 * `gvim73_46-en-v#.#.exe`: This is English only version.  It's a strict

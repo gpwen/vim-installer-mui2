@@ -54,7 +54,7 @@ New features introduced by the upgraded Vim NSIS installer includes:
   line.  This is in fact part of [[silent mode|
   http://nsis.sourceforge.net/Docs/Chapter4.html#4.12]] support.  Please refer
   to [[user manual |
-  http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/gen/vim73_install_manual.txt]]
+  https://github.com/gpwen/vim-installer-mui2/raw/wiki-files/gen/vim73_install_manual.txt]]
   for detail.
 
 * On-line user manual.
@@ -65,7 +65,7 @@ New features introduced by the upgraded Vim NSIS installer includes:
   features available in the installer accurately, which could be necessary as
   the installer support lots of build options.
   [[Here |
-  http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/gen/vim73_install_manual.txt]]
+  https://github.com/gpwen/vim-installer-mui2/raw/wiki-files/gen/vim73_install_manual.txt]]
   is the example.
 
 * Silent mode.
@@ -75,7 +75,7 @@ New features introduced by the upgraded Vim NSIS installer includes:
   mode, no user interface will be shown.  It's useful for unattended
   installation/uninstallation over large number of computers.  Please refer
   to [[user manual |
-  http://github.com/gpwen/vim-installer-mui2/raw/wiki-files/gen/vim73_install_manual.txt]]
+  https://github.com/gpwen/vim-installer-mui2/raw/wiki-files/gen/vim73_install_manual.txt]]
   for detail.
 
 # Features to be Added Soon (TODO List)
