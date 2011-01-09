@@ -300,6 +300,7 @@ SilentInstall             normal
 !ifdef HAVE_MULTI_LANG
     !include "lang\dutch.nsi"
     !include "lang\german.nsi"
+    !include "lang\italian.nsi"
     !include "lang\simpchinese.nsi"
     !include "lang\tradchinese.nsi"
 !endif
