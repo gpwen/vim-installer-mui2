@@ -18,6 +18,7 @@ to one of the following value (you can use either locale name or LCID):
     en    : English, LCID=1033
     nl    : Nederlands, LCID=1043
     de    : Deutsch, LCID=1031
+    it    : Italiano, LCID=1040
     zh_CN : Chinese (Simplified), LCID=2052
     zh_TW : Chinese (Traditional), LCID=1028
 
