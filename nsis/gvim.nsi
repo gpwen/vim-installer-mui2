@@ -363,6 +363,9 @@ SilentInstall             normal
     push $R0  # Found flag
     push $R1  # Parameter value
 
+    # Error flag will be used below, let's clear it first:
+    ClearErrors
+
     !if ${_CASE_SENSITIVE}
         # Handle case-sensitive command line switch:
         ${GetOptionsS} $vim_cmd_params "${_SW_STR}" $R1
@@ -713,6 +716,10 @@ SilentInstall             normal
 # ----------------------------------------------------------------------------
 !define VimExtractConsoleExe "!insertmacro _VimExtractConsoleExe"
 !macro _VimExtractConsoleExe
+    # Error flag will be used below, let's clear it first:
+    ClearErrors
+
+    # Try to read registry value specific to Windows NT & above:
     ReadRegStr $R0 HKLM \
         "SOFTWARE\Microsoft\Windows NT\CurrentVersion" "CurrentVersion"
     ${If} ${Errors}
@@ -763,6 +770,9 @@ SilentInstall             normal
         # No Vim instance running:
         StrCpy $R0 0
     ${EndIf}
+
+    # Clear errors before we return:
+    ClearErrors
 
     # Restore stack:
     Pop  $R1
@@ -862,6 +872,9 @@ SilentInstall             normal
                 fall back to [$vim_install_root] as plugin root."
         StrCpy $R0 "$vim_install_root\vimfiles"
     ${EndIf}
+
+    # Clear possible errors originated from reading environment string:
+    ClearErrors
 
     # Output:
     Pop  $R1
@@ -1732,6 +1745,7 @@ Function VimDumpManual
     ${EndIf}
 
     # Replace place holders in the user manual:
+    ClearErrors
     ${LineFind} "$R0" "$R1" "" "_VimDumpUserManualCallback"
 
     # Tell user we've created the user manual:
@@ -1945,6 +1959,9 @@ Function VimCfgOldVerSections
         SectionSetText $R1 ""
     ${EndIf}
 
+    # Clear errors before we return:
+    ClearErrors
+
     Pop $R2
     Pop $R1
     Pop $R0
@@ -2072,6 +2089,9 @@ Function VimSetDefRootPath
         ${Log} "Set default install path to: $INSTDIR"
     ${EndIf}
 
+    # Clear possible errors originated from reading environment string:
+    ClearErrors
+
     Pop $R2
     Pop $R1
     Pop $R0
@@ -2114,6 +2134,9 @@ Function VimRmOldVer
 
     StrCpy $R0 $R1
     ${LogPrint} "$(str_msg_rm_start) $R0 ..."
+
+    # We'll use error flag below, let's clear it first:
+    ClearErrors
 
     # Determine whether the uninstaller support silent mode or not, run the
     # uninstaller in silent mode if it supports that.
@@ -2202,6 +2225,9 @@ FunctionEnd
 Function VimFinalCheck
     Push $R0
 
+    # We'll use error flag below, let's clear it first:
+    ClearErrors
+
     # Check install path:
     StrCpy $vim_install_root "$INSTDIR"
     ${VimVerifyRootDir} "$vim_install_root" $R0
@@ -2214,10 +2240,10 @@ Function VimFinalCheck
     ${EndIf}
 
     # Check running instances of Vim:
-    ${Logged1} SetOutPath $TEMP
+    ${Logged1} SetOutPath "$TEMP"
     ${VimExtractConsoleExe}
     ${VimIsRuning} $TEMP $R0
-    Delete "$TEMP\vim.exe"
+    ${Logged1} Delete "$TEMP\vim.exe"
     ${If} $R0 <> 0
         ${ShowErr} $(str_msg_vim_running)
         Pop $R0
@@ -2327,7 +2353,7 @@ Function _VimCreateShortcutsFunc
     StrCpy $1 "$vim_bin_path\$1"
 
     # Create the shortcut:
-    ${Logged1} SetOutPath $3
+    ${Logged1} SetOutPath "$3"
     ${Logged5} CreateShortCut "$4\$0" "$1" "$2" "$1" 0
 
     # Restore the stack:
@@ -2643,6 +2669,7 @@ Section "un.$(str_unsection_register)" id_unsection_register
         "$SMPROGRAMS\${VIM_PRODUCT_NAME}"
 
     # Delete startmenu folder (now should be empty):
+    ClearErrors
     ${Logged1} RMDir "$SMPROGRAMS\${VIM_PRODUCT_NAME}"
     ${If} ${Errors}
         ${Log} "WARNING: Fail to remove startmenu folder \
@@ -2756,6 +2783,7 @@ Section -un.post
         Call un.VimRmPluginDir
 
         # Remove install root if it is empty:
+        ClearErrors
         ${Logged1} RMDir "$vim_install_root"
         ${If} ${Errors}
             ${LogPrint} "$(str_msg_rm_root_fail)"
@@ -2969,6 +2997,9 @@ Function un._VimRmConfigCallback
     Exch      $2    # Item callback arg 2: Ignored
     ${ExchAt} 1 $1  # Item callback arg 1: Reference RC file
     ${ExchAt} 2 $0  # Name of the RC file to check
+
+    # Error flag will be used below, let's clear it first:
+    ClearErrors
 
     # Add full path name to the specified RC file:
     StrCpy $0 "$vim_install_root\$0"
