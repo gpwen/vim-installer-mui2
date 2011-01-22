@@ -1243,11 +1243,13 @@ Section $(str_section_vim_rc) id_section_vimrc
 
     # Write default _vimrc only if the file does not exist.  We'll test for
     # .vimrc (and its short version) and _vimrc:
-    ${Logged1} SetOutPath "$vim_install_root"
     ${IfNot}    ${FileExists} "$vim_install_root\_vimrc"
     ${AndIfNot} ${FileExists} "$vim_install_root\.vimrc"
     ${AndIfNot} ${FileExists} "$vim_install_root\vimrc~1"
+        ${Logged1} SetOutPath "$vim_install_root"
         ${Logged2} File /oname=_vimrc "data\mswin_vimrc.vim"
+    ${Else}
+        ${Log} "Found existing vimrc, skip vimrc install."
     ${EndIf}
 
     ${LogSectionEnd}
