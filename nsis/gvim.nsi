@@ -2760,6 +2760,7 @@ Section "un.$(str_unsection_exe)" id_unsection_exe
     # No error message if the "vim62" directory can't be removed, the
     # gvimext.dll may still be there.
     ${Logged1} RMDir "$vim_bin_path"
+    ClearErrors
 
     # Also remove common files if this is the last Vim:
     StrCpy $vim_rm_common $vim_last_copy
