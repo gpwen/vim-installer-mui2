@@ -215,6 +215,64 @@ Var vim_rm_common         # Flag: Should we remove common files?
 # List of file extensions to be registered:
 !define VIM_FILE_EXT_LIST ".htm $\n .html $\n .vim $\n *"
 
+# Templates of files to install.
+#
+# The following templates will be used to generate NSIS install/uninstall
+# commands so that the uninstaller can remove files accurately (only remove
+# those files installed by the installer).
+#
+# Each line of the template has the following format:
+#   <target-path> , <src-pattern>
+# where
+# - <target-path> is the path name on the target system where source file(s)
+#   should be installed.  The path name will be used literally in generate
+#   command except slash conversion and cleanup, NSIS variables can be used
+#   there.  Forward slash can be used in path name, they will be converted to
+#   backward slash automatically.
+# - <src-pattern> is the pattern for the source files (on the build system).
+#   Path name should be included, and wildcards can be used.  Either forward
+#   slash or backward slash can be used as path separator.  The pattern will
+#   be passed to Vim glob() function to expand.  Please note the pattern will
+#   *NOT* be expanded recursively, you're expected to list all directories
+#   explicitly.
+# - If the first non-white character one a line is '#', the line will be
+#   considered as comment line and skipped.
+!define VIM_FNAME_INSTALL_TMPL "vim-install-list.raw"
+!define VIM_INSTALL_FILE_TMPLS \
+    "$vim_bin_path              , ${VIMSRC}\vimrun.exe      $\n\
+     $vim_bin_path              , ${VIMTOOLS}\diff.exe      $\n\
+     $vim_bin_path              , ${VIMRT}\vimtutor.bat     $\n\
+     $vim_bin_path              , ${VIMRT}\README.txt       $\n\
+     $vim_bin_path              , ${VIMRT}\uninstal.txt     $\n\
+     $vim_bin_path              , ${VIMRT}\*.vim            $\n\
+     $vim_bin_path              , ${VIMRT}\rgb.txt          $\n\
+     $vim_bin_path\colors       , ${VIMRT}\colors\*.*	    $\n\
+     $vim_bin_path\compiler     , ${VIMRT}\compiler\*.*	    $\n\
+     $vim_bin_path\doc          , ${VIMRT}\doc\*.txt	    $\n\
+     $vim_bin_path\doc          , ${VIMRT}\doc\tags	    $\n\
+     $vim_bin_path\ftplugin     , ${VIMRT}\ftplugin\*.*	    $\n\
+     $vim_bin_path\indent       , ${VIMRT}\indent\*.*	    $\n\
+     $vim_bin_path\macros       , ${VIMRT}\macros\*.*	    $\n\
+     $vim_bin_path\plugin       , ${VIMRT}\plugin\*.*	    $\n\
+     $vim_bin_path\autoload     , ${VIMRT}\autoload\*.*	    $\n\
+     $vim_bin_path\autoload\xml , ${VIMRT}\autoload\xml\*.* $\n\
+     $vim_bin_path\syntax       , ${VIMRT}\syntax\*.*	    $\n\
+     $vim_bin_path\spell        , ${VIMRT}\spell\*.txt	    $\n\
+     $vim_bin_path\spell        , ${VIMRT}\spell\*.vim	    $\n\
+     $vim_bin_path\spell        , ${VIMRT}\spell\*.spl	    $\n\
+     $vim_bin_path\spell        , ${VIMRT}\spell\*.sug	    $\n\
+     $vim_bin_path\tools        , ${VIMRT}\tools\*.*	    $\n\
+     $vim_bin_path\tutor        , ${VIMRT}\tutor\*.*	    $\n"
+
+# Name of dynamically generated install/uninstall NSIS command files:
+!define VIM_FNAME_INSTALL_CMDS "vim-install-cmds.nsi"
+!define VIM_FNAME_UNINST_CMDS  "vim-uninst-cmds.nsi"
+
+# Simplified Vim settings used for file list generation:
+!define VIM_SIMPLE_RC_FILE     "vim-simple-rc.vim"
+!define VIM_SIMPLE_RC \
+    "set notitle noicon nocp nomodeline viminfo=$\n"
+
 Name                      "${VIM_PRODUCT_NAME}"
 OutFile                   ${VIM_INSTALLER}
 CRCCheck                  force
@@ -1018,13 +1076,26 @@ Section $(str_section_exe) id_section_exe
     ${Logged1} SetOutPath "$vim_bin_path"
     ${Logged2} File /oname=gvim.exe "${VIMSRC}\gvim_ole.exe"
     ${Logged2} File /oname=xxd.exe  "${VIMSRC}\xxdw32.exe"
-    ${Logged1} File "${VIMSRC}\vimrun.exe"
-    ${Logged1} File "${VIMTOOLS}\diff.exe"
-    ${Logged1} File "${VIMRT}\vimtutor.bat"
-    ${Logged1} File "${VIMRT}\README.txt"
-    ${Logged1} File "${VIMRT}\uninstal.txt"
-    ${Logged1} File "${VIMRT}\*.vim"
-    ${Logged1} File "${VIMRT}\rgb.txt"
+
+    # Write install file template:
+    !delfile    "${VIM_FNAME_INSTALL_TMPL}"
+    !appendfile "${VIM_FNAME_INSTALL_TMPL}" "${VIM_INSTALL_FILE_TMPLS}"
+
+    # Write an simplified Vim RC to be used in dynamic NSIS command
+    # generation:
+    !delfile    "${VIM_SIMPLE_RC_FILE}"
+    !appendfile "${VIM_SIMPLE_RC_FILE}"   "${VIM_SIMPLE_RC}"
+
+    # Generate NSIS commands to install/uninstall files specified by the above
+    # file template:
+    !execute \
+        "${VIMSRC}\vimw32.exe -e -X -u ${VIM_SIMPLE_RC_FILE} \
+         -c $\":let g:fname_install_cmds = '${VIM_FNAME_INSTALL_CMDS}' | \
+                let g:fname_uninst_cmds  = '${VIM_FNAME_UNINST_CMDS}'  | \
+                source gen_file_list.vim$\" ${VIM_FNAME_INSTALL_TMPL}"
+
+    # Pull in generated install commands:
+    !include ${VIM_FNAME_INSTALL_CMDS}
 
     # Install XPM DLL:
     !ifdef HAVE_XPM
@@ -1032,49 +1103,6 @@ Section $(str_section_exe) id_section_exe
         !insertmacro InstallLib DLL NOTSHARED REBOOT_NOTPROTECTED \
             "${VIMRT}\xpm4.dll" "$vim_bin_path\xpm4.dll" "$vim_bin_path"
     !endif
-
-    ${Logged1} SetOutPath "$vim_bin_path\colors"
-    ${Logged1} File "${VIMRT}\colors\*.*"
-
-    ${Logged1} SetOutPath "$vim_bin_path\compiler"
-    ${Logged1} File "${VIMRT}\compiler\*.*"
-
-    ${Logged1} SetOutPath "$vim_bin_path\doc"
-    ${Logged1} File "${VIMRT}\doc\*.txt"
-    ${Logged1} File "${VIMRT}\doc\tags"
-
-    ${Logged1} SetOutPath "$vim_bin_path\ftplugin"
-    ${Logged1} File "${VIMRT}\ftplugin\*.*"
-
-    ${Logged1} SetOutPath "$vim_bin_path\indent"
-    ${Logged1} File "${VIMRT}\indent\*.*"
-
-    ${Logged1} SetOutPath "$vim_bin_path\macros"
-    ${Logged1} File "${VIMRT}\macros\*.*"
-
-    ${Logged1} SetOutPath "$vim_bin_path\plugin"
-    ${Logged1} File "${VIMRT}\plugin\*.*"
-
-    ${Logged1} SetOutPath "$vim_bin_path\autoload"
-    ${Logged1} File "${VIMRT}\autoload\*.*"
-
-    ${Logged1} SetOutPath "$vim_bin_path\autoload\xml"
-    ${Logged1} File "${VIMRT}\autoload\xml\*.*"
-
-    ${Logged1} SetOutPath "$vim_bin_path\syntax"
-    ${Logged1} File "${VIMRT}\syntax\*.*"
-
-    ${Logged1} SetOutPath "$vim_bin_path\spell"
-    ${Logged1} File "${VIMRT}\spell\*.txt"
-    ${Logged1} File "${VIMRT}\spell\*.vim"
-    ${Logged1} File "${VIMRT}\spell\*.spl"
-    ${Logged1} File "${VIMRT}\spell\*.sug"
-
-    ${Logged1} SetOutPath "$vim_bin_path\tools"
-    ${Logged1} File "${VIMRT}\tools\*.*"
-
-    ${Logged1} SetOutPath "$vim_bin_path\tutor"
-    ${Logged1} File "${VIMRT}\tutor\*.*"
 
     ${LogSectionEnd}
 SectionEnd
@@ -2618,7 +2646,6 @@ Section "un.$(str_unsection_register)" id_unsection_register
     ${LogSectionStart}
 
     # Uninstall VisVim if it was included.
-    # TODO: Any special handling on x64?
     !ifdef HAVE_VIS_VIM
         ${Log} "Remove $vim_bin_path\VisVim.dll"
         !insertmacro UninstallLib REGDLL NOTSHARED REBOOT_NOTPROTECTED \
@@ -2730,28 +2757,24 @@ Section "un.$(str_unsection_exe)" id_unsection_exe
             "$vim_bin_path\xpm4.dll"
     !endif
 
-    # Remove everything but *.dll files.  Avoids that a lot remains when
-    # gvimext.dll cannot be deleted.
+    # Pull in generated uninstall commands:
     ClearErrors
-    ${Logged2} RMDir /r "$vim_bin_path\VisVim"
-    ${Logged2} RMDir /r "$vim_bin_path\autoload"
-    ${Logged2} RMDir /r "$vim_bin_path\colors"
-    ${Logged2} RMDir /r "$vim_bin_path\compiler"
-    ${Logged2} RMDir /r "$vim_bin_path\doc"
-    ${Logged2} RMDir /r "$vim_bin_path\ftplugin"
-    ${Logged2} RMDir /r "$vim_bin_path\indent"
-    ${Logged2} RMDir /r "$vim_bin_path\keymap"
-    ${Logged2} RMDir /r "$vim_bin_path\lang"
-    ${Logged2} RMDir /r "$vim_bin_path\macros"
-    ${Logged2} RMDir /r "$vim_bin_path\plugin"
-    ${Logged2} RMDir /r "$vim_bin_path\spell"
-    ${Logged2} RMDir /r "$vim_bin_path\syntax"
-    ${Logged2} RMDir /r "$vim_bin_path\tools"
-    ${Logged2} RMDir /r "$vim_bin_path\tutor"
-    ${Logged1} Delete "$vim_bin_path\*.bat"
-    ${Logged1} Delete "$vim_bin_path\*.exe"
-    ${Logged1} Delete "$vim_bin_path\*.txt"
-    ${Logged1} Delete "$vim_bin_path\*.vim"
+    !include ${VIM_FNAME_UNINST_CMDS}
+
+    # TODO: convert this!
+    !ifdef HAVE_NLS
+        ${Logged2} RMDir /r "$vim_bin_path\keymap"
+        ${Logged2} RMDir /r "$vim_bin_path\lang"
+    !endif
+
+    # Remove other files installed with VisVim:
+    !ifdef HAVE_VIS_VIM
+        ${Logged1} Delete "$vim_bin_path\README_VisVim.txt"
+    !endif
+
+    ${Logged1} Delete "$vim_bin_path\gvim.exe"
+    ${Logged1} Delete "$vim_bin_path\vim.exe"
+    ${Logged1} Delete "$vim_bin_path\xxd.exe"
 
     ${If} ${Errors}
         ${ShowErr} $(str_msg_rm_exe_fail)
