@@ -26,9 +26,94 @@
 let s:save_cpo = &cpo
 set cpo&vim
 
+
+" ----------------------------------------------------------------------------
+" Function: s:GenListReadline(buf_id, line_num, ...)                      {{{1
+"   ...
+" Arguments:
+"   buf_id
+"   line_num
+"   field_sep
+"   fields
+"   last_lines
+" Return:
+"   None
+" ----------------------------------------------------------------------------
+function! s:GenListReadline(buf_id, line_num, field_sep, fields, last_lines)
+    " Initialize output fields:
+    if !empty(a:fields)
+        call remove(a:fields, 0, -1)
+    endif
+
+    " Read one line from the specified buffer:
+    let lines = getbufline(a:buf_id, a:line_num)
+    if (len(lines) < 1)
+        " Ignore if read fail:
+        return 0
+    endif
+
+    " Clean up the line:
+    let lines[0] = substitute(lines[0], '^\s\+', '', '')
+    let lines[0] = substitute(lines[0], '\s\+$', '', '')
+
+    " Skip empty line:
+    if (len(lines[0]) < 1)
+        return 0
+    endif
+
+    " Skip comments (lines started with '#'):
+    if (strpart(lines[0], 0, 1) ==# '#')
+        return 0
+    endif
+
+    " Record the last line processed:
+    if !empty(a:last_lines)
+        call remove(a:last_lines, 0, -1)
+    endif
+
+    call add(a:last_lines, lines[0])
+
+    " Split the line to fields:
+    call extend(a:fields, split(lines[0], a:field_sep, 1))
+
+    return 1
+endfunction
+
+
+" ----------------------------------------------------------------------------
+" Function: s:GenListErr(msg_prefix, line, fname_data)                    {{{1
+"   ...
+" Arguments:
+"   msg_prefix :
+"   line       :
+"   fname_data :
+" Return:
+"   None
+" ----------------------------------------------------------------------------
+function! s:GenListErr(msg_prefix, line, fname_data)
+    $put =''
+    $put =a:msg_prefix . 'Syntax error, skip: ' . a:line
+    $put ='!error \"Syntax error in [' . a:fname_data . ']!  \'
+    $put ='        Please check [' . g:fname_install . '] for detail.\"'
+
+    return 1
+endfunction
+
+
+" ----------------------------------------------------------------------------
+" Main Script                                                             {{{1
+" ----------------------------------------------------------------------------
+" It's very important to set 'bufhidden' as 'hide', otherwise the buffer will
+" be unloaded once hide (which move other buffer to front).  If that happened,
+" subseqent read from that buffer will return empty.
+setlocal bufhidden=hide
+
+" Make the current buffer unmodifiable to avoid accident change:
+setlocal nomodifiable
+
 " Record the buffer number/name of the current buffer (template buffer):
 let buf_id_tmpl  = bufnr('%')
-let tmpl_name    = bufname('%')
+let fname_tmpl   = bufname('%')
 
 " Line of text in the current buffer:
 let num_tmplates = line('$')
@@ -36,85 +121,135 @@ let num_tmplates = line('$')
 " New buffer for NSIS install commands:
 new
 setlocal bufhidden=hide
+setlocal modifiable
 call setline('$', '# Generated commands for NSIS installer, do not edit.')
 let buf_id_install = bufnr('%')
 
 " Set default name for the install command file:
-if exists("g:fname_install") == 0
+if !exists("g:fname_install")
     let g:fname_install = 'install-cmds.nsi'
 endif
 
 " New buffer for NSIS uninstall commands:
 new
 setlocal bufhidden=hide
+setlocal modifiable
 call setline('$', '# Generated commands for NSIS uninstaller, do not edit.')
 let buf_id_uninst  = bufnr('%')
 
 " Set default name for the uninstall command file:
-if exists("g:fname_uninst") == 0
+if !exists("g:fname_uninst")
     let g:fname_uninst = 'uninst-cmds.nsi'
 endif
 
+" Set default name for NSIS defines:
+if !exists("g:fname_defines")
+    let g:fname_defines = 'vim_defines.conf'
+endif
+
+" Load NSIS defines if exist:
+let nsis_defs    = {}
+if filereadable(g:fname_defines)
+    " Open NSIS definition file and record buffer ID etc.:
+    execute 'sview ' . g:fname_defines
+    let buf_id_defs = bufnr('%')
+    let num_defs    = line('$')
+
+    " Don't unload this buffer, and avoid accidental change.
+    setlocal bufhidden=hide
+    setlocal nomodifiable
+
+    " Log message will be written to the install command buffer:
+    execute 'buffer ' . buf_id_install
+    $put =''
+    $put ='# Loading NSIS defines from: ' . g:fname_defines
+
+    let line_num    = 1
+    let read_stat   = 1
+    let def_spec    = []
+    let last_lines  = []
+    while line_num <= num_defs
+        " Prefix for debug message output:
+        let msg_prefix = '# ' . g:fname_defines . ' line ' . line_num . ': '
+
+        " Read one line from the definition buffer:
+        let read_stat = s:GenListReadline
+            \ (buf_id_defs, line_num, '\s*=\s*', def_spec, last_lines)
+        let line_num += 1
+
+        if (read_stat != 1)
+            continue
+        endif
+
+        " Skip those lines with incorrect format:
+        if (len(def_spec) != 2)
+            call s:GenListErr(msg_prefix, last_lines[-1], fname_defines)
+            continue
+        endif
+
+        " Echo back the current definition for debug purpose:
+        $put =msg_prefix . def_spec[0] . ' = ' . def_spec[1]
+
+        " Record the definition:
+        let nsis_defs[def_spec[0]] = def_spec[1]
+    endwhile
+
+    $put ='# NSIS defines load completed: ' . g:fname_defines
+end
+
+" Write debug log:
+execute 'buffer ' . buf_id_install
+$put =''
+$put ='# Loading file templates from: ' . g:fname_tmpl
+
 " Process templates in the input buffer:
+let NUM_FIELDS = 2
 let line_num   = 1
-let lines      = []
-let raw_tmpl   = ''
+let read_stat  = 1
 let tmpl_spec  = []
+let last_lines = []
 let msg_prefix = ''
 let temp_msg   = ''
+let macro_name = ''
 let file_list  = []
 let dir_list   = []
 let one_item   = ''
+let idx        = 0
 while line_num <= num_tmplates
     " Prefix for debug message output:
-    let msg_prefix = '# Line ' . line_num . ': '
+    let msg_prefix = '# ' . g:fname_tmpl . ' line ' . line_num . ': '
 
     " Read one line from the template buffer:
-    let lines    = getbufline(buf_id_tmpl, line_num)
-    let line_num = line_num + 1
-    if (len(lines) < 1)
-        " Ignore if read fail:
+    let read_stat = s:GenListReadline
+        \ (buf_id_tmpl, line_num, '\s*,\s*', tmpl_spec, last_lines)
+    let line_num += 1
+
+    if (read_stat != 1)
         continue
     endif
 
-    let raw_tmpl = lines[0]
-
-    " Clean up:
-    let raw_tmpl = substitute(raw_tmpl, '^\s\+', '', '')
-    let raw_tmpl = substitute(raw_tmpl, '\s\+$', '', '')
-
-    " Skip empty line:
-    if (len(raw_tmpl) < 1)
-        continue
-    endif
-
-    " Skip comments (lines started with '#'):
-    if (strpart(raw_tmpl, 0, 1) ==# '#')
-        continue
-    endif
-
-    " Please refer to comments in file header for format of each line:
-    "   <target-path> , <src-pattern>
-    let tmpl_spec = split(raw_tmpl, '\s*,\s*', 1)
-
-    " Skip those lines with incorrect format.  Error message will be embedded
-    " in the output buffer directly:
-    if (len(tmpl_spec) != 2)
-        let temp_msg = msg_prefix . 'Syntax error, skip: ' . raw_tmpl
-
+    " Skip those lines with incorrect format:
+    if (len(tmpl_spec) != NUM_FIELDS)
         execute 'buffer ' . buf_id_install
-        $put =''
-        $put =temp_msg
-        $put ='!error \"Syntax error in [' . tmpl_name . ']!$\n\'
-        $put ='        Please check [' .  g:fname_install .
-            \ '] for detail.\"'
+        call s:GenListErr(msg_prefix, last_lines[-1], fname_tmpl)
 
         execute 'buffer ' . buf_id_uninst
         $put =''
-        $put =temp_msg
+        $put =msg_prefix . 'Syntax error, skip: ' . last_lines[-1]
 
         continue
     endif
+
+    " Perform macro substitution:
+    for macro_name in keys(nsis_defs)
+        let idx = 0
+        while idx < NUM_FIELDS
+            let tmpl_spec[idx] =
+               \ substitute(tmpl_spec[idx], '${' . macro_name . '}',
+                          \ escape(nsis_defs[macro_name], '\'), 'g')
+            let idx += 1
+        endwhile
+    endfor
 
     " Convert any forward slash in target path to backslash since NSIS only
     " accept backslash:
