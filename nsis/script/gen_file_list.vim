@@ -2,7 +2,12 @@
 "
 " This Vim script is used to generate NSIS commands to install/uninstall files
 " from templates held in the current buffer.  Each line in the current buffer
-" is one template in the following format:
+" should be one of:
+" - Blank line (lines with blank characters only); or
+" - Comment line (lines with first non-blank character as '#'); or
+" - Template definition line.
+"
+" The template definition line has the following format:
 "   <target-path> , <src-pattern>
 " where
 " - <target-path> is the path name on the target system where source file(s)
@@ -18,6 +23,22 @@
 "   explicitly.
 " - If the first non-white character one a line is '#', the line will be
 "   considered as comment line and skipped.
+" - NSIS macro can be used in all fields of the template.  The syntax of the
+"   macro reference is (the same as NSIS):
+"     ${MACRO_NAME}
+"   Macro will be expanded after the line has been split into fields.
+"
+" A macro definition file can be loaded before processing the buffer.  The
+" name of the macro definition file should be specified in global variable:
+"   g:fname_defines
+" The default file name is 'vim_defines.conf'.  Each line in the file should
+" be blank line, comment line (same as above) or macro definition line.  The
+" format of the macro definition line is:
+"   <NAME> = <VALUE>
+" where
+" - <NAME> is the name of the macro.  It can be referenced in template
+"   definition as ${NAME}.
+" - <VALUE> is the value of macro.
 "
 " Maintainer:  Guopeng Wen <wenguopeng AT gmail.com>
 " Last Change: 2011-01-30
@@ -29,15 +50,16 @@ set cpo&vim
 
 " ----------------------------------------------------------------------------
 " Function: s:GenListReadline(buf_id, line_num, ...)                      {{{1
-"   ...
+"   Read one line from the specified buffer and split result into fields.
 " Arguments:
-"   buf_id
-"   line_num
-"   field_sep
-"   fields
-"   last_lines
+"   buf_id     : ID of the buffer to read from;
+"   line_num   : Line number of the line to read;
+"   field_sep  : Field separator (regular express for split);
+"   fields     : Output list contains all fields on the line.
+"   last_lines : Output list contains last line read.
 " Return:
-"   None
+"   0 If no valid line has been processed;
+"   1 If a valid line has been successfully processed.
 " ----------------------------------------------------------------------------
 function! s:GenListReadline(buf_id, line_num, field_sep, fields, last_lines)
     " Initialize output fields:
@@ -82,11 +104,13 @@ endfunction
 
 " ----------------------------------------------------------------------------
 " Function: s:GenListErr(msg_prefix, line, fname_data)                    {{{1
-"   ...
+"   Write a error message to buffer for the install commands.  This function
+"   will also embed an NSIS !error command in that buffer, so that makensis
+"   will be stopped with the appropriate error report.
 " Arguments:
-"   msg_prefix :
-"   line       :
-"   fname_data :
+"   msg_prefix : Message prefix (line number etc.)
+"   line       : Text line caused the error.
+"   fname_data : Name of the data file caused the error.
 " Return:
 "   None
 " ----------------------------------------------------------------------------
