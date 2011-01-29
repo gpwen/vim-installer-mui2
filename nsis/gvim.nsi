@@ -215,54 +215,16 @@ Var vim_rm_common         # Flag: Should we remove common files?
 # List of file extensions to be registered:
 !define VIM_FILE_EXT_LIST ".htm $\n .html $\n .vim $\n *"
 
-# Templates of files to install.
-#
-# The following templates will be used to generate NSIS install/uninstall
-# commands so that the uninstaller can remove files accurately (only remove
-# those files installed by the installer).
-#
-# Each line of the template has the following format:
-#   <target-path> , <src-pattern>
-# where
-# - <target-path> is the path name on the target system where source file(s)
-#   should be installed.  The path name will be used literally in generate
-#   command except slash conversion and cleanup, NSIS variables can be used
-#   there.  Forward slash can be used in path name, they will be converted to
-#   backward slash automatically.
-# - <src-pattern> is the pattern for the source files (on the build system).
-#   Path name should be included, and wildcards can be used.  Either forward
-#   slash or backward slash can be used as path separator.  The pattern will
-#   be passed to Vim glob() function to expand.  Please note the pattern will
-#   *NOT* be expanded recursively, you're expected to list all directories
-#   explicitly.
-# - If the first non-white character one a line is '#', the line will be
-#   considered as comment line and skipped.
-!define VIM_FNAME_INSTALL_TMPL "vim-install-list.raw"
-!define VIM_INSTALL_FILE_TMPLS \
-    "$vim_bin_path              , ${VIMSRC}\vimrun.exe      $\n\
-     $vim_bin_path              , ${VIMTOOLS}\diff.exe      $\n\
-     $vim_bin_path              , ${VIMRT}\vimtutor.bat     $\n\
-     $vim_bin_path              , ${VIMRT}\README.txt       $\n\
-     $vim_bin_path              , ${VIMRT}\uninstal.txt     $\n\
-     $vim_bin_path              , ${VIMRT}\*.vim            $\n\
-     $vim_bin_path              , ${VIMRT}\rgb.txt          $\n\
-     $vim_bin_path\colors       , ${VIMRT}\colors\*.*	    $\n\
-     $vim_bin_path\compiler     , ${VIMRT}\compiler\*.*	    $\n\
-     $vim_bin_path\doc          , ${VIMRT}\doc\*.txt	    $\n\
-     $vim_bin_path\doc          , ${VIMRT}\doc\tags	    $\n\
-     $vim_bin_path\ftplugin     , ${VIMRT}\ftplugin\*.*	    $\n\
-     $vim_bin_path\indent       , ${VIMRT}\indent\*.*	    $\n\
-     $vim_bin_path\macros       , ${VIMRT}\macros\*.*	    $\n\
-     $vim_bin_path\plugin       , ${VIMRT}\plugin\*.*	    $\n\
-     $vim_bin_path\autoload     , ${VIMRT}\autoload\*.*	    $\n\
-     $vim_bin_path\autoload\xml , ${VIMRT}\autoload\xml\*.* $\n\
-     $vim_bin_path\syntax       , ${VIMRT}\syntax\*.*	    $\n\
-     $vim_bin_path\spell        , ${VIMRT}\spell\*.txt	    $\n\
-     $vim_bin_path\spell        , ${VIMRT}\spell\*.vim	    $\n\
-     $vim_bin_path\spell        , ${VIMRT}\spell\*.spl	    $\n\
-     $vim_bin_path\spell        , ${VIMRT}\spell\*.sug	    $\n\
-     $vim_bin_path\tools        , ${VIMRT}\tools\*.*	    $\n\
-     $vim_bin_path\tutor        , ${VIMRT}\tutor\*.*	    $\n"
+# Export NSIS defines for file list generation.  Please note it's impossible
+# to write out something like:
+#   ${VIMSRC} = ..
+# in the following way directly, NSIS will expand that macro no matter what
+# escape sequence has been used!
+!define VIM_FNAME_DEFINES "vim_defines.conf"
+!define VIM_DEFINES_LIST \
+    "VIMSRC   = ${VIMSRC}$\n\
+     VIMRT    = ${VIMRT}$\n\
+     VIMTOOLS = ${VIMTOOLS}$\n"
 
 # Name of dynamically generated install/uninstall NSIS command files:
 !define VIM_FNAME_INSTALL_RT "vim_install_rt.nsi"
@@ -1072,18 +1034,19 @@ Section $(str_section_exe) id_section_exe
     ${Logged2} File /oname=gvim.exe "${VIMSRC}\gvim_ole.exe"
     ${Logged2} File /oname=xxd.exe  "${VIMSRC}\xxdw32.exe"
 
-    # Write install file template:
-    !delfile    "${VIM_FNAME_INSTALL_TMPL}"
-    !appendfile "${VIM_FNAME_INSTALL_TMPL}" "${VIM_INSTALL_FILE_TMPLS}"
+    # Export NSIS defines:
+    !delfile    "${VIM_FNAME_DEFINES}"
+    !appendfile "${VIM_FNAME_DEFINES}" "${VIM_DEFINES_LIST}"
 
     # Generate NSIS commands to install/uninstall files specified by the above
     # file template:
     !execute \
         "${VIMSRC}\vimw32.exe -e -R -X -u data\simple_vimrc.vim \
-         -c $\":let g:fname_install = '${VIM_FNAME_INSTALL_RT}' | \
+         -c $\":let g:fname_defines = '${VIM_FNAME_DEFINES}'    | \
+                let g:fname_install = '${VIM_FNAME_INSTALL_RT}' | \
                 let g:fname_uninst  = '${VIM_FNAME_UNINST_RT}'  | \
                 source script\gen_file_list.vim$\" \
-         ${VIM_FNAME_INSTALL_TMPL}"
+         data\runtime_files.list"
 
     # Pull in generated install commands:
     !include ${VIM_FNAME_INSTALL_RT}
