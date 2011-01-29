@@ -40,8 +40,8 @@ call setline('$', '# Generated commands for NSIS installer, do not edit.')
 let buf_id_install = bufnr('%')
 
 " Set default name for the install command file:
-if exists("g:fname_install_cmds") == 0
-    let g:fname_install_cmds = 'install-cmds.nsi'
+if exists("g:fname_install") == 0
+    let g:fname_install = 'install-cmds.nsi'
 endif
 
 " New buffer for NSIS uninstall commands:
@@ -51,8 +51,8 @@ call setline('$', '# Generated commands for NSIS uninstaller, do not edit.')
 let buf_id_uninst  = bufnr('%')
 
 " Set default name for the uninstall command file:
-if exists("g:fname_uninst_cmds") == 0
-    let g:fname_uninst_cmds = 'uninst-cmds.nsi'
+if exists("g:fname_uninst") == 0
+    let g:fname_uninst = 'uninst-cmds.nsi'
 endif
 
 " Process templates in the input buffer:
@@ -106,7 +106,7 @@ while line_num <= num_tmplates
         $put =''
         $put =temp_msg
         $put ='!error \"Syntax error in [' . tmpl_name . ']!$\n\'
-        $put ='        Please check [' .  g:fname_install_cmds .
+        $put ='        Please check [' .  g:fname_install .
             \ '] for detail.\"'
 
         execute 'buffer ' . buf_id_uninst
@@ -185,11 +185,11 @@ endfor
 
 " Save install commands:
 execute 'buffer '  . buf_id_install
-execute 'saveas! ' . g:fname_install_cmds
+execute 'saveas! ' . g:fname_install
 
 " Save un-install commands:
 execute 'buffer '  . buf_id_uninst
-execute 'saveas! ' . g:fname_uninst_cmds
+execute 'saveas! ' . g:fname_uninst
 
 " Restore compatibility:
 let &cpo = s:save_cpo

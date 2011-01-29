@@ -320,6 +320,8 @@ SRC_DOS =	\
 		nsis/data/gui_template.bat \
 		nsis/data/install_manual.txt \
 		nsis/data/mswin_vimrc.vim \
+		nsis/script/gen_file_list.vim \
+		nsis/script/simple_vimrc.vim \
 		nsis/lang/*.nsi \
 		uninstal.txt \
 		src/VisVim/Commands.cpp \

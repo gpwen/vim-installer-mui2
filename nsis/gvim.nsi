@@ -9,13 +9,13 @@
 ##############################################################################
 
 # Location of gvim_ole.exe, vimd32.exe, GvimExt/*, etc.
-!define VIMSRC "..\src"
+!define VIMSRC   "..\src"
 
 # Location of runtime files
-!define VIMRT ".."
+!define VIMRT    ".."
 
 # Location of extra tools: diff.exe
-!define VIMTOOLS ..\..
+!define VIMTOOLS "..\.."
 
 # URL for vim online:
 !define VIM_ONLINE_URL "http://www.vim.org"
@@ -265,13 +265,8 @@ Var vim_rm_common         # Flag: Should we remove common files?
      $vim_bin_path\tutor        , ${VIMRT}\tutor\*.*	    $\n"
 
 # Name of dynamically generated install/uninstall NSIS command files:
-!define VIM_FNAME_INSTALL_CMDS "vim-install-cmds.nsi"
-!define VIM_FNAME_UNINST_CMDS  "vim-uninst-cmds.nsi"
-
-# Simplified Vim settings used for file list generation:
-!define VIM_SIMPLE_RC_FILE     "vim-simple-rc.vim"
-!define VIM_SIMPLE_RC \
-    "set notitle noicon nocp nomodeline viminfo=$\n"
+!define VIM_FNAME_INSTALL_RT "vim_install_rt.nsi"
+!define VIM_FNAME_UNINST_RT  "vim_uninst_rt.nsi"
 
 Name                      "${VIM_PRODUCT_NAME}"
 OutFile                   ${VIM_INSTALLER}
@@ -1081,21 +1076,17 @@ Section $(str_section_exe) id_section_exe
     !delfile    "${VIM_FNAME_INSTALL_TMPL}"
     !appendfile "${VIM_FNAME_INSTALL_TMPL}" "${VIM_INSTALL_FILE_TMPLS}"
 
-    # Write an simplified Vim RC to be used in dynamic NSIS command
-    # generation:
-    !delfile    "${VIM_SIMPLE_RC_FILE}"
-    !appendfile "${VIM_SIMPLE_RC_FILE}"   "${VIM_SIMPLE_RC}"
-
     # Generate NSIS commands to install/uninstall files specified by the above
     # file template:
     !execute \
-        "${VIMSRC}\vimw32.exe -e -X -u ${VIM_SIMPLE_RC_FILE} \
-         -c $\":let g:fname_install_cmds = '${VIM_FNAME_INSTALL_CMDS}' | \
-                let g:fname_uninst_cmds  = '${VIM_FNAME_UNINST_CMDS}'  | \
-                source gen_file_list.vim$\" ${VIM_FNAME_INSTALL_TMPL}"
+        "${VIMSRC}\vimw32.exe -e -R -X -u data\simple_vimrc.vim \
+         -c $\":let g:fname_install = '${VIM_FNAME_INSTALL_RT}' | \
+                let g:fname_uninst  = '${VIM_FNAME_UNINST_RT}'  | \
+                source script\gen_file_list.vim$\" \
+         ${VIM_FNAME_INSTALL_TMPL}"
 
     # Pull in generated install commands:
-    !include ${VIM_FNAME_INSTALL_CMDS}
+    !include ${VIM_FNAME_INSTALL_RT}
 
     # Install XPM DLL:
     !ifdef HAVE_XPM
@@ -2759,7 +2750,7 @@ Section "un.$(str_unsection_exe)" id_unsection_exe
 
     # Pull in generated uninstall commands:
     ClearErrors
-    !include ${VIM_FNAME_UNINST_CMDS}
+    !include ${VIM_FNAME_UNINST_RT}
 
     # TODO: convert this!
     !ifdef HAVE_NLS
