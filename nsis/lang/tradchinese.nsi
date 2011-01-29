@@ -7,7 +7,7 @@
 # fileencoding : big5
 # Author       : Guopeng Wen
 
-!include "helper_util.nsh"
+!include "script\helper_util.nsh"
 ${VimAddLanguage} "TradChinese" "zh_TW"
 
 

@@ -6,7 +6,7 @@
 # fileencoding : cp1252
 # Author       : Christian Brabandt, tux
 
-!include "helper_util.nsh"
+!include "script\helper_util.nsh"
 ${VimAddLanguage} "German" "de"
 
 

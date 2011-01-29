@@ -7,7 +7,7 @@
 # fileencoding : latin1
 # Author       : Antonio Colombo
 
-!include "helper_util.nsh"
+!include "script\helper_util.nsh"
 ${VimAddLanguage} "Italian" "it"
 
 

@@ -16,7 +16,7 @@
 # language.  For example, after you insert "English", ${LANG_ENGLISH} will be
 # defined as the language ID so you can use it in the following language
 # string definition.
-!include "helper_util.nsh"
+!include "script\helper_util.nsh"
 ${VimAddLanguage} "English" "en"
 
 

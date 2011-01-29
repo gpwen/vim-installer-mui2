@@ -7,7 +7,7 @@
 # fileencoding : cp936
 # Author       : Guopeng Wen
 
-!include "helper_util.nsh"
+!include "script\helper_util.nsh"
 ${VimAddLanguage} "SimpChinese" "zh_CN"
 
 

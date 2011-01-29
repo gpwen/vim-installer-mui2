@@ -76,8 +76,8 @@
 !include "WordFunc.nsh"
 !include "x64.nsh"
 
-!include "helper_util.nsh"
-!include "simple_log.nsh"
+!include "script\helper_util.nsh"
+!include "script\simple_log.nsh"
 
 # Global variables:
 Var vim_cmd_params        # Command line parameters

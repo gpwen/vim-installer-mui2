@@ -7,7 +7,7 @@
 # fileencoding : cp1252
 # Author       : Peter Odding <peter@peterodding.com>
 
-!include "helper_util.nsh"
+!include "script\helper_util.nsh"
 ${VimAddLanguage} "Dutch" "nl"
 
 
