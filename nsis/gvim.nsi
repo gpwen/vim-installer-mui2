@@ -2714,6 +2714,7 @@ Section "un.$(str_unsection_exe)" id_unsection_exe
     # Pull in generated uninstall commands:
     ClearErrors
     !include ${VIM_FNAME_UNINST_RT}
+    ClearErrors
 
     # TODO: convert this!
     !ifdef HAVE_NLS
@@ -2729,6 +2730,7 @@ Section "un.$(str_unsection_exe)" id_unsection_exe
     ${Logged1} Delete "$vim_bin_path\gvim.exe"
     ${Logged1} Delete "$vim_bin_path\vim.exe"
     ${Logged1} Delete "$vim_bin_path\xxd.exe"
+    ${Logged1} Delete "$vim_bin_path\${VIM_UNINSTALLER}"
 
     ${If} ${Errors}
         ${ShowErr} $(str_msg_rm_exe_fail)

@@ -1,29 +1,28 @@
 # Templates of runtime files to install.
 #
-# Each line of the template has the following format:
-#   <target-path> , <src-pattern>
 # Please refer to "script/gen_file_list.vim" for detailed syntax.
-$vim_bin_path              , ${VIMSRC}\vimrun.exe
-$vim_bin_path              , ${VIMTOOLS}\diff.exe
-$vim_bin_path              , ${VIMRT}\vimtutor.bat
-$vim_bin_path              , ${VIMRT}\README.txt
-$vim_bin_path              , ${VIMRT}\uninstal.txt
-$vim_bin_path              , ${VIMRT}\*.vim
-$vim_bin_path              , ${VIMRT}\rgb.txt
-$vim_bin_path\colors       , ${VIMRT}\colors\*.*
-$vim_bin_path\compiler     , ${VIMRT}\compiler\*.*
-$vim_bin_path\doc          , ${VIMRT}\doc\*.txt
-$vim_bin_path\doc          , ${VIMRT}\doc\tags
-$vim_bin_path\ftplugin     , ${VIMRT}\ftplugin\*.*
-$vim_bin_path\indent       , ${VIMRT}\indent\*.*
-$vim_bin_path\macros       , ${VIMRT}\macros\*.*
-$vim_bin_path\plugin       , ${VIMRT}\plugin\*.*
-$vim_bin_path\autoload     , ${VIMRT}\autoload\*.*
-$vim_bin_path\autoload\xml , ${VIMRT}\autoload\xml\*.*
-$vim_bin_path\syntax       , ${VIMRT}\syntax\*.*
-$vim_bin_path\spell        , ${VIMRT}\spell\*.txt
-$vim_bin_path\spell        , ${VIMRT}\spell\*.vim
-$vim_bin_path\spell        , ${VIMRT}\spell\*.spl
-$vim_bin_path\spell        , ${VIMRT}\spell\*.sug
-$vim_bin_path\tools        , ${VIMRT}\tools\*.*
-$vim_bin_path\tutor        , ${VIMRT}\tutor\*.*
+# <target-path>            | <src-pattern>
+$vim_bin_path              | ${VIMSRC}\vimrun.exe
+$vim_bin_path              | ${VIMTOOLS}\diff.exe
+$vim_bin_path              | ${VIMRT}\vimtutor.bat
+$vim_bin_path              | ${VIMRT}\README.txt
+$vim_bin_path              | ${VIMRT}\uninstal.txt
+$vim_bin_path              | ${VIMRT}\*.vim
+$vim_bin_path              | ${VIMRT}\rgb.txt
+$vim_bin_path\colors       | ${VIMRT}\colors\*
+$vim_bin_path\compiler     | ${VIMRT}\compiler\*
+$vim_bin_path\doc          | ${VIMRT}\doc\*.txt
+$vim_bin_path\doc          | ${VIMRT}\doc\tags
+$vim_bin_path\ftplugin     | ${VIMRT}\ftplugin\*
+$vim_bin_path\indent       | ${VIMRT}\indent\*
+$vim_bin_path\macros       | ${VIMRT}\macros\*
+$vim_bin_path\plugin       | ${VIMRT}\plugin\*
+$vim_bin_path\autoload     | ${VIMRT}\autoload\*
+$vim_bin_path\autoload\xml | ${VIMRT}\autoload\xml\*
+$vim_bin_path\syntax       | ${VIMRT}\syntax\*
+$vim_bin_path\spell        | ${VIMRT}\spell\*.txt
+$vim_bin_path\spell        | ${VIMRT}\spell\*.vim
+$vim_bin_path\spell        | ${VIMRT}\spell\*.spl
+$vim_bin_path\spell        | ${VIMRT}\spell\*.sug
+$vim_bin_path\tools        | ${VIMRT}\tools\*
+$vim_bin_path\tutor        | ${VIMRT}\tutor\*

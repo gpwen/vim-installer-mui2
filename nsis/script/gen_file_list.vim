@@ -8,7 +8,7 @@
 " - Template definition line.
 "
 " The template definition line has the following format:
-"   <target-path> , <src-pattern>
+"   <target-path> | <src-pattern>
 " where
 " - <target-path> is the path name on the target system where source file(s)
 "   should be installed.  The path name will be used literally in generate
@@ -40,8 +40,7 @@
 "   definition as ${NAME}.
 " - <VALUE> is the value of macro.
 "
-" Maintainer:  Guopeng Wen <wenguopeng AT gmail.com>
-" Last Change: 2011-01-30
+" Maintainer: Guopeng Wen <wenguopeng AT gmail.com>
 
 " Set compatibility to Vim default:
 let s:save_cpo = &cpo
@@ -245,7 +244,7 @@ while line_num <= num_tmplates
 
     " Read one line from the template buffer:
     let read_stat = s:GenListReadline
-        \ (buf_id_tmpl, line_num, '\s*,\s*', tmpl_spec, last_lines)
+        \ (buf_id_tmpl, line_num, '\s*|\s*', tmpl_spec, last_lines)
     let line_num += 1
 
     if (read_stat != 1)
@@ -304,13 +303,31 @@ while line_num <= num_tmplates
     execute 'buffer ' . buf_id_install
     $put ='${Logged1} SetOutPath ' . tmpl_spec[0]
 
-    " Generate NSIS commands to install files:
+    " Expand the source file pattern to generate a file list, and then clean
+    " up the list (remove directories etc.)
     let file_list = split(glob(tmpl_spec[1], 1), "\n")
-    for one_item in file_list
-        " Convert forward slash back to backslash, if any:
-        let one_item = tr(one_item, '/', '\')
+    let idx       = len(file_list)
+    while idx > 0
+        let idx -= 1
 
-        " NSIS commands to install the file:
+        " Skip directories:
+        if (isdirectory(file_list[idx]))
+            call remove(file_list, idx)
+            continue
+        endif
+
+        " Convert forward slash back to backslash, if any:
+        let file_list[idx] = tr(file_list[idx], '/', '\')
+    endwhile
+
+    " Skip empty file list:
+    if (len(file_list) < 1)
+        $put ='# No file found, skip!'
+        continue
+    endif
+
+    " Generate NSIS commands to install files:
+    for one_item in file_list
         $put ='${Logged1} File ' . one_item
     endfor
 
@@ -320,7 +337,7 @@ while line_num <= num_tmplates
         " Get file name:
         let one_item = fnamemodify(one_item, ':t')
 
-        " NSIS commands to install the file:
+        " NSIS commands to remove the file:
         $put ='${Logged1} Delete ' . tmpl_spec[0] . '\' . one_item
     endfor
 endwhile
