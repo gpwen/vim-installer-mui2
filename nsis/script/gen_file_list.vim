@@ -372,9 +372,11 @@ while line_num <= num_tmplates
     " Prefix for debug message output:
     let msg_prefix = '# ' . g:fname_tmpl . ' line ' . line_num . ': '
 
-    " Read one line from the template buffer:
+    " Read one line from the template buffer, the separator for fields is a
+    " vertical bar (|) that NOT preceded by a backslash (\).  This makes it
+    " possible to use backslash to escape vertical bar.
     let read_stat = s:Readline
-        \ (buf_id_tmpl, line_num, '\s*|\s*', tmpl_spec, last_lines)
+        \ (buf_id_tmpl, line_num, '\s*\\\@<!|\s*', tmpl_spec, last_lines)
     let line_num += 1
 
     if (read_stat != 1)
@@ -393,13 +395,19 @@ while line_num <= num_tmplates
         continue
     endif
 
-    " Perform macro substitution:
+    " Escape character processing and macro substitution:
     for macro_name in keys(nsis_defs)
         let idx = 0
         while idx < NUM_FIELDS
+            " Escape character processing: \| -> | and  \: -> :
+            let tmpl_spec[idx] = substitute(tmpl_spec[idx], '\\|', '|', 'g')
+            let tmpl_spec[idx] = substitute(tmpl_spec[idx], '\\:', ':', 'g')
+
+            " Macro substitution:
             let tmpl_spec[idx] =
                \ substitute(tmpl_spec[idx], '${' . macro_name . '}',
                           \ escape(nsis_defs[macro_name], '\'), 'g')
+
             let idx += 1
         endwhile
     endfor
