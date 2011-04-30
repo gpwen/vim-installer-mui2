@@ -50,7 +50,7 @@ set cpo&vim
 
 
 " ----------------------------------------------------------------------------
-" Function: s:GenListReadline(buf_id, line_num, ...)                      {{{1
+" Function: s:Readline(buf_id, line_num, ...)                             {{{1
 "   Read one line from the specified buffer and split result into fields.
 " Arguments:
 "   buf_id     : ID of the buffer to read from;
@@ -62,7 +62,7 @@ set cpo&vim
 "   0 If no valid line has been processed;
 "   1 If a valid line has been successfully processed.
 " ----------------------------------------------------------------------------
-function! s:GenListReadline(buf_id, line_num, field_sep, fields, last_lines)
+function! s:Readline(buf_id, line_num, field_sep, fields, last_lines)
     " Initialize output fields:
     if !empty(a:fields)
         call remove(a:fields, 0, -1)
@@ -104,7 +104,7 @@ endfunction
 
 
 " ----------------------------------------------------------------------------
-" Function: s:GenListErr(msg_prefix, line, fname_data)                    {{{1
+" Function: s:WriteErr(msg_prefix, line, fname_data)                      {{{1
 "   Write a error message to buffer for the install commands.  This function
 "   will also embed an NSIS !error command in that buffer, so that makensis
 "   will be stopped with the appropriate error report.
@@ -115,7 +115,7 @@ endfunction
 " Return:
 "   None
 " ----------------------------------------------------------------------------
-function! s:GenListErr(msg_prefix, line, fname_data)
+function! s:WriteErr(msg_prefix, line, fname_data)
     $put =''
     $put =a:msg_prefix . 'Syntax error, skip: ' . a:line
     $put ='!error \"Syntax error in [' . a:fname_data . ']!  \'
@@ -126,7 +126,7 @@ endfunction
 
 
 " ----------------------------------------------------------------------------
-" Function: s:GenListLoadDefines(fname, buf_id_log)                       {{{1
+" Function: s:LoadDefines(fname, buf_id_log)                              {{{1
 "   Load NSIS macro definitions into a dictionary.
 " Arguments:
 "   fname      : File name of the NSIS macro definition file to load.
@@ -135,7 +135,7 @@ endfunction
 "   A dictionary contains definitions loaded from the NSIS macro definition
 "   file.  Empty dictionary will be returned if the file does not exist.
 " ----------------------------------------------------------------------------
-function! s:GenListLoadDefines(fname, buf_id_log)
+function! s:LoadDefines(fname, buf_id_log)
     " Load NSIS defines if exist:
     let nsis_defs = {}
     if !filereadable(a:fname)
@@ -165,7 +165,7 @@ function! s:GenListLoadDefines(fname, buf_id_log)
         let msg_prefix = '# ' . a:fname . ' line ' . line_num . ': '
 
         " Read one line from the definition buffer:
-        let read_stat = s:GenListReadline
+        let read_stat = s:Readline
             \ (buf_id_defs, line_num, '\s*=\s*', def_spec, last_lines)
         let line_num += 1
 
@@ -175,7 +175,7 @@ function! s:GenListLoadDefines(fname, buf_id_log)
 
         " Skip those lines with incorrect format:
         if (len(def_spec) != 2)
-            call s:GenListErr(msg_prefix, last_lines[-1], fname_defines)
+            call s:WriteErr(msg_prefix, last_lines[-1], fname_defines)
             continue
         endif
 
@@ -196,7 +196,7 @@ endfunction
 
 
 " ----------------------------------------------------------------------------
-" Function: s:GenListExpandPattern(pattern)                               {{{1
+" Function: s:ExpandPattern(pattern)                                      {{{1
 "   Expand file name pattern, and:
 "   - Remove directories from the expanded list;
 "   - Convert all forward slashes to backslash.
@@ -205,7 +205,7 @@ endfunction
 " Return:
 "   List of files generated from the pattern.
 " ----------------------------------------------------------------------------
-function! s:GenListExpandPattern(pattern)
+function! s:ExpandPattern(pattern)
     " Expand the source file pattern to generate a file list, and then clean
     " up the list (remove directories etc.)
     let file_list = split(glob(a:pattern, 1), "\n")
@@ -224,6 +224,76 @@ function! s:GenListExpandPattern(pattern)
     endwhile
 
     return file_list
+endfunction
+
+
+" ----------------------------------------------------------------------------
+" Function: s:GenInstallCmds(buf_id, target_path, file_list)              {{{1
+"   Generate NSIS file install commands for specified files.  Generated
+"   commands will be appended to the specified Vim buffer.
+" Arguments:
+"   buf_id      : ID of the Vim buffer to hold generated commands.
+"   target_path : Target path.
+"   file_list   : List of files to install.
+" Return:
+"   0 if no command generated;
+"   1 if succeeded.
+" ----------------------------------------------------------------------------
+function! s:GenInstallCmds(buf_id, target_path, file_list)
+    " Generate install commands: NSIS command to set output path.
+    execute 'buffer ' . a:buf_id
+
+    " Skip if no file found:
+    if (len(a:file_list) < 1)
+        $put ='# No file found, skip!'
+        return 0
+    endif
+
+    " Set NSIS output path.
+    $put ='${Logged1} SetOutPath ' . a:target_path
+
+    " Generate NSIS commands to install files:
+    let one_item = ''
+    for one_item in a:file_list
+        $put ='${Logged1} File ' . one_item
+    endfor
+
+    return 1
+endfunction
+
+
+" ----------------------------------------------------------------------------
+" Function: s:GenUninstallCmds(buf_id, target_path, file_list)            {{{1
+"   Generate NSIS file uninstall commands for specified files.  Generated
+"   commands will be appended to the specified Vim buffer.
+" Arguments:
+"   buf_id      : ID of the Vim buffer to hold generated commands.
+"   target_path : Target path.
+"   file_list   : List of files to uninstall.
+" Return:
+"   0 if no command generated;
+"   1 if succeeded.
+" ----------------------------------------------------------------------------
+function! s:GenUninstallCmds(buf_id, target_path, file_list)
+    " Generate install commands: NSIS command to set output path.
+    execute 'buffer ' . a:buf_id
+
+    " Skip if no file found:
+    if (len(a:file_list) < 1)
+        $put ='# No file found, skip!'
+        return 0
+    endif
+
+    let one_item = ''
+    for one_item in a:file_list
+        " Get file name:
+        let one_item = fnamemodify(one_item, ':t')
+
+        " NSIS commands to remove the file:
+        $put ='${Logged1} Delete ' . a:target_path . '\' . one_item
+    endfor
+
+    return 1
 endfunction
 
 
@@ -274,32 +344,36 @@ if !exists("g:fname_defines")
     let g:fname_defines = 'vim_defines.conf'
 endif
 
-let nsis_defs = s:GenListLoadDefines(g:fname_defines, buf_id_install)
+let nsis_defs = s:LoadDefines(g:fname_defines, buf_id_install)
 
 " Write debug log:
 execute 'buffer ' . buf_id_install
 $put =''
 $put ='# Loading file templates from: ' . g:fname_tmpl
 
+" Constants to access fields of templates:
+let NUM_FIELDS   = 3
+let IDX_TARGET   = 0
+let IDX_SRC_ROOT = 1
+let IDX_PATTERN  = 2
+
 " Process templates in the input buffer:
-let NUM_FIELDS = 3
-let line_num   = 1
-let read_stat  = 1
-let tmpl_spec  = []
-let last_lines = []
-let msg_prefix = ''
-let temp_msg   = ''
-let macro_name = ''
-let file_list  = []
-let dir_list   = []
-let one_item   = ''
-let idx        = 0
+let line_num     = 1
+let read_stat    = 1
+let tmpl_spec    = []
+let last_lines   = []
+let msg_prefix   = ''
+let temp_msg     = ''
+let macro_name   = ''
+let file_list    = []
+let dir_list     = []
+let idx          = 0
 while line_num <= num_tmplates
     " Prefix for debug message output:
     let msg_prefix = '# ' . g:fname_tmpl . ' line ' . line_num . ': '
 
     " Read one line from the template buffer:
-    let read_stat = s:GenListReadline
+    let read_stat = s:Readline
         \ (buf_id_tmpl, line_num, '\s*|\s*', tmpl_spec, last_lines)
     let line_num += 1
 
@@ -310,7 +384,7 @@ while line_num <= num_tmplates
     " Skip those lines with incorrect format:
     if (len(tmpl_spec) != NUM_FIELDS)
         execute 'buffer ' . buf_id_install
-        call s:GenListErr(msg_prefix, last_lines[-1], fname_tmpl)
+        call s:WriteErr(msg_prefix, last_lines[-1], fname_tmpl)
 
         execute 'buffer ' . buf_id_uninst
         $put =''
@@ -332,17 +406,17 @@ while line_num <= num_tmplates
 
     " Convert any forward slash in target path to backslash since NSIS only
     " accept backslash.  Also remove trailing slashes if any:
-    let tmpl_spec[0] = tr(tmpl_spec[0], '/', '\')
-    let tmpl_spec[0] = substitute(tmpl_spec[0], '\\\+$', '', '')
-
-    " Record the output directory:
-    call add(dir_list, tmpl_spec[0])
+    let tmpl_spec[IDX_TARGET] = tr(tmpl_spec[IDX_TARGET], '/', '\')
+    let tmpl_spec[IDX_TARGET] =
+        \ substitute(tmpl_spec[IDX_TARGET], '\\\+$', '', '')
 
     " Convert backslash in source path to forward slash for better
     " portability.  Also remove trailing slashes from path if any:
-    let tmpl_spec[1] = tr(tmpl_spec[1], '\', '/')
-    let tmpl_spec[1] = substitute(tmpl_spec[1], '/\+$', '', '')
-    let tmpl_spec[2] = tr(tmpl_spec[2], '\', '/')
+    let tmpl_spec[IDX_SRC_ROOT] = tr(tmpl_spec[IDX_SRC_ROOT], '\', '/')
+    let tmpl_spec[IDX_SRC_ROOT] =
+        \ substitute(tmpl_spec[IDX_SRC_ROOT], '/\+$', '', '')
+
+    let tmpl_spec[IDX_PATTERN]  = tr(tmpl_spec[IDX_PATTERN], '\', '/')
 
     " Echo back the current line (converted) for debug purpose:
     let temp_msg = msg_prefix . join(tmpl_spec, ' | ')
@@ -355,33 +429,17 @@ while line_num <= num_tmplates
     $put =''
     $put =temp_msg
 
-    " Generate install commands: NSIS command to set output path.
-    execute 'buffer ' . buf_id_install
-    $put ='${Logged1} SetOutPath ' . tmpl_spec[0]
+    " Record the output directory:
+    call add(dir_list, tmpl_spec[IDX_TARGET])
 
     " Expand the source file pattern to generate a file list, and then clean
     " up the list (remove directories etc.).  Skip if no file found.
-    let file_list = s:GenListExpandPattern(tmpl_spec[1] . '/' . tmpl_spec[2])
+    let file_list = s:ExpandPattern(tmpl_spec[IDX_SRC_ROOT] .
+        \ '/' . tmpl_spec[IDX_PATTERN])
 
-    if (len(file_list) < 1)
-        $put ='# No file found, skip!'
-        continue
-    endif
-
-    " Generate NSIS commands to install files:
-    for one_item in file_list
-        $put ='${Logged1} File ' . one_item
-    endfor
-
-    " Generate uninstall commands:
-    execute 'buffer ' . buf_id_uninst
-    for one_item in file_list
-        " Get file name:
-        let one_item = fnamemodify(one_item, ':t')
-
-        " NSIS commands to remove the file:
-        $put ='${Logged1} Delete ' . tmpl_spec[0] . '\' . one_item
-    endfor
+    " Generate NSIS commands to install/uninstall files:
+    call s:GenInstallCmds(buf_id_install, tmpl_spec[IDX_TARGET], file_list)
+    call s:GenUninstallCmds(buf_id_uninst, tmpl_spec[IDX_TARGET], file_list)
 endwhile
 
 " Sort directory list in reverse order:
@@ -393,6 +451,7 @@ execute 'buffer ' . buf_id_uninst
 $put =''
 $put ='# Remove directories:'
 
+let one_item = ''
 let last_dir = ''
 for one_item in dir_list
     if one_item !=# last_dir
