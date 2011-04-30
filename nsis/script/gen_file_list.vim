@@ -8,19 +8,21 @@
 " - Template definition line.
 "
 " The template definition line has the following format:
-"   <target-path> | <src-pattern>
+"   <target-path> | <src-root> | <src-pattern>
 " where
 " - <target-path> is the path name on the target system where source file(s)
 "   should be installed.  The path name will be used literally in generate
 "   command except slash conversion and cleanup, NSIS variables can be used
 "   there.  Forward slash can be used in path name, they will be converted to
 "   backward slash automatically.
-" - <src-pattern> is the pattern for the source files (on the build system).
-"   Path name should be included, and wildcards can be used.  Either forward
-"   slash or backward slash can be used as path separator.  The pattern will
-"   be passed to Vim glob() function to expand.  Please note the pattern will
-"   *NOT* be expanded recursively, you're expected to list all directories
-"   explicitly.
+" - <src-root> is the root path for the source files (on the build system).
+"   Either forward slash or backward slash can be used as path separator.
+" - <src-pattern> is the pattern for the source files (on the build system)
+"   under <src-root>.  Path name relative to the <src-root> can be included,
+"   and wildcards can be used.  Either forward slash or backward slash can be
+"   used as path separator.  The pattern will be passed to Vim glob() function
+"   to expand.  Please note the pattern will *NOT* be expanded recursively,
+"   you're expected to list all directories explicitly.
 " - If the first non-white character one a line is '#', the line will be
 "   considered as comment line and skipped.
 " - NSIS macro can be used in all fields of the template.  The syntax of the
@@ -124,6 +126,108 @@ endfunction
 
 
 " ----------------------------------------------------------------------------
+" Function: s:GenListLoadDefines(fname, buf_id_log)                       {{{1
+"   Load NSIS macro definitions into a dictionary.
+" Arguments:
+"   fname      : File name of the NSIS macro definition file to load.
+"   buf_id_log : ID of the Vim buffer to write log messages.
+" Return:
+"   A dictionary contains definitions loaded from the NSIS macro definition
+"   file.  Empty dictionary will be returned if the file does not exist.
+" ----------------------------------------------------------------------------
+function! s:GenListLoadDefines(fname, buf_id_log)
+    " Load NSIS defines if exist:
+    let nsis_defs = {}
+    if !filereadable(a:fname)
+        return nsis_defs
+    end
+
+    " Open NSIS definition file and record buffer ID etc.:
+    execute 'sview ' . a:fname
+    let buf_id_defs = bufnr('%')
+    let num_defs    = line('$')
+
+    " Don't unload this buffer, and avoid accidental change.
+    setlocal bufhidden=hide
+    setlocal nomodifiable
+
+    " Log message will be written to the install command buffer:
+    execute 'buffer ' . a:buf_id_log
+    $put =''
+    $put ='# Loading NSIS defines from: ' . a:fname
+
+    let line_num    = 1
+    let read_stat   = 1
+    let def_spec    = []
+    let last_lines  = []
+    while line_num <= num_defs
+        " Prefix for debug message output:
+        let msg_prefix = '# ' . a:fname . ' line ' . line_num . ': '
+
+        " Read one line from the definition buffer:
+        let read_stat = s:GenListReadline
+            \ (buf_id_defs, line_num, '\s*=\s*', def_spec, last_lines)
+        let line_num += 1
+
+        if (read_stat != 1)
+            continue
+        endif
+
+        " Skip those lines with incorrect format:
+        if (len(def_spec) != 2)
+            call s:GenListErr(msg_prefix, last_lines[-1], fname_defines)
+            continue
+        endif
+
+        " Echo back the current definition for debug purpose:
+        $put =msg_prefix . def_spec[0] . ' = ' . def_spec[1]
+
+        " Record the definition:
+        let nsis_defs[def_spec[0]] = def_spec[1]
+    endwhile
+
+    $put ='# NSIS defines load completed: ' . a:fname
+
+    " Unload the temporary buffer for NSIS definition file:
+    execute 'bunload! ' . buf_id_defs
+
+    return nsis_defs
+endfunction
+
+
+" ----------------------------------------------------------------------------
+" Function: s:GenListExpandPattern(pattern)                               {{{1
+"   Expand file name pattern, and:
+"   - Remove directories from the expanded list;
+"   - Convert all forward slashes to backslash.
+" Arguments:
+"   pattern : File name pattern to expand.
+" Return:
+"   List of files generated from the pattern.
+" ----------------------------------------------------------------------------
+function! s:GenListExpandPattern(pattern)
+    " Expand the source file pattern to generate a file list, and then clean
+    " up the list (remove directories etc.)
+    let file_list = split(glob(a:pattern, 1), "\n")
+    let idx       = len(file_list)
+    while idx > 0
+        let idx -= 1
+
+        " Skip directories:
+        if (isdirectory(file_list[idx]))
+            call remove(file_list, idx)
+            continue
+        endif
+
+        " Convert forward slash back to backslash, if any:
+        let file_list[idx] = tr(file_list[idx], '/', '\')
+    endwhile
+
+    return file_list
+endfunction
+
+
+" ----------------------------------------------------------------------------
 " Main Script                                                             {{{1
 " ----------------------------------------------------------------------------
 " It's very important to set 'bufhidden' as 'hide', otherwise the buffer will
@@ -165,60 +269,12 @@ if !exists("g:fname_uninst")
     let g:fname_uninst = 'uninst-cmds.nsi'
 endif
 
-" Set default name for NSIS defines:
+" Set default name for NSIS defines and load them if exist:
 if !exists("g:fname_defines")
     let g:fname_defines = 'vim_defines.conf'
 endif
 
-" Load NSIS defines if exist:
-let nsis_defs    = {}
-if filereadable(g:fname_defines)
-    " Open NSIS definition file and record buffer ID etc.:
-    execute 'sview ' . g:fname_defines
-    let buf_id_defs = bufnr('%')
-    let num_defs    = line('$')
-
-    " Don't unload this buffer, and avoid accidental change.
-    setlocal bufhidden=hide
-    setlocal nomodifiable
-
-    " Log message will be written to the install command buffer:
-    execute 'buffer ' . buf_id_install
-    $put =''
-    $put ='# Loading NSIS defines from: ' . g:fname_defines
-
-    let line_num    = 1
-    let read_stat   = 1
-    let def_spec    = []
-    let last_lines  = []
-    while line_num <= num_defs
-        " Prefix for debug message output:
-        let msg_prefix = '# ' . g:fname_defines . ' line ' . line_num . ': '
-
-        " Read one line from the definition buffer:
-        let read_stat = s:GenListReadline
-            \ (buf_id_defs, line_num, '\s*=\s*', def_spec, last_lines)
-        let line_num += 1
-
-        if (read_stat != 1)
-            continue
-        endif
-
-        " Skip those lines with incorrect format:
-        if (len(def_spec) != 2)
-            call s:GenListErr(msg_prefix, last_lines[-1], fname_defines)
-            continue
-        endif
-
-        " Echo back the current definition for debug purpose:
-        $put =msg_prefix . def_spec[0] . ' = ' . def_spec[1]
-
-        " Record the definition:
-        let nsis_defs[def_spec[0]] = def_spec[1]
-    endwhile
-
-    $put ='# NSIS defines load completed: ' . g:fname_defines
-end
+let nsis_defs = s:GenListLoadDefines(g:fname_defines, buf_id_install)
 
 " Write debug log:
 execute 'buffer ' . buf_id_install
@@ -226,7 +282,7 @@ $put =''
 $put ='# Loading file templates from: ' . g:fname_tmpl
 
 " Process templates in the input buffer:
-let NUM_FIELDS = 2
+let NUM_FIELDS = 3
 let line_num   = 1
 let read_stat  = 1
 let tmpl_spec  = []
@@ -275,21 +331,21 @@ while line_num <= num_tmplates
     endfor
 
     " Convert any forward slash in target path to backslash since NSIS only
-    " accept backslash:
+    " accept backslash.  Also remove trailing slashes if any:
     let tmpl_spec[0] = tr(tmpl_spec[0], '/', '\')
-
-    " Also remove trailing slashes if any:
     let tmpl_spec[0] = substitute(tmpl_spec[0], '\\\+$', '', '')
 
     " Record the output directory:
     call add(dir_list, tmpl_spec[0])
 
     " Convert backslash in source path to forward slash for better
-    " portability:
+    " portability.  Also remove trailing slashes from path if any:
     let tmpl_spec[1] = tr(tmpl_spec[1], '\', '/')
+    let tmpl_spec[1] = substitute(tmpl_spec[1], '/\+$', '', '')
+    let tmpl_spec[2] = tr(tmpl_spec[2], '\', '/')
 
     " Echo back the current line (converted) for debug purpose:
-    let temp_msg = msg_prefix . tmpl_spec[0] . ', ' . tmpl_spec[1]
+    let temp_msg = msg_prefix . join(tmpl_spec, ' | ')
 
     execute 'buffer ' . buf_id_install
     $put =''
@@ -304,23 +360,9 @@ while line_num <= num_tmplates
     $put ='${Logged1} SetOutPath ' . tmpl_spec[0]
 
     " Expand the source file pattern to generate a file list, and then clean
-    " up the list (remove directories etc.)
-    let file_list = split(glob(tmpl_spec[1], 1), "\n")
-    let idx       = len(file_list)
-    while idx > 0
-        let idx -= 1
+    " up the list (remove directories etc.).  Skip if no file found.
+    let file_list = s:GenListExpandPattern(tmpl_spec[1] . '/' . tmpl_spec[2])
 
-        " Skip directories:
-        if (isdirectory(file_list[idx]))
-            call remove(file_list, idx)
-            continue
-        endif
-
-        " Convert forward slash back to backslash, if any:
-        let file_list[idx] = tr(file_list[idx], '/', '\')
-    endwhile
-
-    " Skip empty file list:
     if (len(file_list) < 1)
         $put ='# No file found, skip!'
         continue
