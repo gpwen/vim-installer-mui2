@@ -44,9 +44,60 @@
 "
 " Maintainer: Guopeng Wen <wenguopeng AT gmail.com>
 
+" ----------------------------------------------------------------------------
+" Global initialization & setup                                           {{{1
+" ----------------------------------------------------------------------------
+
 " Set compatibility to Vim default:
 let s:save_cpo = &cpo
 set cpo&vim
+
+" Constants to access fields of templates:
+let s:NUM_FIELDS   = 3
+let s:IDX_TARGET   = 0
+let s:IDX_SRC_ROOT = 1
+let s:IDX_PATTERN  = 2
+
+" It's very important to set 'bufhidden' as 'hide', otherwise the buffer will
+" be unloaded once hide (which move other buffer to front).  If that happened,
+" subsequent read from that buffer will return empty.
+setlocal bufhidden=hide
+
+" Make the current buffer unmodifiable to avoid accident change:
+setlocal nomodifiable
+
+" Record the buffer number/name of the current buffer (template buffer):
+let s:buf_id_tmpl = bufnr('%')
+let s:fname_tmpl  = bufname('%')
+
+" New buffer for NSIS install commands:
+new
+setlocal bufhidden=hide
+setlocal modifiable
+call setline('$', '# Generated commands for NSIS installer, do not edit.')
+let s:buf_id_install = bufnr('%')
+
+" Set default name for the install command file:
+if !exists("g:fname_install")
+    let g:fname_install = 'install-cmds.nsi'
+endif
+
+" New buffer for NSIS uninstall commands:
+new
+setlocal bufhidden=hide
+setlocal modifiable
+call setline('$', '# Generated commands for NSIS uninstaller, do not edit.')
+let s:buf_id_uninst  = bufnr('%')
+
+" Set default name for the uninstall command file:
+if !exists("g:fname_uninst")
+    let g:fname_uninst = 'uninst-cmds.nsi'
+endif
+
+" Set default name for NSIS defines and load them if exist:
+if !exists("g:fname_defines")
+    let g:fname_defines = 'vim_defines.conf'
+endif
 
 
 " ----------------------------------------------------------------------------
@@ -300,62 +351,18 @@ endfunction
 " ----------------------------------------------------------------------------
 " Main Script                                                             {{{1
 " ----------------------------------------------------------------------------
-" It's very important to set 'bufhidden' as 'hide', otherwise the buffer will
-" be unloaded once hide (which move other buffer to front).  If that happened,
-" subseqent read from that buffer will return empty.
-setlocal bufhidden=hide
 
-" Make the current buffer unmodifiable to avoid accident change:
-setlocal nomodifiable
-
-" Record the buffer number/name of the current buffer (template buffer):
-let buf_id_tmpl  = bufnr('%')
-let fname_tmpl   = bufname('%')
-
-" Line of text in the current buffer:
-let num_tmplates = line('$')
-
-" New buffer for NSIS install commands:
-new
-setlocal bufhidden=hide
-setlocal modifiable
-call setline('$', '# Generated commands for NSIS installer, do not edit.')
-let buf_id_install = bufnr('%')
-
-" Set default name for the install command file:
-if !exists("g:fname_install")
-    let g:fname_install = 'install-cmds.nsi'
-endif
-
-" New buffer for NSIS uninstall commands:
-new
-setlocal bufhidden=hide
-setlocal modifiable
-call setline('$', '# Generated commands for NSIS uninstaller, do not edit.')
-let buf_id_uninst  = bufnr('%')
-
-" Set default name for the uninstall command file:
-if !exists("g:fname_uninst")
-    let g:fname_uninst = 'uninst-cmds.nsi'
-endif
-
-" Set default name for NSIS defines and load them if exist:
-if !exists("g:fname_defines")
-    let g:fname_defines = 'vim_defines.conf'
-endif
-
-let nsis_defs = s:LoadDefines(g:fname_defines, buf_id_install)
+" Load NSIS defines:
+let nsis_defs = s:LoadDefines(g:fname_defines, s:buf_id_install)
 
 " Write debug log:
-execute 'buffer ' . buf_id_install
+execute 'buffer ' . s:buf_id_install
 $put =''
-$put ='# Loading file templates from: ' . g:fname_tmpl
+$put ='# Loading file templates from: ' . s:fname_tmpl
 
-" Constants to access fields of templates:
-let NUM_FIELDS   = 3
-let IDX_TARGET   = 0
-let IDX_SRC_ROOT = 1
-let IDX_PATTERN  = 2
+" Number of file template lines:
+execute 'buffer ' . s:buf_id_tmpl
+let num_tmplates = line('$')
 
 " Process templates in the input buffer:
 let line_num     = 1
@@ -370,13 +377,13 @@ let dir_list     = []
 let idx          = 0
 while line_num <= num_tmplates
     " Prefix for debug message output:
-    let msg_prefix = '# ' . g:fname_tmpl . ' line ' . line_num . ': '
+    let msg_prefix = '# ' . s:fname_tmpl . ' line ' . line_num . ': '
 
     " Read one line from the template buffer, the separator for fields is a
     " vertical bar (|) that NOT preceded by a backslash (\).  This makes it
     " possible to use backslash to escape vertical bar.
     let read_stat = s:Readline
-        \ (buf_id_tmpl, line_num, '\s*\\\@<!|\s*', tmpl_spec, last_lines)
+        \ (s:buf_id_tmpl, line_num, '\s*\\\@<!|\s*', tmpl_spec, last_lines)
     let line_num += 1
 
     if (read_stat != 1)
@@ -384,11 +391,11 @@ while line_num <= num_tmplates
     endif
 
     " Skip those lines with incorrect format:
-    if (len(tmpl_spec) != NUM_FIELDS)
-        execute 'buffer ' . buf_id_install
-        call s:WriteErr(msg_prefix, last_lines[-1], fname_tmpl)
+    if (len(tmpl_spec) != s:NUM_FIELDS)
+        execute 'buffer ' . s:buf_id_install
+        call s:WriteErr(msg_prefix, last_lines[-1], s:fname_tmpl)
 
-        execute 'buffer ' . buf_id_uninst
+        execute 'buffer ' . s:buf_id_uninst
         $put =''
         $put =msg_prefix . 'Syntax error, skip: ' . last_lines[-1]
 
@@ -398,7 +405,7 @@ while line_num <= num_tmplates
     " Escape character processing and macro substitution:
     for macro_name in keys(nsis_defs)
         let idx = 0
-        while idx < NUM_FIELDS
+        while idx < s:NUM_FIELDS
             " Escape character processing: \| -> | and  \: -> :
             let tmpl_spec[idx] = substitute(tmpl_spec[idx], '\\|', '|', 'g')
             let tmpl_spec[idx] = substitute(tmpl_spec[idx], '\\:', ':', 'g')
@@ -414,40 +421,40 @@ while line_num <= num_tmplates
 
     " Convert any forward slash in target path to backslash since NSIS only
     " accept backslash.  Also remove trailing slashes if any:
-    let tmpl_spec[IDX_TARGET] = tr(tmpl_spec[IDX_TARGET], '/', '\')
-    let tmpl_spec[IDX_TARGET] =
-        \ substitute(tmpl_spec[IDX_TARGET], '\\\+$', '', '')
+    let tmpl_spec[s:IDX_TARGET] = tr(tmpl_spec[s:IDX_TARGET], '/', '\')
+    let tmpl_spec[s:IDX_TARGET] =
+        \ substitute(tmpl_spec[s:IDX_TARGET], '\\\+$', '', '')
 
     " Convert backslash in source path to forward slash for better
     " portability.  Also remove trailing slashes from path if any:
-    let tmpl_spec[IDX_SRC_ROOT] = tr(tmpl_spec[IDX_SRC_ROOT], '\', '/')
-    let tmpl_spec[IDX_SRC_ROOT] =
-        \ substitute(tmpl_spec[IDX_SRC_ROOT], '/\+$', '', '')
+    let tmpl_spec[s:IDX_SRC_ROOT] = tr(tmpl_spec[s:IDX_SRC_ROOT], '\', '/')
+    let tmpl_spec[s:IDX_SRC_ROOT] =
+        \ substitute(tmpl_spec[s:IDX_SRC_ROOT], '/\+$', '', '')
 
-    let tmpl_spec[IDX_PATTERN]  = tr(tmpl_spec[IDX_PATTERN], '\', '/')
+    let tmpl_spec[s:IDX_PATTERN]  = tr(tmpl_spec[s:IDX_PATTERN], '\', '/')
 
     " Echo back the current line (converted) for debug purpose:
     let temp_msg = msg_prefix . join(tmpl_spec, ' | ')
 
-    execute 'buffer ' . buf_id_install
+    execute 'buffer ' . s:buf_id_install
     $put =''
     $put =temp_msg
 
-    execute 'buffer ' . buf_id_uninst
+    execute 'buffer ' . s:buf_id_uninst
     $put =''
     $put =temp_msg
 
     " Record the output directory:
-    call add(dir_list, tmpl_spec[IDX_TARGET])
+    call add(dir_list, tmpl_spec[s:IDX_TARGET])
 
     " Expand the source file pattern to generate a file list, and then clean
     " up the list (remove directories etc.).  Skip if no file found.
-    let file_list = s:ExpandPattern(tmpl_spec[IDX_SRC_ROOT] .
-        \ '/' . tmpl_spec[IDX_PATTERN])
+    let file_list = s:ExpandPattern(tmpl_spec[s:IDX_SRC_ROOT] .
+        \ '/' . tmpl_spec[s:IDX_PATTERN])
 
     " Generate NSIS commands to install/uninstall files:
-    call s:GenInstallCmds(buf_id_install, tmpl_spec[IDX_TARGET], file_list)
-    call s:GenUninstallCmds(buf_id_uninst, tmpl_spec[IDX_TARGET], file_list)
+    call s:GenInstallCmds(s:buf_id_install, tmpl_spec[s:IDX_TARGET], file_list)
+    call s:GenUninstallCmds(s:buf_id_uninst, tmpl_spec[s:IDX_TARGET], file_list)
 endwhile
 
 " Sort directory list in reverse order:
@@ -455,7 +462,7 @@ call sort(dir_list)
 call reverse(dir_list)
 
 " Generate commands to remove directory, duplicated items will be removed:
-execute 'buffer ' . buf_id_uninst
+execute 'buffer ' . s:buf_id_uninst
 $put =''
 $put ='# Remove directories:'
 
@@ -469,11 +476,11 @@ for one_item in dir_list
 endfor
 
 " Save install commands:
-execute 'buffer '  . buf_id_install
+execute 'buffer '  . s:buf_id_install
 execute 'saveas! ' . g:fname_install
 
 " Save un-install commands:
-execute 'buffer '  . buf_id_uninst
+execute 'buffer '  . s:buf_id_uninst
 execute 'saveas! ' . g:fname_uninst
 
 " Restore compatibility:
