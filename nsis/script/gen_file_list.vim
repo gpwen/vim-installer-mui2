@@ -1,38 +1,51 @@
 " vi:set ts=8 sts=4 sw=4 fdm=marker:
 "
-" This Vim script is used to generate NSIS commands to install/uninstall files
-" from templates held in the current buffer.  Each line in the current buffer
-" should be one of:
+" This Vim script is used to generate NSIS commands to install/un-install
+" files from templates held in the current buffer.  Each line in the current
+" buffer should be one of:
 " - Blank line (lines with blank characters only); or
 " - Comment line (lines with first non-blank character as '#'); or
 " - Template definition line.
 "
 " The template definition line has the following format:
-"   <target-path> | <src-root> | <src-pattern>
-" where
+"   <target-path> | <src-root> | <src-patterns>
+"
+" where:
+"
 " - <target-path> is the path name on the target system where source file(s)
 "   should be installed.  The path name will be used literally in generate
 "   command except slash conversion and cleanup, NSIS variables can be used
 "   there.  Forward slash can be used in path name, they will be converted to
 "   backward slash automatically.
+"
 " - <src-root> is the root path for the source files (on the build system).
 "   Either forward slash or backward slash can be used as path separator.
-" - <src-pattern> is the pattern for the source files (on the build system)
-"   under <src-root>.  Path name relative to the <src-root> can be included,
-"   and wildcards can be used.  Either forward slash or backward slash can be
-"   used as path separator.  The pattern will be passed to Vim glob() function
-"   to expand.  Please note the pattern will *NOT* be expanded recursively,
+"
+" - <src-patterns> is one or more patterns to match source files (on the build
+"   system) under <src-root>.  Patterns are delimited by colon (:).  Path name
+"   relative to the <src-root> can be included, and wildcards can be used.
+"   Either forward slash or backward slash can be used as path separator (for
+"   relative path).  The pattern will be passed to Vim glob() function to
+"   expand.  Please note the pattern will *NOT* be expanded recursively,
 "   you're expected to list all directories explicitly.
+"
+" - Fields of the template should be delimited by vertical bar(|), and
+"   patterns in the pattern field should be delimited colon (:).  If vertical
+"   bar and colon needs to be used as filed content, they should be escaped
+"   using backslash, like \| or \:.  Those escape sequences will be escaped
+"   after the template line has be split into fields.
+"
 " - If the first non-white character one a line is '#', the line will be
 "   considered as comment line and skipped.
+"
 " - NSIS macro can be used in all fields of the template.  The syntax of the
 "   macro reference is (the same as NSIS):
 "     ${MACRO_NAME}
-"   Macro will be expanded after the line has been split into fields.
+"   Macro will be expanded after escaped sequences processing.
 "
 " A macro definition file can be loaded before processing the buffer.  The
 " name of the macro definition file should be specified in global variable:
-"   g:fname_defines
+"   g:gen_fcmds_fname_defines
 " The default file name is 'vim_defines.conf'.  Each line in the file should
 " be blank line, comment line (same as above) or macro definition line.  The
 " format of the macro definition line is:
@@ -51,6 +64,13 @@
 " Set compatibility to Vim default:
 let s:save_cpo = &cpo
 set cpo&vim
+
+" Set debug flag.  Turn on debug flag by default to make it easier to debug
+" from vim directly.  To debug, open the file template in vim, and then source
+" in this script:
+if !exists("g:gen_fcmds_debug_on")
+    let g:gen_fcmds_debug_on = 1
+endif
 
 " Constants to access fields of templates:
 let s:NUM_FIELDS   = 3
@@ -78,8 +98,8 @@ call setline('$', '# Generated commands for NSIS installer, do not edit.')
 let s:buf_id_install = bufnr('%')
 
 " Set default name for the install command file:
-if !exists("g:fname_install")
-    let g:fname_install = 'install-cmds.nsi'
+if !exists("g:gen_fcmds_fname_install")
+    let g:gen_fcmds_fname_install = 'install-cmds.nsi'
 endif
 
 " New buffer for NSIS uninstall commands:
@@ -90,14 +110,31 @@ call setline('$', '# Generated commands for NSIS uninstaller, do not edit.')
 let s:buf_id_uninst  = bufnr('%')
 
 " Set default name for the uninstall command file:
-if !exists("g:fname_uninst")
-    let g:fname_uninst = 'uninst-cmds.nsi'
+if !exists("g:gen_fcmds_fname_uninst")
+    let g:gen_fcmds_fname_uninst = 'uninst-cmds.nsi'
 endif
 
 " Set default name for NSIS defines and load them if exist:
-if !exists("g:fname_defines")
-    let g:fname_defines = 'vim_defines.conf'
+if !exists("g:gen_fcmds_fname_defines")
+    let g:gen_fcmds_fname_defines = 'vim_defines.conf'
 endif
+
+
+" ----------------------------------------------------------------------------
+" Function: s:DebugLog(msg)                                               {{{1
+"   Write debug log to install command buffer.
+" Arguments:
+"   msg: Message to log.
+" Return:
+"   N/A
+" ----------------------------------------------------------------------------
+function! s:DebugLog(msg)
+    execute 'buffer ' . s:buf_id_install
+    $put =''
+    $put ='# DEBUG: ' . a:msg
+
+    return 1
+endfunction
 
 
 " ----------------------------------------------------------------------------
@@ -170,7 +207,9 @@ function! s:WriteErr(msg_prefix, line, fname_data)
     $put =''
     $put =a:msg_prefix . 'Syntax error, skip: ' . a:line
     $put ='!error \"Syntax error in [' . a:fname_data . ']!  \'
-    $put ='        Please check [' . g:fname_install . '] for detail.\"'
+    $put ='        Please check ['  .
+        \ g:gen_fcmds_fname_install .
+        \ '] for detail.\"'
 
     return 1
 endfunction
@@ -191,7 +230,7 @@ function! s:LoadDefines(fname, buf_id_log)
     let nsis_defs = {}
     if !filereadable(a:fname)
         return nsis_defs
-    end
+    endif
 
     " Open NSIS definition file and record buffer ID etc.:
     execute 'sview ' . a:fname
@@ -247,7 +286,7 @@ endfunction
 
 
 " ----------------------------------------------------------------------------
-" Function: s:LoadTemplateLine(line_num)                                  {{{1
+" Function: s:LoadTemplateLine(line_num, tmpl_spec, nsis_defs)            {{{1
 "   Read one line from the template buffer, and convert it to target path,
 "   source root and source pattern.  The following
 " Arguments:
@@ -265,7 +304,7 @@ function! s:LoadTemplateLine(line_num, tmpl_spec, nsis_defs)
     " Prefix for debug message output:
     let msg_prefix = '# ' . s:fname_tmpl . ' line ' . a:line_num . ': '
 
-    " Read one line from the template buffer, the separator for fields is a
+    " Read one line from the template buffer, the delimiter for fields is a
     " vertical bar (|) that NOT preceded by a backslash (\).  This makes it
     " possible to use backslash to escape vertical bar.
     let last_lines = []
@@ -289,69 +328,94 @@ function! s:LoadTemplateLine(line_num, tmpl_spec, nsis_defs)
         return 0
     endif
 
-    " Escape character processing and macro substitution:
-    for macro_name in keys(a:nsis_defs)
-        let idx = 0
-        while idx < s:NUM_FIELDS
-            " Escape character processing: \| -> | and  \: -> :
-            let a:tmpl_spec[idx] =
-                \ substitute(a:tmpl_spec[idx], '\\|', '|', 'g')
-            let a:tmpl_spec[idx] =
-                \ substitute(a:tmpl_spec[idx], '\\:', ':', 'g')
+    " The pattern field may contains multiple patterns, the delimiter for
+    " patterns is colon (:) that NOT preceded by a backslash (\).  This makes
+    " it possible to use backslash to escape colon.  We'll put target path,
+    " source root and all patterns into one flat list so we can process them
+    " in same way easily:
+    let flat_list =
+        \ a:tmpl_spec[s:IDX_TARGET : s:IDX_SRC_ROOT] +
+        \ split(a:tmpl_spec[s:IDX_PATTERN], '\s*\\\@<!:\s*', 1)
 
-            " Macro substitution:
-            let a:tmpl_spec[idx] =
-               \ substitute(a:tmpl_spec[idx], '${' . macro_name . '}',
+    " Length of the flat list:
+    let total_len = len(flat_list)
+
+    " Escape character processing and macro substitution etc.:
+    let idx        = 0
+    let macro_name = ''
+    while idx < total_len
+        " Escape character processing: \| -> | and  \: -> :
+        let flat_list[idx] = substitute(flat_list[idx], '\\|', '|', 'g')
+        let flat_list[idx] = substitute(flat_list[idx], '\\:', ':', 'g')
+
+        " Macro substitution:
+        for macro_name in keys(a:nsis_defs)
+            let flat_list[idx] =
+               \ substitute(flat_list[idx], '${' . macro_name . '}',
                           \ escape(a:nsis_defs[macro_name], '\'), 'g')
+        endfor
 
-            let idx += 1
-        endwhile
-    endfor
+        " Path delimiter conversion:
+        if (idx == s:IDX_TARGET)
+            " Convert any forward slash in target path to backslash since NSIS
+            " only accept backslash.  Also remove trailing slashes if any:
+            let flat_list[idx] = tr(flat_list[idx], '/', '\')
+            let flat_list[idx] = substitute(flat_list[idx], '\\\+$', '', '')
+        else
+            " Convert backslash in other fields to forward slash for better
+            " portability.  Also remove trailing slashes from path if any:
+            let flat_list[idx] = tr(flat_list[idx], '\', '/')
+            let flat_list[idx] = substitute(flat_list[idx], '/\+$', '', '')
+        endif
 
-    " Convert any forward slash in target path to backslash since NSIS
-    " only accept backslash.  Also remove trailing slashes if any:
-    let a:tmpl_spec[s:IDX_TARGET] = tr(a:tmpl_spec[s:IDX_TARGET], '/', '\')
-    let a:tmpl_spec[s:IDX_TARGET] =
-        \ substitute(a:tmpl_spec[s:IDX_TARGET], '\\\+$', '', '')
+        " Move to the next field:
+        let idx += 1
+    endwhile
 
-    " Convert backslash in source path to forward slash for better
-    " portability.  Also remove trailing slashes from path if any:
-    let a:tmpl_spec[s:IDX_SRC_ROOT] = tr(a:tmpl_spec[s:IDX_SRC_ROOT], '\', '/')
-    let a:tmpl_spec[s:IDX_SRC_ROOT] =
-        \ substitute(a:tmpl_spec[s:IDX_SRC_ROOT], '/\+$', '', '')
-
-    let a:tmpl_spec[s:IDX_PATTERN]  = tr(a:tmpl_spec[s:IDX_PATTERN], '\', '/')
+    " Output the final result:
+    let a:tmpl_spec[s:IDX_TARGET : s:IDX_SRC_ROOT] =
+        \ flat_list[s:IDX_TARGET : s:IDX_SRC_ROOT]
+    call remove(flat_list, s:IDX_TARGET, s:IDX_SRC_ROOT)
+    let a:tmpl_spec[s:IDX_PATTERN] = flat_list
 
     " Echo back the current line (converted) for debug purpose:
-    let temp_msg = msg_prefix . join(a:tmpl_spec, ' | ')
+    let temp_msg = '# ' .
+        \ join(a:tmpl_spec[s:IDX_TARGET : s:IDX_SRC_ROOT], ' | ') .
+        \ ' | ' . join(a:tmpl_spec[s:IDX_PATTERN], ' : ')
 
-    execute 'buffer ' . s:buf_id_install
-    $put =''
-    $put =temp_msg
-
-    execute 'buffer ' . s:buf_id_uninst
-    $put =''
-    $put =temp_msg
+    for buf_id in [s:buf_id_install, s:buf_id_uninst]
+        execute 'buffer ' . buf_id
+        $put =''
+        $put =msg_prefix
+        $put =temp_msg
+    endfor
 
     return 1
 endfunction
 
 
 " ----------------------------------------------------------------------------
-" Function: s:ExpandPattern(pattern)                                      {{{1
-"   Expand file name pattern, and:
+" Function: s:ExpandPatterns(src_root, pattern_list)                      {{{1
+"   Expand a list of file name pattern, and:
 "   - Remove directories from the expanded list;
 "   - Convert all forward slashes to backslash.
 " Arguments:
-"   pattern : File name pattern to expand.
+"   src_root     : Root path for file name expansion.
+"   pattern_list : List of file name patterns to expand.
 " Return:
 "   List of files generated from the pattern.
 " ----------------------------------------------------------------------------
-function! s:ExpandPattern(pattern)
-    " Expand the source file pattern to generate a file list, and then clean
-    " up the list (remove directories etc.)
-    let file_list = split(glob(a:pattern, 1), "\n")
-    let idx       = len(file_list)
+function! s:ExpandPatterns(src_root, pattern_list)
+    " Expand all specified source file patterns to generate a file list:
+    let pattern   = ''
+    let file_list = []
+    for pattern in a:pattern_list
+        call extend(file_list,
+            \ split(glob(a:src_root . '/' . pattern, 1), "\n"))
+    endfor
+
+    " Clean up the generated file list (remove directories etc.):
+    let idx = len(file_list)
     while idx > 0
         let idx -= 1
 
@@ -447,7 +511,7 @@ endfunction
 " ----------------------------------------------------------------------------
 function! s:GenNsisCommands()
     " Load NSIS defines:
-    let nsis_defs = s:LoadDefines(g:fname_defines, s:buf_id_install)
+    let nsis_defs = s:LoadDefines(g:gen_fcmds_fname_defines, s:buf_id_install)
 
     " Write debug log:
     execute 'buffer ' . s:buf_id_install
@@ -476,10 +540,11 @@ function! s:GenNsisCommands()
         " Record the output directory:
         call add(dir_list, tmpl_spec[s:IDX_TARGET])
 
-        " Expand the source file pattern to generate a file list, and then
+        " Expand the source file patterns to generate a file list, and then
         " clean up the list (remove directories etc.).  Skip if no file found.
-        let file_list = s:ExpandPattern(tmpl_spec[s:IDX_SRC_ROOT] .
-            \ '/' . tmpl_spec[s:IDX_PATTERN])
+        let file_list =
+            \ s:ExpandPatterns(tmpl_spec[s:IDX_SRC_ROOT],
+            \                  tmpl_spec[s:IDX_PATTERN])
 
         " Generate NSIS commands to install/uninstall files:
         call s:GenInstallCmds(tmpl_spec[s:IDX_TARGET], file_list)
@@ -517,14 +582,16 @@ call s:GenNsisCommands()
 
 " Save install commands:
 execute 'buffer '  . s:buf_id_install
-execute 'saveas! ' . g:fname_install
+execute 'saveas! ' . g:gen_fcmds_fname_install
 
 " Save un-install commands:
 execute 'buffer '  . s:buf_id_uninst
-execute 'saveas! ' . g:fname_uninst
+execute 'saveas! ' . g:gen_fcmds_fname_uninst
 
 " Restore compatibility:
 let &cpo = s:save_cpo
 
 " All done, quit:
-qall
+if g:gen_fcmds_debug_on == 0
+    qall
+endif

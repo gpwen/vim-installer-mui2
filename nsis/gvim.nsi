@@ -247,6 +247,10 @@ InstType                  $(str_type_full)
 
 SilentInstall             normal
 
+# Export NSIS defines:
+!delfile                  "${VIM_FNAME_DEFINES}"
+!appendfile               "${VIM_FNAME_DEFINES}" "${VIM_DEFINES_LIST}"
+
 ##############################################################################
 # MUI Settings                                                            {{{1
 ##############################################################################
@@ -897,6 +901,46 @@ SilentInstall             normal
 !macroend
 
 # ----------------------------------------------------------------------------
+# macro VimGenFileCmdsInstall/Uninstall $_FNAME_TMPL ...                  {{{2
+#   Create specified shortcuts.
+#
+#   Parameters for VimGenFileCmdsInstall:
+#     $_FNAME_TMPL      : Name of the template file.
+#     $_FNAME_INSTALL   : Name of the file to hold generated file install
+#                         commands.
+#     $_FNAME_UNINSTALL : Name of the file to hold file generated uninstall
+#                         commands.
+#   Parameters for VimGenFileCmdsUninstall:
+#     $_FNAME_UNINSTALL : Name of the file to hold file generated uninstall
+#                         commands.
+#   Returns:
+#     N/A
+# ----------------------------------------------------------------------------
+!define VimGenFileCmdsInstall   "!insertmacro _VimGenFileCmds 1"
+!define VimGenFileCmdsUninstall "!insertmacro _VimGenFileCmds 0 0 0"
+!macro _VimGenFileCmds _IS_INSTALL _FNAME_TMPL _FNAME_INSTALL _FNAME_UNINST
+    !if ${_IS_INSTALL}
+        # Generate NSIS commands to install/uninstall files specified by a
+        # template.  This is only required for install sections:
+        !execute \
+            "${VIMSRC}\vimw32.exe -e -R -X -u data\simple_vimrc.vim \
+             -c $\":let g:gen_fcmds_debug_on      = 0                      | \
+                    let g:gen_fcmds_fname_defines = '${VIM_FNAME_DEFINES}' | \
+                    let g:gen_fcmds_fname_install = '${_FNAME_INSTALL}'    | \
+                    let g:gen_fcmds_fname_uninst  = '${_FNAME_UNINST}'     | \
+                    source script\gen_file_list.vim$\" \
+             ${_FNAME_TMPL}"
+
+        # Pull in generated install commands:
+        !include ${_FNAME_INSTALL}
+    !else
+        # For un-install case, we only need to pull in generated un-install
+        # commands:
+        !include ${_FNAME_UNINST}
+    !endif
+!macroend
+
+# ----------------------------------------------------------------------------
 # macro VimCreateShortcuts $_SHORTCUT_SPEC $_SHORTCUT_ROOT                {{{2
 #   Create specified shortcuts.
 #
@@ -1034,22 +1078,9 @@ Section $(str_section_exe) id_section_exe
     ${Logged2} File /oname=gvim.exe "${VIMSRC}\gvim_ole.exe"
     ${Logged2} File /oname=xxd.exe  "${VIMSRC}\xxdw32.exe"
 
-    # Export NSIS defines:
-    !delfile    "${VIM_FNAME_DEFINES}"
-    !appendfile "${VIM_FNAME_DEFINES}" "${VIM_DEFINES_LIST}"
-
-    # Generate NSIS commands to install/uninstall files specified by the above
-    # file template:
-    !execute \
-        "${VIMSRC}\vimw32.exe -e -R -X -u data\simple_vimrc.vim \
-         -c $\":let g:fname_defines = '${VIM_FNAME_DEFINES}'    | \
-                let g:fname_install = '${VIM_FNAME_INSTALL_RT}' | \
-                let g:fname_uninst  = '${VIM_FNAME_UNINST_RT}'  | \
-                source script\gen_file_list.vim$\" \
-         data\runtime_files.list"
-
-    # Pull in generated install commands:
-    !include ${VIM_FNAME_INSTALL_RT}
+    # Generate NSIS commands to install runtime files:
+    ${VimGenFileCmdsInstall} "data\runtime_files.list" \
+        ${VIM_FNAME_INSTALL_RT} ${VIM_FNAME_UNINST_RT}
 
     # Install XPM DLL:
     !ifdef HAVE_XPM
@@ -2713,7 +2744,7 @@ Section "un.$(str_unsection_exe)" id_unsection_exe
 
     # Pull in generated uninstall commands:
     ClearErrors
-    !include ${VIM_FNAME_UNINST_RT}
+    ${VimGenFileCmdsUninstall} ${VIM_FNAME_UNINST_RT}
     ClearErrors
 
     # TODO: convert this!
