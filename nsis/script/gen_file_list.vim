@@ -247,6 +247,97 @@ endfunction
 
 
 " ----------------------------------------------------------------------------
+" Function: s:LoadTemplateLine(line_num)                                  {{{1
+"   Read one line from the template buffer, and convert it to target path,
+"   source root and source pattern.  The following
+" Arguments:
+"   line_num  : Line number (zero based) of the line to be loaded from
+"               the template buffer.
+"   tmpl_spec : Output list for template fields.
+"   nsis_defs : Dictionary holds NSIS macro definitions.  Macro substitution
+"               will be performed on all fields after the loaded lines have
+"               been broken up into fields.
+" Return:
+"   0 If no valid line has been loaded;
+"   1 If a valid line has been successfully loaded and processed.
+" ----------------------------------------------------------------------------
+function! s:LoadTemplateLine(line_num, tmpl_spec, nsis_defs)
+    " Prefix for debug message output:
+    let msg_prefix = '# ' . s:fname_tmpl . ' line ' . a:line_num . ': '
+
+    " Read one line from the template buffer, the separator for fields is a
+    " vertical bar (|) that NOT preceded by a backslash (\).  This makes it
+    " possible to use backslash to escape vertical bar.
+    let last_lines = []
+    let read_stat  = s:Readline
+        \ (s:buf_id_tmpl, a:line_num, '\s*\\\@<!|\s*',
+        \  a:tmpl_spec, last_lines)
+
+    if (read_stat != 1)
+        return 0
+    endif
+
+    " Skip those lines with incorrect format:
+    if (len(a:tmpl_spec) != s:NUM_FIELDS)
+        execute 'buffer ' . s:buf_id_install
+        call s:WriteErr(msg_prefix, last_lines[-1], s:fname_tmpl)
+
+        execute 'buffer ' . s:buf_id_uninst
+        $put =''
+        $put =msg_prefix . 'Syntax error, skip: ' . last_lines[-1]
+
+        return 0
+    endif
+
+    " Escape character processing and macro substitution:
+    for macro_name in keys(a:nsis_defs)
+        let idx = 0
+        while idx < s:NUM_FIELDS
+            " Escape character processing: \| -> | and  \: -> :
+            let a:tmpl_spec[idx] =
+                \ substitute(a:tmpl_spec[idx], '\\|', '|', 'g')
+            let a:tmpl_spec[idx] =
+                \ substitute(a:tmpl_spec[idx], '\\:', ':', 'g')
+
+            " Macro substitution:
+            let a:tmpl_spec[idx] =
+               \ substitute(a:tmpl_spec[idx], '${' . macro_name . '}',
+                          \ escape(a:nsis_defs[macro_name], '\'), 'g')
+
+            let idx += 1
+        endwhile
+    endfor
+
+    " Convert any forward slash in target path to backslash since NSIS
+    " only accept backslash.  Also remove trailing slashes if any:
+    let a:tmpl_spec[s:IDX_TARGET] = tr(a:tmpl_spec[s:IDX_TARGET], '/', '\')
+    let a:tmpl_spec[s:IDX_TARGET] =
+        \ substitute(a:tmpl_spec[s:IDX_TARGET], '\\\+$', '', '')
+
+    " Convert backslash in source path to forward slash for better
+    " portability.  Also remove trailing slashes from path if any:
+    let a:tmpl_spec[s:IDX_SRC_ROOT] = tr(a:tmpl_spec[s:IDX_SRC_ROOT], '\', '/')
+    let a:tmpl_spec[s:IDX_SRC_ROOT] =
+        \ substitute(a:tmpl_spec[s:IDX_SRC_ROOT], '/\+$', '', '')
+
+    let a:tmpl_spec[s:IDX_PATTERN]  = tr(a:tmpl_spec[s:IDX_PATTERN], '\', '/')
+
+    " Echo back the current line (converted) for debug purpose:
+    let temp_msg = msg_prefix . join(a:tmpl_spec, ' | ')
+
+    execute 'buffer ' . s:buf_id_install
+    $put =''
+    $put =temp_msg
+
+    execute 'buffer ' . s:buf_id_uninst
+    $put =''
+    $put =temp_msg
+
+    return 1
+endfunction
+
+
+" ----------------------------------------------------------------------------
 " Function: s:ExpandPattern(pattern)                                      {{{1
 "   Expand file name pattern, and:
 "   - Remove directories from the expanded list;
@@ -348,7 +439,9 @@ endfunction
 
 " ----------------------------------------------------------------------------
 " Function: s:GenNsisCommands()                                           {{{1
-"   Main function to generate NSIS commands from file template.
+"   Main function to generate NSIS commands from file template.  Generated
+"   commands will be appended to previously created Vim buffers for
+"   install/un-install commands.
 " Arguments: N/A
 " Return:    N/A
 " ----------------------------------------------------------------------------
@@ -366,84 +459,19 @@ function! s:GenNsisCommands()
     let num_tmplates = line('$')
 
     " Process templates in the input buffer:
-    let line_num     = 1
-    let read_stat    = 1
-    let tmpl_spec    = []
-    let last_lines   = []
-    let msg_prefix   = ''
-    let temp_msg     = ''
-    let macro_name   = ''
-    let file_list    = []
-    let dir_list     = []
-    let idx          = 0
+    let line_num  = 1
+    let load_stat = 1
+    let tmpl_spec = []
+    let file_list = []
+    let dir_list  = []
     while line_num <= num_tmplates
-        " Prefix for debug message output:
-        let msg_prefix = '# ' . s:fname_tmpl . ' line ' . line_num . ': '
-
-        " Read one line from the template buffer, the separator for fields is
-        " a vertical bar (|) that NOT preceded by a backslash (\).  This makes
-        " it possible to use backslash to escape vertical bar.
-        let read_stat = s:Readline
-            \ (s:buf_id_tmpl, line_num, '\s*\\\@<!|\s*', tmpl_spec, last_lines)
+        " Load and process one line from the template buffer:
+        let load_stat = s:LoadTemplateLine(line_num, tmpl_spec, nsis_defs)
         let line_num += 1
 
-        if (read_stat != 1)
+        if (load_stat != 1)
             continue
         endif
-
-        " Skip those lines with incorrect format:
-        if (len(tmpl_spec) != s:NUM_FIELDS)
-            execute 'buffer ' . s:buf_id_install
-            call s:WriteErr(msg_prefix, last_lines[-1], s:fname_tmpl)
-
-            execute 'buffer ' . s:buf_id_uninst
-            $put =''
-            $put =msg_prefix . 'Syntax error, skip: ' . last_lines[-1]
-
-            continue
-        endif
-
-        " Escape character processing and macro substitution:
-        for macro_name in keys(nsis_defs)
-            let idx = 0
-            while idx < s:NUM_FIELDS
-                " Escape character processing: \| -> | and  \: -> :
-                let tmpl_spec[idx] = substitute(tmpl_spec[idx], '\\|', '|', 'g')
-                let tmpl_spec[idx] = substitute(tmpl_spec[idx], '\\:', ':', 'g')
-
-                " Macro substitution:
-                let tmpl_spec[idx] =
-                   \ substitute(tmpl_spec[idx], '${' . macro_name . '}',
-                              \ escape(nsis_defs[macro_name], '\'), 'g')
-
-                let idx += 1
-            endwhile
-        endfor
-
-        " Convert any forward slash in target path to backslash since NSIS
-        " only accept backslash.  Also remove trailing slashes if any:
-        let tmpl_spec[s:IDX_TARGET] = tr(tmpl_spec[s:IDX_TARGET], '/', '\')
-        let tmpl_spec[s:IDX_TARGET] =
-            \ substitute(tmpl_spec[s:IDX_TARGET], '\\\+$', '', '')
-
-        " Convert backslash in source path to forward slash for better
-        " portability.  Also remove trailing slashes from path if any:
-        let tmpl_spec[s:IDX_SRC_ROOT] = tr(tmpl_spec[s:IDX_SRC_ROOT], '\', '/')
-        let tmpl_spec[s:IDX_SRC_ROOT] =
-            \ substitute(tmpl_spec[s:IDX_SRC_ROOT], '/\+$', '', '')
-
-        let tmpl_spec[s:IDX_PATTERN]  = tr(tmpl_spec[s:IDX_PATTERN], '\', '/')
-
-        " Echo back the current line (converted) for debug purpose:
-        let temp_msg = msg_prefix . join(tmpl_spec, ' | ')
-
-        execute 'buffer ' . s:buf_id_install
-        $put =''
-        $put =temp_msg
-
-        execute 'buffer ' . s:buf_id_uninst
-        $put =''
-        $put =temp_msg
 
         " Record the output directory:
         call add(dir_list, tmpl_spec[s:IDX_TARGET])
@@ -476,14 +504,6 @@ function! s:GenNsisCommands()
         endif
     endfor
 
-    " Save install commands:
-    execute 'buffer '  . s:buf_id_install
-    execute 'saveas! ' . g:fname_install
-
-    " Save un-install commands:
-    execute 'buffer '  . s:buf_id_uninst
-    execute 'saveas! ' . g:fname_uninst
-
     return 1
 endfunction
 
@@ -491,7 +511,17 @@ endfunction
 " ----------------------------------------------------------------------------
 " Main Script                                                             {{{1
 " ----------------------------------------------------------------------------
+" Generate NSIS commands.  Generated command will be appended to Vim buffers
+" for install/un-install commands:
 call s:GenNsisCommands()
+
+" Save install commands:
+execute 'buffer '  . s:buf_id_install
+execute 'saveas! ' . g:fname_install
+
+" Save un-install commands:
+execute 'buffer '  . s:buf_id_uninst
+execute 'saveas! ' . g:fname_uninst
 
 " Restore compatibility:
 let &cpo = s:save_cpo
