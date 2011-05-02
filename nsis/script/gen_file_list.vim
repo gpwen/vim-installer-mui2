@@ -29,6 +29,17 @@
 "   expand.  Please note the pattern will *NOT* be expanded recursively,
 "   you're expected to list all directories explicitly.
 "
+" - Relative path of source files found under <src-root> will be kept by
+"   default when installed into <target-path>.  That means:
+"       <src-root>\path\to\foo.txt
+"   will be installed as:
+"       <target-path>\path\to\foo.txt
+"   To remove the relative path (install source files into <target-path>
+"   directly without relative path), append "\*" or "/*" to the <target-path>
+"   in the template specification.  In this case the above file will be
+"   installed as:
+"       <target-path>\foo.txt
+"
 " - Fields of the template should be delimited by vertical bar(|), and
 "   patterns in the pattern field should be delimited colon (:).  If vertical
 "   bar and colon needs to be used as filed content, they should be escaped
@@ -445,18 +456,23 @@ endfunction
 
 
 " ----------------------------------------------------------------------------
-" Function: s:GenInstallCmds(target_path, src_root, file_list)            {{{1
+" Function: s:GenInstallCmds(target_path, src_root, file_list, ...)       {{{1
 "   Generate NSIS file install commands for specified files.  Generated
 "   commands will be appended to the Vim buffer for NSIS install commands.
 " Arguments:
 "   target_path : Target path.
 "   src_root    : Root path for source files.
 "   file_list   : List of files to install (relative to source root).
+"   dir_list    : List of directories to be created on the target system.
+"   keep_dir    : If 1, keep relative path of source files when copy to target
+"                 path;  Otherwise, copy source files to target path without
+"                 relative path.
 " Return:
 "   0 if no command generated;
 "   1 if succeeded.
 " ----------------------------------------------------------------------------
-function! s:GenInstallCmds(target_path, src_root, file_list)
+function! s:GenInstallCmds(target_path, src_root, file_list,
+                         \ dir_list, keep_dir)
     " Generate install commands: NSIS command to set output path.
     execute 'buffer ' . s:buf_id_install
 
@@ -470,12 +486,53 @@ function! s:GenInstallCmds(target_path, src_root, file_list)
     " we need backslash here:
     let full_root = tr(a:src_root, '/', '\') . '\'
 
-    " Set NSIS output path.
-    $put ='${Logged1} SetOutPath ' . a:target_path
+    " In order to keep relative path of source files, we need to update NSIS
+    " output directory when relative path of source file changes.  prev_dir is
+    " used to record the last relative path we set, so we can detect change in
+    " relative path.
+    if (a:keep_dir)
+        " We need to keep relative path, so set the last relative path to an
+        " invalid value so it will be updated for the first source file:
+        let prev_dir = ':'
+    else
+        " No relative path should be kept, so we'll essentially disable
+        " detection of relative path change and simply use target path as NSIS
+        " output path for all files:
+        let prev_dir = ''
+        $put ='${Logged1} SetOutPath ' . a:target_path
+        call add(a:dir_list, a:target_path)
+    endif
 
     " Generate NSIS commands to install files:
     let one_item = ''
+    let new_dir  = ''
     for one_item in a:file_list
+        " Detect change in the relative path of source files if we need to
+        " keep the relative path:
+        if (a:keep_dir)
+            " Relative path of the source file:
+            let new_dir = fnamemodify(one_item, ':h')
+
+            " In case the source file does not have relative path:
+            if (new_dir ==# '.')
+                let new_dir = ''
+            endif
+
+            " If the relative path changed, update NSIS output directory and
+            " record the new directory created:
+            if (new_dir !=# prev_dir)
+                let prev_dir = new_dir
+                let new_dir  =
+                    \ (prev_dir ==# '') ?
+                    \   a:target_path :
+                    \   (a:target_path . '\' . prev_dir)
+
+                $put ='${Logged1} SetOutPath ' . new_dir
+                call add(a:dir_list, new_dir)
+            end
+        endif
+
+        " Generate NSIS File command to install the file:
         $put ='${Logged1} File ' . full_root . one_item
     endfor
 
@@ -484,17 +541,20 @@ endfunction
 
 
 " ----------------------------------------------------------------------------
-" Function: s:GenUninstallCmds(target_path, file_list)                    {{{1
+" Function: s:GenUninstallCmds(target_path, file_list, keep_dir)          {{{1
 "   Generate NSIS file uninstall commands for specified files.  Generated
 "   commands will be appended to the Vim buffer for NSIS uninstall commands.
 " Arguments:
 "   target_path : Target path.
 "   file_list   : List of files to uninstall (relate to source root).
+"   keep_dir    : If 1, keep relative path of source files when copy to target
+"                 path;  Otherwise, copy source files to target path without
+"                 relative path.
 " Return:
 "   0 if no command generated;
 "   1 if succeeded.
 " ----------------------------------------------------------------------------
-function! s:GenUninstallCmds(target_path, file_list)
+function! s:GenUninstallCmds(target_path, file_list, keep_dir)
     " Generate install commands: NSIS command to set output path.
     execute 'buffer ' . s:buf_id_uninst
 
@@ -506,10 +566,15 @@ function! s:GenUninstallCmds(target_path, file_list)
 
     let one_item = ''
     for one_item in a:file_list
-        " Get file name:
-        let one_item = fnamemodify(one_item, ':t')
+        " If we don't need to keep relative path when install source files,
+        " source files have been installed into the target path directly
+        " without relative path.  Therefore, we only need their file name to
+        " remove them.
+        if (!a:keep_dir)
+            let one_item = fnamemodify(one_item, ':t')
+        endif
 
-        " NSIS commands to remove the file:
+        " Generate NSIS commands to remove the file:
         $put ='${Logged1} Delete ' . a:target_path . '\' . one_item
     endfor
 
@@ -547,6 +612,11 @@ function! s:GenNsisCommands()
     let tmpl_spec   = []
     let file_list   = []
     let dir_list    = []
+    let target_len  = 0
+    let keep_dir    = 1
+    let target_path = ''
+    let src_root    = ''
+    let patterns    = ''
     while line_num <= num_tmplates
         " Load and process one line from the template buffer:
         let load_stat = s:LoadTemplateLine(line_num, tmpl_spec, nsis_defs)
@@ -561,16 +631,27 @@ function! s:GenNsisCommands()
         let src_root    = tmpl_spec[s:IDX_SRC_ROOT]
         let patterns    = tmpl_spec[s:IDX_PATTERNS]
 
-        " Record the output directory:
-        call add(dir_list, target_path)
+        " If target path ends with "\*", do not keep relative path of source
+        " files.  Otherwise, keep the relative path.  Please note both "/*"
+        " and "\*" will be converted to "\*" when loading the template.
+        let target_len  = strlen(target_path)
+        if (target_len > 2  &&
+          \ strpart(target_path, target_len - 2) ==# '\*')
+            " Remove the special flag from target path:
+            let target_path = strpart(target_path, 0, target_len - 2)
+            let keep_dir    = 0
+        else
+            let keep_dir    = 1
+        endif
 
         " Expand the source file patterns to generate a file list, and then
         " clean up the list (remove directories etc.).  Skip if no file found.
         let file_list = s:ExpandPatterns(src_root, patterns)
 
         " Generate NSIS commands to install/uninstall files:
-        call s:GenInstallCmds(target_path, src_root, file_list)
-        call s:GenUninstallCmds(target_path, file_list)
+        call s:GenInstallCmds(target_path, src_root, file_list,
+                            \ dir_list, keep_dir)
+        call s:GenUninstallCmds(target_path, file_list, keep_dir)
     endwhile
 
     " Sort directory list in reverse order:

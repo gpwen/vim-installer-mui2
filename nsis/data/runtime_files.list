@@ -1,20 +1,20 @@
 # Templates of runtime files to install.
 #
 # Please refer to "script/gen_file_list.vim" for detailed syntax.
-# <target-path>            | <src-root>  | <src-patterns>
-$vim_bin_path              | ${VIMSRC}   | vimrun.exe
-$vim_bin_path              | ${VIMTOOLS} | diff.exe
-$vim_bin_path              | ${VIMRT}    | vimtutor.bat : README.txt : uninstal.txt : *.vim : rgb.txt
-$vim_bin_path\colors       | ${VIMRT}    | colors\*
-$vim_bin_path\compiler     | ${VIMRT}    | compiler\*
-$vim_bin_path\doc          | ${VIMRT}    | doc\*.txt : doc\tags
-$vim_bin_path\ftplugin     | ${VIMRT}    | ftplugin\*
-$vim_bin_path\indent       | ${VIMRT}    | indent\*
-$vim_bin_path\macros       | ${VIMRT}    | macros\*
-$vim_bin_path\plugin       | ${VIMRT}    | plugin\*
-$vim_bin_path\autoload     | ${VIMRT}    | autoload\*
-$vim_bin_path\autoload\xml | ${VIMRT}    | autoload\xml\*
-$vim_bin_path\syntax       | ${VIMRT}    | syntax\*
-$vim_bin_path\spell        | ${VIMRT}    | spell\*.txt : spell\*.vim : spell\*.spl : spell\*.sug
-$vim_bin_path\tools        | ${VIMRT}    | tools\*
-$vim_bin_path\tutor        | ${VIMRT}    | tutor\*
+# <target-path>              | <src-root>  | <src-patterns>
+$vim_bin_path\*              | ${VIMSRC}   | vimrun.exe
+$vim_bin_path\*              | ${VIMTOOLS} | diff.exe
+$vim_bin_path\*              | ${VIMRT}    | vimtutor.bat : README.txt : uninstal.txt : *.vim : rgb.txt
+$vim_bin_path\colors\*       | ${VIMRT}    | colors\*
+$vim_bin_path\compiler\*     | ${VIMRT}    | compiler\*
+$vim_bin_path\doc\*          | ${VIMRT}    | doc\*.txt : doc\tags
+$vim_bin_path\ftplugin\*     | ${VIMRT}    | ftplugin\*
+$vim_bin_path\indent\*       | ${VIMRT}    | indent\*
+$vim_bin_path\macros\*       | ${VIMRT}    | macros\*
+$vim_bin_path\plugin\*       | ${VIMRT}    | plugin\*
+$vim_bin_path\autoload\*     | ${VIMRT}    | autoload\*
+$vim_bin_path\autoload\xml\* | ${VIMRT}    | autoload\xml\*
+$vim_bin_path\syntax\*       | ${VIMRT}    | syntax\*
+$vim_bin_path\spell\*        | ${VIMRT}    | spell\*.txt : spell\*.vim : spell\*.spl : spell\*.sug
+$vim_bin_path\tools\*        | ${VIMRT}    | tools\*
+$vim_bin_path\tutor\*        | ${VIMRT}    | tutor\*
