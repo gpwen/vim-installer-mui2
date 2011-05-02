@@ -608,7 +608,6 @@ function! s:GenNsisCommands()
     let load_stat   = 1
     let target_path = ''
     let src_root    = ''
-    let patterns    = []
     let tmpl_spec   = []
     let file_list   = []
     let dir_list    = []
@@ -616,7 +615,7 @@ function! s:GenNsisCommands()
     let keep_dir    = 1
     let target_path = ''
     let src_root    = ''
-    let patterns    = ''
+    let patterns    = []
     while line_num <= num_tmplates
         " Load and process one line from the template buffer:
         let load_stat = s:LoadTemplateLine(line_num, tmpl_spec, nsis_defs)
