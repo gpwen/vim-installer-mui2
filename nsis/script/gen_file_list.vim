@@ -76,7 +76,7 @@ endif
 let s:NUM_FIELDS   = 3
 let s:IDX_TARGET   = 0
 let s:IDX_SRC_ROOT = 1
-let s:IDX_PATTERN  = 2
+let s:IDX_PATTERNS = 2
 
 " It's very important to set 'bufhidden' as 'hide', otherwise the buffer will
 " be unloaded once hide (which move other buffer to front).  If that happened,
@@ -335,7 +335,7 @@ function! s:LoadTemplateLine(line_num, tmpl_spec, nsis_defs)
     " in same way easily:
     let flat_list =
         \ a:tmpl_spec[s:IDX_TARGET : s:IDX_SRC_ROOT] +
-        \ split(a:tmpl_spec[s:IDX_PATTERN], '\s*\\\@<!:\s*', 1)
+        \ split(a:tmpl_spec[s:IDX_PATTERNS], '\s*\\\@<!:\s*', 1)
 
     " Length of the flat list:
     let total_len = len(flat_list)
@@ -376,12 +376,12 @@ function! s:LoadTemplateLine(line_num, tmpl_spec, nsis_defs)
     let a:tmpl_spec[s:IDX_TARGET : s:IDX_SRC_ROOT] =
         \ flat_list[s:IDX_TARGET : s:IDX_SRC_ROOT]
     call remove(flat_list, s:IDX_TARGET, s:IDX_SRC_ROOT)
-    let a:tmpl_spec[s:IDX_PATTERN] = flat_list
+    let a:tmpl_spec[s:IDX_PATTERNS] = flat_list
 
     " Echo back the current line (converted) for debug purpose:
     let temp_msg = '# ' .
         \ join(a:tmpl_spec[s:IDX_TARGET : s:IDX_SRC_ROOT], ' | ') .
-        \ ' | ' . join(a:tmpl_spec[s:IDX_PATTERN], ' : ')
+        \ ' | ' . join(a:tmpl_spec[s:IDX_PATTERNS], ' : ')
 
     for buf_id in [s:buf_id_install, s:buf_id_uninst]
         execute 'buffer ' . buf_id
@@ -406,45 +406,73 @@ endfunction
 "   List of files generated from the pattern.
 " ----------------------------------------------------------------------------
 function! s:ExpandPatterns(src_root, pattern_list)
+    " Append forward slash to source root to make it easier to remove source
+    " root from expanded file list:
+    let full_root = a:src_root . '/'
+    let root_len  = strlen(full_root)
+
     " Expand all specified source file patterns to generate a file list:
     let pattern   = ''
+    let idx       = 0
+    let temp_list = []
     let file_list = []
     for pattern in a:pattern_list
-        call extend(file_list,
-            \ split(glob(a:src_root . '/' . pattern, 1), "\n"))
+        " Expand the pattern, store result in a list:
+        let temp_list = split(glob(full_root . pattern, 1), "\n")
+
+        " Clean up the generated file list (remove directories etc.):
+        let idx = len(temp_list)
+        while idx > 0
+            let idx -= 1
+
+            " Remove directories:
+            if (isdirectory(temp_list[idx]))
+                call remove(temp_list, idx)
+                continue
+            endif
+
+            " Convert backslash to forward slash, if any:
+            let temp_list[idx] = tr(temp_list[idx], '\', '/')
+
+            " Remove source root:
+            if (strlen(temp_list[idx]) > root_len  &&
+              \ strpart(temp_list[idx], 0, root_len) ==# full_root)
+                let temp_list[idx] = strpart(temp_list[idx], root_len)
+            else
+                " We cannot find source root in the expanded file name, that's
+                " impossible!  Log the error:
+                call s:DebugLog('Error to expand file pattern [' .
+                    \ pattern . ']:')
+                call s:DebugLog('No source root [' . full_root .
+                    \ '] in expanded file name [' .
+                    \ temp_list[idx] . ']!'
+            endif
+
+            " Convert forward slash back to backslash since NSIS only know
+            " backslash:
+            let temp_list[idx] = tr(temp_list[idx], '/', '\')
+        endwhile
+
+        call extend(file_list, temp_list)
     endfor
-
-    " Clean up the generated file list (remove directories etc.):
-    let idx = len(file_list)
-    while idx > 0
-        let idx -= 1
-
-        " Skip directories:
-        if (isdirectory(file_list[idx]))
-            call remove(file_list, idx)
-            continue
-        endif
-
-        " Convert forward slash back to backslash, if any:
-        let file_list[idx] = tr(file_list[idx], '/', '\')
-    endwhile
 
     return file_list
 endfunction
 
 
 " ----------------------------------------------------------------------------
-" Function: s:GenInstallCmds(target_path, file_list)                      {{{1
+" Function: s:GenInstallCmds(target_path, src_root, file_list)            {{{1
 "   Generate NSIS file install commands for specified files.  Generated
 "   commands will be appended to the Vim buffer for NSIS install commands.
 " Arguments:
 "   target_path : Target path.
-"   file_list   : List of files to install.
+"   src_root    : Root path for source files.
+"   file_list   : List of files to install (relative to source root).
 " Return:
 "   0 if no command generated;
 "   1 if succeeded.
 " ----------------------------------------------------------------------------
-function! s:GenInstallCmds(target_path, file_list)
+function! s:GenInstallCmds(target_path, src_root, file_list)
     " Generate install commands: NSIS command to set output path.
     execute 'buffer ' . s:buf_id_install
 
@@ -454,13 +482,17 @@ function! s:GenInstallCmds(target_path, file_list)
         return 0
     endif
 
+    " Append path delimiter to source root.  Source root uses forward slash,
+    " we need backslash here:
+    let full_root = tr(a:src_root, '/', '\') . '\'
+
     " Set NSIS output path.
     $put ='${Logged1} SetOutPath ' . a:target_path
 
     " Generate NSIS commands to install files:
     let one_item = ''
     for one_item in a:file_list
-        $put ='${Logged1} File ' . one_item
+        $put ='${Logged1} File ' . full_root . one_item
     endfor
 
     return 1
@@ -473,7 +505,7 @@ endfunction
 "   commands will be appended to the Vim buffer for NSIS uninstall commands.
 " Arguments:
 "   target_path : Target path.
-"   file_list   : List of files to uninstall.
+"   file_list   : List of files to uninstall (relate to source root).
 " Return:
 "   0 if no command generated;
 "   1 if succeeded.
@@ -523,11 +555,14 @@ function! s:GenNsisCommands()
     let num_tmplates = line('$')
 
     " Process templates in the input buffer:
-    let line_num  = 1
-    let load_stat = 1
-    let tmpl_spec = []
-    let file_list = []
-    let dir_list  = []
+    let line_num    = 1
+    let load_stat   = 1
+    let target_path = ''
+    let src_root    = ''
+    let patterns    = []
+    let tmpl_spec   = []
+    let file_list   = []
+    let dir_list    = []
     while line_num <= num_tmplates
         " Load and process one line from the template buffer:
         let load_stat = s:LoadTemplateLine(line_num, tmpl_spec, nsis_defs)
@@ -537,18 +572,21 @@ function! s:GenNsisCommands()
             continue
         endif
 
+        " For easier access:
+        let target_path = tmpl_spec[s:IDX_TARGET]
+        let src_root    = tmpl_spec[s:IDX_SRC_ROOT]
+        let patterns    = tmpl_spec[s:IDX_PATTERNS]
+
         " Record the output directory:
-        call add(dir_list, tmpl_spec[s:IDX_TARGET])
+        call add(dir_list, target_path)
 
         " Expand the source file patterns to generate a file list, and then
         " clean up the list (remove directories etc.).  Skip if no file found.
-        let file_list =
-            \ s:ExpandPatterns(tmpl_spec[s:IDX_SRC_ROOT],
-            \                  tmpl_spec[s:IDX_PATTERN])
+        let file_list = s:ExpandPatterns(src_root, patterns)
 
         " Generate NSIS commands to install/uninstall files:
-        call s:GenInstallCmds(tmpl_spec[s:IDX_TARGET], file_list)
-        call s:GenUninstallCmds(tmpl_spec[s:IDX_TARGET], file_list)
+        call s:GenInstallCmds(target_path, src_root, file_list)
+        call s:GenUninstallCmds(target_path, file_list)
     endwhile
 
     " Sort directory list in reverse order:
