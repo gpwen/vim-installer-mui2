@@ -406,10 +406,8 @@ endfunction
 "   List of files generated from the pattern.
 " ----------------------------------------------------------------------------
 function! s:ExpandPatterns(src_root, pattern_list)
-    " Append forward slash to source root to make it easier to remove source
-    " root from expanded file list:
-    let full_root = a:src_root . '/'
-    let root_len  = strlen(full_root)
+    " Change current directory to the source root:
+    execute 'cd ' . fnameescape(a:src_root)
 
     " Expand all specified source file patterns to generate a file list:
     let pattern   = ''
@@ -418,7 +416,7 @@ function! s:ExpandPatterns(src_root, pattern_list)
     let file_list = []
     for pattern in a:pattern_list
         " Expand the pattern, store result in a list:
-        let temp_list = split(glob(full_root . pattern, 1), "\n")
+        let temp_list = split(glob(pattern, 1), "\n")
 
         " Clean up the generated file list (remove directories etc.):
         let idx = len(temp_list)
@@ -431,30 +429,16 @@ function! s:ExpandPatterns(src_root, pattern_list)
                 continue
             endif
 
-            " Convert backslash to forward slash, if any:
-            let temp_list[idx] = tr(temp_list[idx], '\', '/')
-
-            " Remove source root:
-            if (strlen(temp_list[idx]) > root_len  &&
-              \ strpart(temp_list[idx], 0, root_len) ==# full_root)
-                let temp_list[idx] = strpart(temp_list[idx], root_len)
-            else
-                " We cannot find source root in the expanded file name, that's
-                " impossible!  Log the error:
-                call s:DebugLog('Error to expand file pattern [' .
-                    \ pattern . ']:')
-                call s:DebugLog('No source root [' . full_root .
-                    \ '] in expanded file name [' .
-                    \ temp_list[idx] . ']!'
-            endif
-
-            " Convert forward slash back to backslash since NSIS only know
+            " Convert forward slash back to backslash since NSIS only knows
             " backslash:
             let temp_list[idx] = tr(temp_list[idx], '/', '\')
         endwhile
 
         call extend(file_list, temp_list)
     endfor
+
+    " Restore the current directory:
+    cd -
 
     return file_list
 endfunction
