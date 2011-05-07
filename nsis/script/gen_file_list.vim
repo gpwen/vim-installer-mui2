@@ -452,6 +452,43 @@ endfunction
 
 
 " ----------------------------------------------------------------------------
+" Function: s:AddNewDirs(dir_list, target_path, new_dir)                  {{{1
+"   Add a new relative directory to the directory list.  This list will be
+"   used to generated NSIS directory remove commands.  All parent directories
+"   of the directory will be added to make sure we won't left behind any empty
+"   directory after un-installation.
+" Arguments:
+"   dir_list    : List of directories to be created on the target system.
+"   target_path : Target path.
+"   new_dir     : New directory to add (relative to source path).
+" Return:
+"   0 if nothing added;
+"   1 Otherwise.
+" ----------------------------------------------------------------------------
+function! s:AddNewDirs(dir_list, target_path, new_dir)
+    " Skip empty relative path, we already added that:
+    if (a:new_dir ==# '')
+        return 0
+    endif
+
+    " Add the relative path and all of its parent path:
+    let temp_dir = a:new_dir
+    while (temp_dir !=# '')
+        " Add the relative path to the new directory list:
+        call add(a:dir_list,  a:target_path . '\' . tr(temp_dir, '/', '\'))
+
+        " Move to its parent directory:
+        let temp_dir = fnamemodify(temp_dir, ':h')
+        if (temp_dir ==# '.')
+            let temp_dir = ''
+        endif
+    endwhile
+
+    return 1
+endfunction
+
+
+" ----------------------------------------------------------------------------
 " Function: s:GenInstallCmds(target_path, src_root, file_list, ...)       {{{1
 "   Generate NSIS file install commands for specified files.  Generated
 "   commands will be appended to the Vim buffer for NSIS install commands.
@@ -496,8 +533,11 @@ function! s:GenInstallCmds(target_path, src_root, file_list,
         " output path for all files:
         let prev_dir = ''
         $put ='${Logged1} SetOutPath ' . a:target_path
-        call add(a:dir_list, a:target_path)
     endif
+
+    " In all cases, we'll add target path so that no empty target path will be
+    " left after un-intallation:
+    call add(a:dir_list, a:target_path)
 
     " Generate NSIS commands to install files:
     let one_item = ''
@@ -508,7 +548,7 @@ function! s:GenInstallCmds(target_path, src_root, file_list,
         if (a:keep_dir)
             " Relative path of the source file.  Convert forward slash back to
             " backslash since NSIS only knows that.
-            let new_dir = tr(fnamemodify(one_item, ':h'), '/', '\')
+            let new_dir = fnamemodify(one_item, ':h')
 
             " In case the source file does not have relative path:
             if (new_dir ==# '.')
@@ -518,14 +558,19 @@ function! s:GenInstallCmds(target_path, src_root, file_list,
             " If the relative path changed, update NSIS output directory and
             " record the new directory created:
             if (new_dir !=# prev_dir)
+                " Update relative path:
                 let prev_dir = new_dir
+
+                " Set NSIS output path:
                 let new_dir  =
                     \ (prev_dir ==# '') ?
                     \   a:target_path :
-                    \   (a:target_path . '\' . prev_dir)
-
+                    \   (a:target_path . '\' . tr(prev_dir, '/', '\'))
                 $put ='${Logged1} SetOutPath ' . new_dir
-                call add(a:dir_list, new_dir)
+
+                " Add the new relative path and all of its parents to the new
+                " directory list:
+                call s:AddNewDirs(a:dir_list, a:target_path, prev_dir)
             end
         endif
 
