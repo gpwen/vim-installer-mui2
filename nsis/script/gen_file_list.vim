@@ -439,10 +439,6 @@ function! s:ExpandPatterns(src_root, pattern_list)
                 call remove(temp_list, idx)
                 continue
             endif
-
-            " Convert forward slash back to backslash since NSIS only knows
-            " backslash:
-            let temp_list[idx] = tr(temp_list[idx], '/', '\')
         endwhile
 
         call extend(file_list, temp_list)
@@ -483,7 +479,7 @@ function! s:GenInstallCmds(target_path, src_root, file_list,
     endif
 
     " Append path delimiter to source root.  Source root uses forward slash,
-    " we need backslash here:
+    " we need backslash here since NSIS only knows that:
     let full_root = tr(a:src_root, '/', '\') . '\'
 
     " In order to keep relative path of source files, we need to update NSIS
@@ -510,8 +506,9 @@ function! s:GenInstallCmds(target_path, src_root, file_list,
         " Detect change in the relative path of source files if we need to
         " keep the relative path:
         if (a:keep_dir)
-            " Relative path of the source file:
-            let new_dir = fnamemodify(one_item, ':h')
+            " Relative path of the source file.  Convert forward slash back to
+            " backslash since NSIS only knows that.
+            let new_dir = tr(fnamemodify(one_item, ':h'), '/', '\')
 
             " In case the source file does not have relative path:
             if (new_dir ==# '.')
@@ -532,8 +529,9 @@ function! s:GenInstallCmds(target_path, src_root, file_list,
             end
         endif
 
-        " Generate NSIS File command to install the file:
-        $put ='${Logged1} File ' . full_root . one_item
+        " Generate NSIS File command to install the file.  We need to convert
+        " forward slash back to backslash since NSIS only knows that.
+        $put ='${Logged1} File ' . full_root . tr(one_item, '/', '\')
     endfor
 
     return 1
@@ -569,10 +567,11 @@ function! s:GenUninstallCmds(target_path, file_list, keep_dir)
         " If we don't need to keep relative path when install source files,
         " source files have been installed into the target path directly
         " without relative path.  Therefore, we only need their file name to
-        " remove them.
-        if (!a:keep_dir)
-            let one_item = fnamemodify(one_item, ':t')
-        endif
+        " remove them.  We need to convert forward slash back to backslash
+        " since NSIS only knows that.
+        let one_item = a:keep_dir ?
+                     \ tr(one_item, '/', '\') :
+                     \ fnamemodify(one_item, ':t')
 
         " Generate NSIS commands to remove the file:
         $put ='${Logged1} Delete ' . a:target_path . '\' . one_item
