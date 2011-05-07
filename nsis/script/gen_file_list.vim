@@ -26,8 +26,7 @@
 "   relative to the <src-root> can be included, and wildcards can be used.
 "   Either forward slash or backward slash can be used as path separator (for
 "   relative path).  The pattern will be passed to Vim glob() function to
-"   expand.  Please note the pattern will *NOT* be expanded recursively,
-"   you're expected to list all directories explicitly.
+"   expand.
 "
 " - Relative path of source files found under <src-root> will be kept by
 "   default when installed into <target-path>.  That means:
@@ -65,6 +64,22 @@
 " - <NAME> is the name of the macro.  It can be referenced in template
 "   definition as ${NAME}.
 " - <VALUE> is the value of macro.
+"
+" Both macro definition and template definition can be split into multiple
+" lines.  If the last non-white-space character of a line is a backslash
+" preceded by at least one white-space character (or nothing, in case the
+" backslash happens to be the first character of the line), the next line is
+" treated as an addition to the current line.  However, if the next line is a
+" blank line or comment line, the current line will be terminated even if line
+" continuation character presents.  The line continuation character (backslash
+" character and white-space characters around it) will be removed before
+" joining or terminating a line.
+"
+" To include backslash character itself as the last character of a line (avoid
+" it to be treated as line continuation character), another backslash should
+" be added to escape it (i.e., use two backslashes in tandem).  The script
+" will process line continuation escape sequence immediately after detection
+" of line continuation.
 "
 " Maintainer: Guopeng Wen <wenguopeng AT gmail.com>
 
@@ -151,52 +166,77 @@ endfunction
 " ----------------------------------------------------------------------------
 " Function: s:Readline(buf_id, line_num, ...)                             {{{1
 "   Read one line from the specified buffer and split result into fields.
+"   This function will handle line continuation.
 " Arguments:
-"   buf_id     : ID of the buffer to read from;
-"   line_num   : Line number of the line to read;
-"   field_sep  : Field separator (regular express for split);
-"   fields     : Output list contains all fields on the line.
-"   last_lines : Output list contains last line read.
+"   buf_id        : ID of the buffer to read from;
+"   line_num      : Line number of the line to read;
+"   field_sep     : Field separator (regular express for split);
+"   fields        : Output list contains all fields on the line;
+"   pending_lines : Working buffer for line continuation processing.
 " Return:
 "   0 If no valid line has been processed;
 "   1 If a valid line has been successfully processed.
 " ----------------------------------------------------------------------------
-function! s:Readline(buf_id, line_num, field_sep, fields, last_lines)
+function! s:Readline(buf_id, line_num, field_sep, fields, pending_lines)
     " Initialize output fields:
-    if !empty(a:fields)
+    if (!empty(a:fields))
         call remove(a:fields, 0, -1)
     endif
 
-    " Read one line from the specified buffer:
-    let lines = getbufline(a:buf_id, a:line_num)
-    if (len(lines) < 1)
-        " Ignore if read fail:
+    " Read one line from the specified buffer.  Lines will be cached in the
+    " pending lines buffer until the next blank line, comment line or line
+    " without line continuation character is found.  Therefore, the caller
+    " needs to read one more line beyond the end of the buffer to make sure
+    " the last block of continuation lines are processed.
+    let has_more = 0
+    let lines    = getbufline(a:buf_id, a:line_num)
+    if (len(lines) > 0)
+        " We got a valid line, clean it up:
+        let lines[0] = substitute(lines[0], '^\s\+', '', '')
+        let lines[0] = substitute(lines[0], '\s\+$', '', '')
+
+        " Process the line: Lines with useful content will be added to the
+        " pending lines buffer.  A flag will be set to indicate whether line
+        " continuation character present or not (has_more).
+        if (lines[0] ==# '\')
+           " The line contains nothing but backslash, it should be treated as
+           " line continuation.  However, since the line contains nothing, we
+           " won't record it in the pending lines buffer:
+            let has_more = 1
+        elseif (strlen(lines[0]) < 1)
+            " Skip empty lines:
+            let has_more = 0
+        elseif (strpart(lines[0], 0, 1) ==# '#')
+            " Skip comments (lines started with '#'):
+            let has_more = 0
+        elseif (lines[0] =~ '\s\+\\$')
+            " This line has useful content and ends with a single backslash
+            " with preceding white spaces, we'll record it in the pending
+            " lines buffer after cleanup the line continuation character.  The
+            " line continuation flag should also be set.
+            let has_more = 1
+            let lines[0] = substitute(lines[0], '\s\+\\$', '', '')
+            call add(a:pending_lines, lines[0])
+        else
+            " This is a normal line with useful content.  Record it after
+            " processing line continuation escape sequence.
+            let has_more = 0
+            let lines[0] = substitute(lines[0], '\s\@<=\\\\$', '\\', '')
+            call add(a:pending_lines, lines[0])
+        endif
+    endif
+
+    " We need to process pending lines unless more continuation lines are
+    " expected (has_more), or the pending lines buffer is empty:
+    if (has_more  ||  len(a:pending_lines) < 1)
         return 0
-    endif
+    end
 
-    " Clean up the line:
-    let lines[0] = substitute(lines[0], '^\s\+', '', '')
-    let lines[0] = substitute(lines[0], '\s\+$', '', '')
+    " Processing pending lines: Join them and split the result into fields.
+    call extend(a:fields, split(join(a:pending_lines, ''), a:field_sep, 1))
 
-    " Skip empty line:
-    if (len(lines[0]) < 1)
-        return 0
-    endif
-
-    " Skip comments (lines started with '#'):
-    if (strpart(lines[0], 0, 1) ==# '#')
-        return 0
-    endif
-
-    " Record the last line processed:
-    if !empty(a:last_lines)
-        call remove(a:last_lines, 0, -1)
-    endif
-
-    call add(a:last_lines, lines[0])
-
-    " Split the line to fields:
-    call extend(a:fields, split(lines[0], a:field_sep, 1))
+    " All pending lines have been processed, empty the buffer:
+    call remove(a:pending_lines, 0, -1)
 
     return 1
 endfunction
@@ -257,17 +297,19 @@ function! s:LoadDefines(fname, buf_id_log)
     $put =''
     $put ='# Loading NSIS defines from: ' . a:fname
 
-    let line_num    = 1
-    let read_stat   = 1
-    let def_spec    = []
-    let last_lines  = []
-    while line_num <= num_defs
+    " Process macro definitions in the buffer.  We intentionally process one
+    " more line to make sure the last line continuation block is processed.
+    let line_num      = 1
+    let read_stat     = 1
+    let def_spec      = []
+    let pending_lines = []
+    while line_num <= num_defs + 1
         " Prefix for debug message output:
         let msg_prefix = '# ' . a:fname . ' line ' . line_num . ': '
 
         " Read one line from the definition buffer:
         let read_stat = s:Readline
-            \ (buf_id_defs, line_num, '\s*=\s*', def_spec, last_lines)
+            \ (buf_id_defs, line_num, '\s*=\s*', def_spec, pending_lines)
         let line_num += 1
 
         if (read_stat != 1)
@@ -276,7 +318,7 @@ function! s:LoadDefines(fname, buf_id_log)
 
         " Skip those lines with incorrect format:
         if (len(def_spec) != 2)
-            call s:WriteErr(msg_prefix, last_lines[-1], fname_defines)
+            call s:WriteErr(msg_prefix, join(def_spec, '='), fname_defines)
             continue
         endif
 
@@ -301,27 +343,27 @@ endfunction
 "   Read one line from the template buffer, and convert it to target path,
 "   source root and source pattern.  The following
 " Arguments:
-"   line_num  : Line number (zero based) of the line to be loaded from
-"               the template buffer.
-"   tmpl_spec : Output list for template fields.
-"   nsis_defs : Dictionary holds NSIS macro definitions.  Macro substitution
-"               will be performed on all fields after the loaded lines have
-"               been broken up into fields.
+"   line_num      : Line number (zero based) of the line to be loaded from the
+"                   template buffer;
+"   tmpl_spec     : Output list for template fields;
+"   nsis_defs     : Dictionary holds NSIS macro definitions.  Macro
+"                   substitution will be performed on all fields after the
+"                   loaded lines have been broken up into fields;
+"   pending_lines : Working buffer for line continuation processing.
 " Return:
 "   0 If no valid line has been loaded;
 "   1 If a valid line has been successfully loaded and processed.
 " ----------------------------------------------------------------------------
-function! s:LoadTemplateLine(line_num, tmpl_spec, nsis_defs)
+function! s:LoadTemplateLine(line_num, tmpl_spec, nsis_defs, pending_lines)
     " Prefix for debug message output:
     let msg_prefix = '# ' . s:fname_tmpl . ' line ' . a:line_num . ': '
 
     " Read one line from the template buffer, the delimiter for fields is a
     " vertical bar (|) that NOT preceded by a backslash (\).  This makes it
     " possible to use backslash to escape vertical bar.
-    let last_lines = []
     let read_stat  = s:Readline
         \ (s:buf_id_tmpl, a:line_num, '\s*\\\@<!|\s*',
-        \  a:tmpl_spec, last_lines)
+        \  a:tmpl_spec, a:pending_lines)
 
     if (read_stat != 1)
         return 0
@@ -329,12 +371,13 @@ function! s:LoadTemplateLine(line_num, tmpl_spec, nsis_defs)
 
     " Skip those lines with incorrect format:
     if (len(a:tmpl_spec) != s:NUM_FIELDS)
+        let err_line = join(a:tmpl_spec, '|')
         execute 'buffer ' . s:buf_id_install
-        call s:WriteErr(msg_prefix, last_lines[-1], s:fname_tmpl)
+        call s:WriteErr(msg_prefix, err_line, s:fname_tmpl)
 
         execute 'buffer ' . s:buf_id_uninst
         $put =''
-        $put =msg_prefix . 'Syntax error, skip: ' . last_lines[-1]
+        $put =msg_prefix . 'Syntax error, skip: ' . err_line
 
         return 0
     endif
@@ -426,6 +469,11 @@ function! s:ExpandPatterns(src_root, pattern_list)
     let temp_list = []
     let file_list = []
     for pattern in a:pattern_list
+        " Skip empty pattern:
+        if (strlen(pattern) < 1)
+            continue
+        endif
+
         " Expand the pattern, store result in a list:
         let temp_list = split(glob(pattern, 1), "\n")
 
@@ -647,22 +695,25 @@ function! s:GenNsisCommands()
     execute 'buffer ' . s:buf_id_tmpl
     let num_tmplates = line('$')
 
-    " Process templates in the input buffer:
-    let line_num    = 1
-    let load_stat   = 1
-    let target_path = ''
-    let src_root    = ''
-    let tmpl_spec   = []
-    let file_list   = []
-    let dir_list    = []
-    let target_len  = 0
-    let keep_dir    = 1
-    let target_path = ''
-    let src_root    = ''
-    let patterns    = []
-    while line_num <= num_tmplates
+    " Process templates in the input buffer.  We intentionally process one
+    " more line to make sure the last line continuation block is processed.
+    let line_num      = 1
+    let load_stat     = 1
+    let target_path   = ''
+    let src_root      = ''
+    let pending_lines = []
+    let tmpl_spec     = []
+    let file_list     = []
+    let dir_list      = []
+    let target_len    = 0
+    let keep_dir      = 1
+    let target_path   = ''
+    let src_root      = ''
+    let patterns      = []
+    while line_num <= num_tmplates + 1
         " Load and process one line from the template buffer:
-        let load_stat = s:LoadTemplateLine(line_num, tmpl_spec, nsis_defs)
+        let load_stat = s:LoadTemplateLine(line_num, tmpl_spec,
+                                        \  nsis_defs, pending_lines)
         let line_num += 1
 
         if (load_stat != 1)
@@ -691,7 +742,7 @@ function! s:GenNsisCommands()
         " clean up the list (remove directories etc.).  Skip if no file found.
         let file_list = s:ExpandPatterns(src_root, patterns)
 
-        " Generate NSIS commands to install/uninstall files:
+        " Generate NSIS commands to install/un-install files:
         call s:GenInstallCmds(target_path, src_root, file_list,
                             \ dir_list, keep_dir)
         call s:GenUninstallCmds(target_path, file_list, keep_dir)
