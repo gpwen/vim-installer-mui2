@@ -226,10 +226,6 @@ Var vim_rm_common         # Flag: Should we remove common files?
      VIMRT    = ${VIMRT}$\n\
      VIMTOOLS = ${VIMTOOLS}$\n"
 
-# Name of dynamically generated install/uninstall NSIS command files:
-!define VIM_FNAME_INSTALL_RT "vim_install_rt.nsi"
-!define VIM_FNAME_UNINST_RT  "vim_uninst_rt.nsi"
-
 Name                      "${VIM_PRODUCT_NAME}"
 OutFile                   ${VIM_INSTALLER}
 CRCCheck                  force
@@ -1080,7 +1076,7 @@ Section $(str_section_exe) id_section_exe
 
     # Generate NSIS commands to install runtime files:
     ${VimGenFileCmdsInstall} "data\runtime_files.list" \
-        ${VIM_FNAME_INSTALL_RT} ${VIM_FNAME_UNINST_RT}
+        "vim_install_rt.nsi" "vim_uninst_rt.nsi"
 
     # Install XPM DLL:
     !ifdef HAVE_XPM
@@ -1308,7 +1304,6 @@ SectionGroupEnd
 
         ${LogSectionStart}
 
-        # TODO: Check if this works on x64 or not.
         ${Log} "Install $vim_bin_path\VisVim.dll"
         !insertmacro InstallLib REGDLL NOTSHARED REBOOT_NOTPROTECTED \
             "${VIMSRC}\VisVim\VisVim.dll" \
@@ -1330,11 +1325,9 @@ SectionGroupEnd
 
         ${LogSectionStart}
 
-        ${Logged1} SetOutPath "$vim_bin_path\lang"
-        ${Logged2} File /r "${VIMRT}\lang\*.*"
-        ${Logged1} SetOutPath "$vim_bin_path\keymap"
-        ${Logged1} File "${VIMRT}\keymap\README.txt"
-        ${Logged1} File "${VIMRT}\keymap\*.vim"
+        # Generate NSIS commands to install NLS files:
+        ${VimGenFileCmdsInstall} "data\nls_files.list" \
+            "vim_install_nls.nsi" "vim_uninst_nls.nsi"
 
         # Install NLS support DLLs:
         ${Log} "Install $vim_bin_path\libintl.dll"
@@ -2744,14 +2737,12 @@ Section "un.$(str_unsection_exe)" id_unsection_exe
 
     # Pull in generated uninstall commands:
     ClearErrors
-    ${VimGenFileCmdsUninstall} ${VIM_FNAME_UNINST_RT}
-    ClearErrors
-
-    # TODO: convert this!
     !ifdef HAVE_NLS
-        ${Logged2} RMDir /r "$vim_bin_path\keymap"
-        ${Logged2} RMDir /r "$vim_bin_path\lang"
+        ${VimGenFileCmdsUninstall} "vim_uninst_nls.nsi"
+        ClearErrors
     !endif
+    ${VimGenFileCmdsUninstall} "vim_uninst_rt.nsi"
+    ClearErrors
 
     # Remove other files installed with VisVim:
     !ifdef HAVE_VIS_VIM

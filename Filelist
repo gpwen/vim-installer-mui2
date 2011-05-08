@@ -319,6 +319,7 @@ SRC_DOS =	\
 		nsis/data/gui_template.bat \
 		nsis/data/install_manual.txt \
 		nsis/data/mswin_vimrc.vim \
+		nsis/data/nls_files.list \
 		nsis/data/runtime_files.list \
 		nsis/script/gen_file_list.vim \
 		nsis/script/helper_util.nsh \

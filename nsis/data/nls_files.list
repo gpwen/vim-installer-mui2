@@ -1,0 +1,5 @@
+# Templates of NLS files to install.
+#
+# Please refer to "script/gen_file_list.vim" for detailed syntax.
+# <target-path> | <src-root>  | <src-patterns>
+$vim_bin_path   | ${VIMRT}    | lang\**\* : keymap\README.txt : keymap\*.vim
