@@ -56,6 +56,15 @@
 # Maximum number of old Vim versions to support on GUI:
 !define VIM_MAX_OLD_VER 5
 
+# In the following code, most file install/uninstall commands are dynamically
+# generated with a Vim script to make sure the uninstaller removes exactly
+# the same set of files the installer installed (please refer to
+# gen_file_list.vim for detail).  This macro determines the Vim executable
+# used to interpret that Vim script.  By default, we'll use those executables
+# (the 32-bit console version) we're going to package.  You may point this to
+# other versions, like the one installed on the build system.
+!define VIM_INTERPRETER "${VIMSRC}\vimw32.exe"
+
 !define VER_MAJOR 7
 !define VER_MINOR 3
 
@@ -919,7 +928,7 @@ SilentInstall             normal
         # Generate NSIS commands to install/uninstall files specified by a
         # template.  This is only required for install sections:
         !execute \
-            "${VIMSRC}\vimw32.exe -e -R -X -u data\simple_vimrc.vim \
+            "${VIM_INTERPRETER} -e -R -X -u data\simple_vimrc.vim \
              -c $\":let g:gen_fcmds_debug_on      = 0                      | \
                     let g:gen_fcmds_fname_defines = '${VIM_FNAME_DEFINES}' | \
                     let g:gen_fcmds_fname_install = '${_FNAME_INSTALL}'    | \
@@ -930,7 +939,7 @@ SilentInstall             normal
         # Pull in generated install commands:
         !include ${_FNAME_INSTALL}
     !else
-        # For un-install case, we only need to pull in generated un-install
+        # For uninstall case, we only need to pull in generated uninstall
         # commands:
         !include ${_FNAME_UNINST}
     !endif
@@ -2041,14 +2050,14 @@ Function VimSetDefRootPath
     ${EndIf}
 
     # Next try previously installed versions if any.  The install path will be
-    # derived from the un-install key of the last installed version:
+    # derived from the uninstall key of the last installed version:
     ${If}    $R2 = 0
     ${AndIf} $vim_old_ver_count > 0
         # Find the uninstall key for the last installed version ($R1):
         IntOp $R0 $vim_old_ver_count - 1
         ${VimGetOldVerKey} $R0 $R1
 
-        # Read path of the un-installer for registry ($R0):
+        # Read path of the uninstaller for registry ($R0):
         ${If} $R1 != ""
             ReadRegStr $R0 SHCTX "${REG_KEY_UNINSTALL}\$R1" "UninstallString"
         ${Else}
@@ -2268,9 +2277,9 @@ FunctionEnd
 
 # ----------------------------------------------------------------------------
 # Function _VimGetOldVerKeyFunc                                           {{{2
-#   Get the un-installer key for n-th old Vim version installed on the system.
+#   Get the uninstaller key for n-th old Vim version installed on the system.
 #
-#   All un-installer keys found on the system will be stored in a string,
+#   All uninstaller keys found on the system will be stored in a string,
 #   delimited by CR/LF.  This function will retrieve specified key from that
 #   string.  This is a workaround since NSIS does not support array.
 #
@@ -2283,7 +2292,7 @@ FunctionEnd
 #     Required key on the top of the stack.
 # ----------------------------------------------------------------------------
 Function _VimGetOldVerKeyFunc
-    Exch $0  # Index of the un-install key
+    Exch $0  # Index of the uninstall key
 
     ${If} $0 >= $vim_old_ver_count
         StrCpy $0 ""
