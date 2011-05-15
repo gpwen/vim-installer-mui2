@@ -57,12 +57,12 @@
 !define VIM_MAX_OLD_VER 5
 
 # In the following code, most file install/uninstall commands are dynamically
-# generated with a Vim script to make sure the uninstaller removes exactly
-# the same set of files the installer installed (please refer to
-# gen_file_list.vim for detail).  This macro determines the Vim executable
-# used to interpret that Vim script.  By default, we'll use those executables
-# (the 32-bit console version) we're going to package.  You may point this to
-# other versions, like the one installed on the build system.
+# generated with a Vim script to make sure the uninstaller removes exactly the
+# same set of files the installer installed (please refer to section III of
+# nsis/README.txt for detail).  This macro determines the Vim executable used
+# to interpret that Vim script.  By default, we'll use those executables (the
+# 32-bit console version) we're going to package.  You may point this to other
+# versions, like the one installed on the build system.
 !define VIM_INTERPRETER "${VIMSRC}\vimw32.exe"
 
 !define VER_MAJOR 7

@@ -1,6 +1,6 @@
-# Templates of runtime files to install.
+# This template list all runtime files to be installed.
 #
-# Please refer to "script/gen_file_list.vim" for detailed syntax.
+# Please refer to section III of "nsis/README.txt" for detailed syntax.
 # <target-path> | <src-root>  | <src-patterns>
 $vim_bin_path   | ${VIMSRC}   | vimrun.exe
 $vim_bin_path   | ${VIMTOOLS} | diff.exe

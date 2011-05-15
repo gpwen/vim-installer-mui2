@@ -1,85 +1,8 @@
 " vi:set ts=8 sts=4 sw=4 fdm=marker:
 "
 " This Vim script is used to generate NSIS commands to install/un-install
-" files from templates held in the current buffer.  Each line in the current
-" buffer should be one of:
-" - Blank line (lines with blank characters only); or
-" - Comment line (lines with first non-blank character as '#'); or
-" - Template definition line.
-"
-" The template definition line has the following format:
-"   <target-path> | <src-root> | <src-patterns>
-"
-" where:
-"
-" - <target-path> is the path name on the target system where source file(s)
-"   should be installed.  The path name will be used literally in generate
-"   command except slash conversion and cleanup, NSIS variables can be used
-"   there.  Forward slash can be used in path name, they will be converted to
-"   backward slash automatically.
-"
-" - <src-root> is the root path for the source files (on the build system).
-"   Either forward slash or backward slash can be used as path separator.
-"
-" - <src-patterns> is one or more patterns to match source files (on the build
-"   system) under <src-root>.  Patterns are delimited by colon (:).  Path name
-"   relative to the <src-root> can be included, and wildcards can be used.
-"   Either forward slash or backward slash can be used as path separator (for
-"   relative path).  The pattern will be passed to Vim glob() function to
-"   expand.
-"
-" - Relative path of source files found under <src-root> will be kept by
-"   default when installed into <target-path>.  That means:
-"       <src-root>\path\to\foo.txt
-"   will be installed as:
-"       <target-path>\path\to\foo.txt
-"   To remove the relative path (install source files into <target-path>
-"   directly without relative path), append "\*" or "/*" to the <target-path>
-"   in the template specification.  In this case the above file will be
-"   installed as:
-"       <target-path>\foo.txt
-"
-" - Fields of the template should be delimited by vertical bar(|), and
-"   patterns in the pattern field should be delimited colon (:).  If vertical
-"   bar and colon needs to be used as filed content, they should be escaped
-"   using backslash, like \| or \:.  Those escape sequences will be escaped
-"   after the template line has be split into fields.
-"
-" - If the first non-white character one a line is '#', the line will be
-"   considered as comment line and skipped.
-"
-" - NSIS macro can be used in all fields of the template.  The syntax of the
-"   macro reference is (the same as NSIS):
-"     ${MACRO_NAME}
-"   Macro will be expanded after escaped sequences processing.
-"
-" A macro definition file can be loaded before processing the buffer.  The
-" name of the macro definition file should be specified in global variable:
-"   g:gen_fcmds_fname_defines
-" The default file name is 'vim_defines.conf'.  Each line in the file should
-" be blank line, comment line (same as above) or macro definition line.  The
-" format of the macro definition line is:
-"   <NAME> = <VALUE>
-" where
-" - <NAME> is the name of the macro.  It can be referenced in template
-"   definition as ${NAME}.
-" - <VALUE> is the value of macro.
-"
-" Both macro definition and template definition can be split into multiple
-" lines.  If the last non-white-space character of a line is a backslash
-" preceded by at least one white-space character (or nothing, in case the
-" backslash happens to be the first character of the line), the next line is
-" treated as an addition to the current line.  However, if the next line is a
-" blank line or comment line, the current line will be terminated even if line
-" continuation character presents.  The line continuation character (backslash
-" character and white-space characters around it) will be removed before
-" joining or terminating a line.
-"
-" To include backslash character itself as the last character of a line (avoid
-" it to be treated as line continuation character), another backslash should
-" be added to escape it (i.e., use two backslashes in tandem).  The script
-" will process line continuation escape sequence immediately after detection
-" of line continuation.
+" files from templates held in the current buffer.  Please refer to section
+" III of nsis/README.txt for detail.
 "
 " Maintainer: Guopeng Wen <wenguopeng AT gmail.com>
 
@@ -504,7 +427,7 @@ endfunction
 "   Add a new relative directory to the directory list.  This list will be
 "   used to generated NSIS directory remove commands.  All parent directories
 "   of the directory will be added to make sure we won't left behind any empty
-"   directory after un-installation.
+"   directory after uninstallation.
 " Arguments:
 "   dir_list    : List of directories to be created on the target system.
 "   target_path : Target path.
@@ -678,7 +601,7 @@ endfunction
 " Function: s:GenNsisCommands()                                           {{{1
 "   Main function to generate NSIS commands from file template.  Generated
 "   commands will be appended to previously created Vim buffers for
-"   install/un-install commands.
+"   install/uninstall commands.
 " Arguments: N/A
 " Return:    N/A
 " ----------------------------------------------------------------------------
@@ -742,7 +665,7 @@ function! s:GenNsisCommands()
         " clean up the list (remove directories etc.).  Skip if no file found.
         let file_list = s:ExpandPatterns(src_root, patterns)
 
-        " Generate NSIS commands to install/un-install files:
+        " Generate NSIS commands to install/uninstall files:
         call s:GenInstallCmds(target_path, src_root, file_list,
                             \ dir_list, keep_dir)
         call s:GenUninstallCmds(target_path, file_list, keep_dir)
@@ -774,14 +697,14 @@ endfunction
 " Main Script                                                             {{{1
 " ----------------------------------------------------------------------------
 " Generate NSIS commands.  Generated command will be appended to Vim buffers
-" for install/un-install commands:
+" for install/uninstall commands:
 call s:GenNsisCommands()
 
 " Save install commands:
 execute 'buffer '  . s:buf_id_install
 execute 'saveas! ' . g:gen_fcmds_fname_install
 
-" Save un-install commands:
+" Save uninstall commands:
 execute 'buffer '  . s:buf_id_uninst
 execute 'saveas! ' . g:gen_fcmds_fname_uninst
 
