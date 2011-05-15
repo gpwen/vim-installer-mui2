@@ -20,7 +20,7 @@ NSIS_LC_MAPPING=locale_mapping.dat
 OPT_EN_LANG_FILE=/tmp/english.nsi.$$
 
 # Link for git repository:
-LINK_GIT_RAW_BASE="http://github.com/gpwen/vim-installer-mui2/raw"
+LINK_GIT_RAW_BASE="https://github.com/gpwen/vim-installer-mui2/raw"
 
 # Link for language template:
 LINK_LANG_TMPL_BASE="$LINK_GIT_RAW_BASE/misc/lang-tmpl"
