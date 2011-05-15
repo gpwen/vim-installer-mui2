@@ -8,25 +8,25 @@ installer.  This should be the easiest way to try the new installer.
 
 You need to installed the following software to repack the official installer.
 
-* [[7-Zip|http://www.7-zip.org/]]
+*   [[7-Zip|http://www.7-zip.org/]]
 
-  You need [[7-Zip|http://www.7-zip.org/]] to unpack the official Vim
-  installer so we can repack it.  It can be downloaded from
-  [[here|http://www.7-zip.org/]].  After installation, you should add its
-  install path to Windows PATH environment so that `7z` command can be
-  accessed from DOS prompt.
+    You need [[7-Zip|http://www.7-zip.org/]] to unpack the official Vim
+    installer so we can repack it.  It can be downloaded from
+    [[here|http://www.7-zip.org/]].  After installation, you should add its
+    install path to Windows PATH environment so that `7z` command can be
+    accessed from DOS prompt.
 
-  If you have already installed [[cygwin|http://www.cygwin.com/]], you may
-  have already installed 7-Zip port as part of it (the `p7zip` package).  You
-  can check if you can access the `7z` command or not.
+    If you have already installed [[cygwin|http://www.cygwin.com/]], you may
+    have already installed 7-Zip port as part of it (the `p7zip` package).
+    You can check if you can access the `7z` command or not.
 
-* [[NSIS|http://nsis.sourceforge.net/]]
+*   [[NSIS|http://nsis.sourceforge.net/]]
 
-  You need this to generate the installer.  It can be downloaded from [[here |
-  http://nsis.sourceforge.net/]].
+    You need this to generate the installer.  It can be downloaded from [[here
+    | http://nsis.sourceforge.net/]].
 
-  Again, after installation, you should add its install path to Windows PATH
-  environment so that "makensis" command can be accessed from DOS prompt.
+    Again, after installation, you should add its install path to Windows PATH
+    environment so that "makensis" command can be accessed from DOS prompt.
 
 ## Repack Automatically with Shell Script
 
@@ -34,11 +34,11 @@ If you have installed [[cygwin|http://www.cygwin.com/]], you can use the fully
 automated shell script to repack Vim installer.  Please verify the following
 cygwin packages have been installed before you start:
 
-* `p7zip`: This is a 7-Zip port, as mentioned above.
+*   `p7zip`: This is a 7-Zip port, as mentioned above.
 
-* `wget`: Used to download file.
+*   `wget`: Used to download file.
 
-* `git`: Used for repository access.
+*   `git`: Used for repository access.
 
 Please follow steps listed below to repack the installer:
 
@@ -108,11 +108,11 @@ repack-vim.bat path\to\vim-installer-mui2
 ```
 
     The batch file will perform the following steps automatically:
-    * Unpack the official Vim installer using 7-Zip, restore the original NSIS
-      build environment.
-    * Copy new NSIS installer script from the git repository (from the path
-      you specified on the command line).
-    * Build the new NSIS installer.
+    *   Unpack the official Vim installer using 7-Zip, restore the original
+        NSIS build environment.
+    *   Copy new NSIS installer script from the git repository (from the path
+        you specified on the command line).
+    *   Build the new NSIS installer.
 
 Once done, the new installer can be found at:
 ```bat

@@ -96,13 +96,13 @@ whether to remove the default Vim config file `_vimrc` or not.  The config
 file won't be removed by default.  When uninstalling the last Vim from the
 system:
 
-* `vimfiles` directory hierarchy (under Vim install path and user home) will
-  be removed automatically *if they are empty*.  Non-empty `vimfiles` will be
-  left intact.
+*   `vimfiles` directory hierarchy (under Vim install path and user home) will
+    be removed automatically *if they are empty*.  Non-empty `vimfiles` will
+    be left intact.
 
-* Vim install root will be removed automatically *if it's empty*.  If fact, if
-  no files has been changed under that directory, and user choose to remove
-  defalt config file, that directory will be empty.
+*   Vim install root will be removed automatically *if it's empty*.  If fact,
+    if no files has been changed under that directory, and user choose to
+    remove defalt config file, that directory will be empty.
 
 Uninstaller will check for running instances of Vim once user press "Uninstall".
 

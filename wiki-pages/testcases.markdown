@@ -26,18 +26,18 @@ directory (if the installer aborted, or you uninstalled Vim only).
 
 4.  Verify that shell extension DLL(s) won't be removed by old uninstaller
     upon reboot:
-    * Install Vim using the official installer.
-    * Use "Edit With Vim" context menu to open at least one file to make sure
-      the shell extension DLL has been loaded by the file explorer.
-    * Install Vim again using the upgraded installer, let the installer
-      uninstall the version installed above.  When asked, remove executables
-      of the old version.  You should find the Vim binary directory can not be
-      removed as the shell extension DLL (`gvimext.dll`) is still in use by
-      the file explorer.
-    * After upgraded installer finished, reboot the PC.
-    * Now check `gvimext*.dll` under Vim binary directory.  `gvimext.dll`
-      should be removed, while `gvimext32.dll` and/or `gvimext64.dll` should
-      still be there.
+    *   Install Vim using the official installer.
+    *   Use "Edit With Vim" context menu to open at least one file to make
+        sure the shell extension DLL has been loaded by the file explorer.
+    *   Install Vim again using the upgraded installer, let the installer
+        uninstall the version installed above.  When asked, remove executables
+        of the old version.  You should find the Vim binary directory can not
+        be removed as the shell extension DLL (`gvimext.dll`) is still in use
+        by the file explorer.
+    *   After upgraded installer finished, reboot the PC.
+    *   Now check `gvimext*.dll` under Vim binary directory.  `gvimext.dll`
+        should be removed, while `gvimext32.dll` and/or `gvimext64.dll` should
+        still be there.
 
 ### I-2. Test Icons
 
@@ -46,9 +46,9 @@ directory (if the installer aborted, or you uninstalled Vim only).
 
 2.  Install desktop icons, the following 3 icons should be added on the
     desktop:
-    * `gVim 7.3`
-    * `gVim Easy 7.3`
-    * `gVim Read only 7.3`
+    *   `gVim 7.3`
+    *   `gVim Easy 7.3`
+    *   `gVim Read only 7.3`
 
     Verify that these icons function correctly.
 
@@ -75,14 +75,14 @@ directory (if the installer aborted, or you uninstalled Vim only).
 ### I-3. Test Batch Files
 
 1.  Install batch files, and verify the following commands work in DOS prompt:
-    * `evim`
-    * `gvim`
-    * `view`
-    * `vimdiff`
-    * `gview`
-    * `gvimdiff`
-    * `vim`
-    * `vimtutor`
+    *   `evim`
+    *   `gvim`
+    *   `view`
+    *   `vimdiff`
+    *   `gview`
+    *   `gvimdiff`
+    *   `vim`
+    *   `vimtutor`
 
     Test with various command line parameters, make sure they work as
     expected.
@@ -104,9 +104,9 @@ directory (if the installer aborted, or you uninstalled Vim only).
 1.  Install Vim context menu, verify that "gvim" has been listed in the
     "Recommended Programs" section of the "Open With &rarr; Choose Program
     ..." dialog for the following file types:
-    * `.htm`
-    * `.html`
-    * `.vim`
+    *   `.htm`
+    *   `.html`
+    *   `.vim`
 
     Also verify that "gvim" has been listed in the "Other Programs" section of
     the above dialog for all other file types.
@@ -115,13 +115,13 @@ directory (if the installer aborted, or you uninstalled Vim only).
     context menu for all files.
 
 3.  Open "Add or Remove Program" from control panel, verify that:
-    * "Vim 7.3 (self-installing)" has been listed as currently installed
-      programs.
-    * The above item only supports "Remove" option.
-    * The "Support Info" of the above items includes:
-      * Version (7.3);
-      * URL for Vim online;
-      * URL for downloading the PC installer.
+    *   "Vim 7.3 (self-installing)" has been listed as currently installed
+        programs.
+    *   The above item only supports "Remove" option.
+    *   The "Support Info" of the above items includes:
+        *   Version (7.3);
+        *   URL for Vim online;
+        *   URL for downloading the PC installer.
 
 ### I-6. Test OLE Registration
 
@@ -138,16 +138,19 @@ directory (if the installer aborted, or you uninstalled Vim only).
     it remove the config file, verify that vim install directory can be
     removed.
 
-2.  Same as above, but put some file in the `vimfiles` directory, verify that
+2.  Same as above, but put some files in the `vimfiles` directory, verify that
     the entire `vimfiles` directory hierarchy will be kept intact.
 
     Run the test for shared `vimfiles` directory and `vimfiles` directory
     under `$HOME`.
 
-3.  Verify that vim batch files under Windows directory has been removed by
+3.  Same as above, but add some files in the `vim##` directory or its
+    subdirectories, verify that those extra files will be kept intact.
+
+4.  Verify that vim batch files under Windows directory has been removed by
     the uninstaller.
 
-4.  Change setting of the version string (`VIM_VER_NODOT` environment string)
+5.  Change setting of the version string (`VIM_VER_NODOT` environment string)
     in some of those vim batch files under Windows directory, verify that
     unintaller does not remove those batch files.
 

@@ -2,82 +2,98 @@
 
 New features introduced by the upgraded Vim NSIS installer includes:
 
-* Upgraded to Modern UI (MUI) 2.0.  Now NSIS 2.34 is the minimum
-  requirement.
+*   **Upgraded to Modern UI (MUI) 2.0.**  Now NSIS 2.34 is the minimum
+    requirement.
 
-* Installation/uninstallation are now performed natively with NSIS script,
-  external `install.exe` and `uninstal.exe` are no longer necessary.  This
-  eliminates all _ugly_ DOS command windows in installer/uninstaller.
+*   **Installation/uninstallation are now performed natively with NSIS
+    script.**
 
-* It's now possible to install both 32-bit and 64-bit version of the shell
-  extension on 64-bit systems.  This make it possible for 32-bit file
-  explorer-like applications continue to use Vim context menu on 64-bit
-  systems.  This feature is suggested and tested by Leonardo Valeri Manera.
+    External `install.exe` and `uninstal.exe` are no longer necessary.  This
+    eliminates all _ugly_ DOS command windows in installer/uninstaller.
 
-* Multiple language support (disabled by default).
+*   **It's now possible to install both 32-bit and 64-bit version of the shell
+    extension on 64-bit systems.**
 
-  You can find detail on the [[language page | language]].
+    This make it possible for 32-bit file explorer-like applications continue
+    to use Vim context menu on 64-bit systems.  This feature is suggested and
+    tested by Leonardo Valeri Manera.
 
-* Install log.  A detailed install log (`vim-install.log`) will be created for
-  debug purpose.
+*   **Multiple language support (disabled by default).**
 
-* User can choose whether to remove or keep existing Vim version(s) using the
-  component list directly.
+    You can find detail on the [[language page | language]].
 
-* Uninstaller are executed from NSIS script directly.
+*   **Install log.**
 
-* Better way to uninstall/upgrade shell extension DLL (using Library.nsh).
+    A detailed install log (`vim-install.log`) will be created for debug
+    purpose.
 
-  Now the DLL will be move to Windows temporary directory before deletion.
-  This makes it possible to remove Vim install directory even if the DLL
-  cannot be removed without a reboot.  It also solves the problem where newly
-  installed DLL could be removed unintentionally after reboot.
+*   **User can choose whether to remove or keep existing Vim version(s) using
+    the component list directly.**
 
-* Detailed description for each component.
+*   **Uninstaller are executed from NSIS script directly.**
 
-  MUI makes it possible to add detailed description for each
-  component to be installed/removed.  If you hover the mouse pointer
-  over the component list, detailed description of those components
-  will be shown.  Such description is also used to explain the
-  impact of component removal.
+*   **Better way to uninstall/upgrade shell extension DLL (using
+    Library.nsh).**
 
-* Eliminated all pop-up message boxes used to ask for user input.
+    Now the DLL will be move to Windows temporary directory before deletion.
+    This makes it possible to remove Vim install directory even if the DLL
+    cannot be removed without a reboot.  It also solves the problem where
+    newly installed DLL could be removed unintentionally after reboot.
 
-* Do not make any real change until all running instances of Vim have been
-  closed.
+*   **Detailed description for each component.**
 
-* New artwork for the installer.
+    MUI makes it possible to add detailed description for each component to be
+    installed/removed.  If you hover the mouse pointer over the component
+    list, detailed description of those components will be shown.  Such
+    description is also used to explain the impact of component removal.
 
-* Command line support.
+*   **Eliminated all pop-up message boxes used to ask for user input.**
 
-  All install options that's available on GUI is also available on the command
-  line.  This is in fact part of [[silent mode|
-  http://nsis.sourceforge.net/Docs/Chapter4.html#4.12]] support.  Please refer
-  to [[user manual |
-  https://github.com/gpwen/vim-installer-mui2/raw/wiki-files/gen/vim73_install_manual.txt]]
-  for detail.
+*   **Do not make any real change until all running instances of Vim have been
+    closed.**
 
-* On-line user manual.
+*   **New artwork for the installer.**
 
-  If the installer is started with the `/?` or `/HELP` command line switch, it
-  will drop a user manual named `vim##_install_manual.txt` in the current
-  working directory.  That manual is dynamically generated, it will list all
-  features available in the installer accurately, which could be necessary as
-  the installer support lots of build options.
-  [[Here |
-  https://github.com/gpwen/vim-installer-mui2/raw/wiki-files/gen/vim73_install_manual.txt]]
-  is the example.
+*   **Command line support.**
 
-* Silent mode.
+    All install options that's available on GUI is also available on the
+    command line.  This is in fact part of [[silent mode|
+    http://nsis.sourceforge.net/Docs/Chapter4.html#4.12]] support.  Please
+    refer to [[user manual |
+    https://github.com/gpwen/vim-installer-mui2/raw/wiki-files/gen/vim73_install_manual.txt]]
+    for detail.
 
-  The new installer has full support for [[silent mode|
-  http://nsis.sourceforge.net/Docs/Chapter4.html#4.12]].  When run in such
-  mode, no user interface will be shown.  It's useful for unattended
-  installation/uninstallation over large number of computers.  Please refer
-  to [[user manual |
-  https://github.com/gpwen/vim-installer-mui2/raw/wiki-files/gen/vim73_install_manual.txt]]
-  for detail.
+*   **On-line user manual.**
+
+    If the installer is started with the `/?` or `/HELP` command line switch,
+    it will drop a user manual named `vim##_install_manual.txt` in the current
+    working directory.  That manual is dynamically generated, it will list all
+    features available in the installer accurately, which could be necessary
+    as the installer support lots of build options.  [[Here |
+    https://github.com/gpwen/vim-installer-mui2/raw/wiki-files/gen/vim73_install_manual.txt]]
+    is the example.
+
+*   **Silent mode.**
+
+    The new installer has full support for [[silent mode|
+    http://nsis.sourceforge.net/Docs/Chapter4.html#4.12]].  When run in such
+    mode, no user interface will be shown.  It's useful for unattended
+    installation/uninstallation over large number of computers.  Please refer
+    to [[user manual |
+    https://github.com/gpwen/vim-installer-mui2/raw/wiki-files/gen/vim73_install_manual.txt]]
+    for detail.
+
+*   **Accurate Uninstall.**
+
+    The uninstaller will remove only those files installed by the installer,
+    nothing more, nothing less.  That means if you installed some files in the
+    Vim directory yourself, such as user manuals for other languages, they
+    will be kept intact by the uninstaller.
+
+    As comparison, the official uninstaller will remove files using wildcards,
+    even remove directories recursively, which result in bogus removal if
+    extra files have been installed by user.
 
 # Features to be Added Soon (TODO List)
 
-* (TODO) Translation for more languages.
+*   (TODO) **Translation for more languages.**
