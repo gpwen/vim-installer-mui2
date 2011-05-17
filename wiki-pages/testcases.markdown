@@ -157,7 +157,7 @@ directory (if the installer aborted, or you uninstalled Vim only).
     You can change the major, minor version number, or append some
     alphanumerics to the version number.
 
-### U-3. Test Registry Change
+### U-2. Test Registry Change
 
 1.  Verify that uninstall entry has been removed.
 
