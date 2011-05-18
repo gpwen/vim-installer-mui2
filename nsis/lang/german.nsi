@@ -156,7 +156,7 @@ LangString str_msg_invalid_root  ${LANG_GERMAN} \
 LangString str_msg_bin_mismatch  ${LANG_GERMAN} \
     "Pfaddiskrepanz!$\r$\n$\r$\n\
      Erwarte Anwendungsverzeichnis $\"$vim_bin_path$\",$\r$\n\
-     aber fand Anwendungpfad $\"$INSTDIR$\" vor."
+     aber fand Anwendungspfad $\"$INSTDIR$\" vor."
 
 LangString str_msg_vim_running   ${LANG_GERMAN} \
     "Laufender Vim-Prozess erkannt.$\r$\n\
