@@ -16,7 +16,7 @@ ${VimAddLanguage} "Italian" "it"
 ##############################################################################
 
 LangString str_dest_folder          ${LANG_ITALIAN} \
-    "Cartella di installazione (deve finire con $\"vim$\")"
+    "Cartella d'installazione (il nome deve finire con $\"vim$\")"
 
 LangString str_show_readme          ${LANG_ITALIAN} \
     "Visualizza README al termine dell'installazione"
